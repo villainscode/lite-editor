@@ -12,7 +12,7 @@ const LiteEditor = (function() {
   
   // Default configuration
   const defaultConfig = {
-    plugins: ['heading', 'fontcolor', 'highlight', 'bold', 'italic', 'underline', 'strike', 'alignleft', 'aligncenter', 'alignright', 'formatindentincrease', 'formatindentdecrease', 'blockquote', 'code', 'codeblock', 'bulletedlist', 'numberlist', 'checklist', 'link', 'image', 'table', 'reset'],
+    plugins: ['heading', 'fontFamily', 'fontcolor', 'highlight', 'bold', 'italic', 'underline', 'strike', 'alignleft', 'aligncenter', 'alignright', 'formatindentincrease', 'formatindentdecrease', 'blockquote', 'code', 'codeblock', 'bulletedlist', 'numberlist', 'checklist', 'link', 'image', 'table', 'reset'],
     placeholder: '내용을 입력하세요...'
   };
   
@@ -162,8 +162,27 @@ const LiteEditor = (function() {
           // Add click event
           buttonElement.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // 이벤트 버블링 방지
+            
+            // 1. 버튼 클릭 전 선택 영역 저장
+            let isActiveSelection = false;
+            if (window.liteEditorSelection) {
+              isActiveSelection = window.liteEditorSelection.save();
+              console.log('버튼 클릭 시 선택 영역 저장:', isActiveSelection);
+            }
+            
+            // 2. 플러그인 액션 실행 (저장된 선택 영역 정보 유지)
             plugin.action(contentArea, buttonElement);
+            
+            // 3. 에디터에 포커스 및 선택 영역 복원
             contentArea.focus();
+            
+            // 4. 저장된 선택 영역이 있었다면 복원
+            if (isActiveSelection && window.liteEditorSelection) {
+              // 명령 실행 후 선택 영역 복원 시도
+              window.liteEditorSelection.restore();
+              console.log('버튼 클릭 후 선택 영역 복원 완료');
+            }
           });
           
           // Add to toolbar
@@ -179,6 +198,87 @@ const LiteEditor = (function() {
    * @param {HTMLElement} originalElement - Original element
    */
   function setupEventListeners(contentArea, originalElement) {
+    // 현재 선택 영역을 저장하는 변수
+    let savedSelection = null;
+    let selectionActive = false; // 활성화된 선택 영역이 있는지 추적
+    
+    // 선택 영역을 저장하기 위한 CSS 스타일 추가
+    const style = document.createElement('style');
+    style.textContent = `
+      .lite-editor-content ::selection {
+        background: rgba(0, 120, 215, 0.4) !important;
+        color: inherit !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // 선택 영역 저장 함수
+    const saveSelection = () => {
+      try {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0 && sel.getRangeAt(0).commonAncestorContainer) {
+          // 선택 영역이 에디터 내부에 있는지 확인
+          let node = sel.getRangeAt(0).commonAncestorContainer;
+          while (node && node !== contentArea && node !== document.body) {
+            node = node.parentNode;
+          }
+          
+          // 선택 영역이 에디터 내부에 있는 경우에만 저장
+          if (node === contentArea) {
+            // 유효한 선택 영역인지 확인 (텍스트 노드 또는 요소 노드)
+            savedSelection = sel.getRangeAt(0).cloneRange();
+            selectionActive = !savedSelection.collapsed; // 실제 선택한 내용이 있는지 확인
+            console.log('선택 영역 저장됨:', savedSelection, '활성화됨:', selectionActive);
+            return selectionActive; // 실제 선택된 내용이 있는 경우에만 true 반환
+          }
+        }
+      } catch (e) {
+        console.error('선택 영역 저장 중 오류:', e);
+      }
+      return false;
+    };
+    
+    // 선택 영역 복원 함수
+    const restoreSelection = () => {
+      if (savedSelection) {
+        try {
+          // 에디터에 포커스 먼저 주기 (포커스 가 이미 있는지 확인하고 없으면 맞춰줌)
+          if (document.activeElement !== contentArea) {
+            contentArea.focus();
+          }
+          
+          // 선택 영역 복원
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(savedSelection);
+          
+          // DOM에 스타일 추가하여 선택 영역의 가시성 유지
+          if (selectionActive) {
+            // 이미 기본 CSS로 적용되어 있으니 여기서는 추가 스타일링이 필요 없음
+          }
+          
+          console.log('선택 영역 복원됨', '활성화됨:', selectionActive);
+          return selectionActive; // 활성화된 선택 영역이 있는 경우에만 true 반환
+        } catch (e) {
+          console.error('선택 영역 복원 중 오류:', e);
+        }
+      }
+      return false;
+    };
+    
+    // 현재 선택 영역이 활성화되어 있는지 확인
+    const isSelectionActive = () => {
+      return selectionActive;
+    };
+    
+    // 전역 객체에 선택 영역 저장/복원 함수 추가 (플러그인에서 접근 가능하도록)
+    window.liteEditorSelection = {
+      save: saveSelection,
+      restore: restoreSelection,
+      get: () => savedSelection,
+      isActive: isSelectionActive
+    };
+    
     // Function to sync content with original element
     const syncContent = () => {
       if (originalElement.tagName === 'TEXTAREA' || originalElement.tagName === 'INPUT') {
@@ -192,6 +292,17 @@ const LiteEditor = (function() {
       originalElement.dispatchEvent(event);
     };
     
+    // 선택 영역이 변경될 때마다 저장
+    contentArea.addEventListener('mouseup', () => {
+      setTimeout(saveSelection, 50); // 약간의 지연을 주어 브라우저가 선택을 완료하도록 함
+    });
+    contentArea.addEventListener('keyup', () => {
+      setTimeout(saveSelection, 50);
+    });
+    contentArea.addEventListener('focus', () => {
+      setTimeout(saveSelection, 50);
+    });
+    
     // Listen for input events
     contentArea.addEventListener('input', syncContent);
     
@@ -200,6 +311,22 @@ const LiteEditor = (function() {
       // Implement common keyboard shortcuts here
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
+          case 'z': // Undo & Redo
+            e.preventDefault();
+            if (e.shiftKey) {
+              // Redo: Command+Shift+Z or Ctrl+Shift+Z
+              document.execCommand('redo', false, null);
+            } else {
+              // Undo: Command+Z or Ctrl+Z
+              document.execCommand('undo', false, null);
+            }
+            break;
+          case 'y': // Alternative Redo for Windows (Ctrl+Y)
+            if (!e.shiftKey) {
+              e.preventDefault();
+              document.execCommand('redo', false, null);
+            }
+            break;
           case 'b': // Bold
             e.preventDefault();
             document.execCommand('bold', false, null);
@@ -233,7 +360,7 @@ const LiteEditor = (function() {
   
   // Undo plugin
   registerPlugin('undo', {
-    title: 'undo',
+    title: 'undo (⌘Z)',
     icon: 'undo',
     action: (contentArea) => {
       document.execCommand('undo', false, null);
@@ -242,193 +369,12 @@ const LiteEditor = (function() {
   
   // Redo plugin
   registerPlugin('redo', {
-    title: 'redo',
+    title: 'redo (⌘⇧Z)',
     icon: 'redo',
     action: (contentArea) => {
       document.execCommand('redo', false, null);
     }
   });
-  
-  // Font Family plugin
-  registerPlugin('fontFamily', {
-    title: 'font family',
-    icon: 'text_format',
-    action: (contentArea, buttonElement) => {
-      // 드롭다운 메뉴 토글 (이미 action 함수가 이벤트에 연결됨)
-      const dropdown = buttonElement.querySelector('.lite-editor-dropdown-menu');
-      if (dropdown) {
-        dropdown.classList.toggle('show');
-      }
-    },
-    customRender: (toolbar, contentArea) => {
-      console.log('폰트 플러그인 렌더링');
-      // 폰트 그룹 정의
-      const fontGroups = [
-        {
-          label: 'Basic',
-          fonts: [
-            { value: 'Arial, sans-serif', label: 'Arial' },
-            { value: 'Comic Sans MS, cursive', label: 'Comic Sans MS' },
-            { value: 'Helvetica, sans-serif', label: 'Helvetica' },
-            { value: 'Tahoma, sans-serif', label: 'Tahoma' },
-            { value: 'Trebuchet MS, sans-serif', label: 'Trebuchet MS' },
-            { value: 'Verdana, sans-serif', label: 'Verdana' }
-          ]
-        },
-        {
-          label: 'Korean',
-          fonts: [
-            { value: "'Noto Sans KR', sans-serif", label: 'Noto Sans KR' },
-            { value: "'Nanum Gothic', sans-serif", label: 'Nanum Gothic' },
-            { value: "'굴림체', '굴림', 'Gulim', sans-serif", label: '굴림체' },
-            { value: "'바탕체', '바탕', 'Batang', serif", label: '바탕체' }
-          ]
-        },
-        {
-          label: 'Coding',
-          fonts: [
-            { value: "'IBM Plex Mono', monospace", label: 'IBM Plex Mono' },
-            { value: "'Hack', monospace", label: 'Hack' },
-            { value: "'JetBrains Mono', monospace", label: 'JetBrains Mono' },
-            { value: 'Consolas, monospace', label: 'Consolas' }
-          ]
-        }
-      ];
-      
-      // 현재 선택된 폰트 표시용 컨테이너
-      const fontContainer = document.createElement('div');
-      fontContainer.className = 'lite-editor-button lite-editor-font-button';
-      fontContainer.title = 'Font Family';
-      
-      // 아이콘 추가
-      const iconElement = document.createElement('span');
-      iconElement.className = 'material-icons';
-      iconElement.textContent = 'text_format';
-      fontContainer.appendChild(iconElement);
-      
-      // 드롭다운 메뉴 생성 (문서 최상단에 배치)
-      const dropdownMenu = document.createElement('div');
-      dropdownMenu.className = 'lite-editor-dropdown-menu';
-      dropdownMenu.style.position = 'fixed'; // 고정 포지션으로 변경
-      
-      // 드롭다운 헤더 생성
-      const dropdownHeader = document.createElement('div');
-      dropdownHeader.className = 'lite-editor-dropdown-header';
-      dropdownHeader.textContent = 'Font Family';
-      dropdownMenu.appendChild(dropdownHeader);
-      
-      // 드롭다운 리스트 생성
-      const menuList = document.createElement('ul');
-      menuList.className = 'lite-editor-dropdown-menu-list';
-      
-      // 그룹별로 폰트 아이템 추가
-      fontGroups.forEach(group => {
-        // 그룹 레이블 추가
-        const groupLabel = document.createElement('div');
-        groupLabel.className = 'lite-editor-dropdown-group';
-        groupLabel.textContent = group.label;
-        menuList.appendChild(groupLabel);
-        
-        // 해당 그룹의 폰트 추가
-        group.fonts.forEach(font => {
-          const listItem = document.createElement('li');
-          listItem.setAttribute('data-value', font.value);
-          
-          const link = document.createElement('a');
-          link.href = '#';
-          
-          // 폰트 이름 설정
-          link.textContent = font.label;
-          link.style.fontFamily = font.value; // 해당 폰트로 표시
-          
-          // 폰트 선택 이벤트
-          link.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // 이전 선택 상태 제거
-            const prevSelected = menuList.querySelector('li.selected');
-            if (prevSelected) {
-              prevSelected.classList.remove('selected');
-            }
-            
-            // 현재 선택 항목 표시
-            listItem.classList.add('selected');
-            
-            // 폰트 적용
-            document.execCommand('fontName', false, font.value);
-            
-            // 드롭다운 닫기
-            dropdownMenu.classList.remove('show');
-            
-            // 컨텐츠 영역에 포커스
-            contentArea.focus();
-          });
-          
-          listItem.appendChild(link);
-          menuList.appendChild(listItem);
-        });
-      });
-      
-      dropdownMenu.appendChild(menuList);
-      
-      // 드롭다운을 문서 body에 직접 추가하여 z-index 문제 해결
-      document.body.appendChild(dropdownMenu);
-      
-      // 드롭다운과 버튼 연결을 위해 버튼에 레퍼런스 저장
-      fontContainer.dropdownMenu = dropdownMenu;
-      
-      // 클릭 이벤트 수정 - 기본 액션 대신 여기서 처리
-      fontContainer.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // 이벤트 버블링 방지
-        console.log('폰트 버튼 클릭됨');
-        
-        // 다른 모든 드롭다운 먼저 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
-          if (menu !== fontContainer.dropdownMenu) menu.classList.remove('show');
-        });
-        
-        // 이 드롭다운 토글
-        const dropdownMenu = fontContainer.dropdownMenu;
-        dropdownMenu.classList.toggle('show');
-        
-        // 드롭다운 메뉴 위치 조정
-        if (dropdownMenu.classList.contains('show')) {
-          const buttonRect = fontContainer.getBoundingClientRect();
-          
-          // 절대 위치로 계산
-          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
-          
-          // 콘솔로 디버그 정보 추가
-          console.log('버튼 위치:', buttonRect.top, buttonRect.bottom);
-          console.log('드롭다운 위치:', dropdownMenu.style.top, dropdownMenu.style.left);
-          
-          // 가시성 강제 확인
-          dropdownMenu.style.visibility = 'visible';
-          dropdownMenu.style.opacity = '1';
-        }
-        
-        console.log('드롭다운 상태:', dropdownMenu.classList.contains('show') ? '열림' : '닫힘');
-      });
-      
-      // 드롭다운 외부 클릭 시 닫기 (전역 핸들러)
-      // 기존 핸들러가 중복 등록되는 것을 방지하기 위해 한 번만 등록
-      if (!window.fontDropdownInitialized) {
-        document.addEventListener('click', (e) => {
-          // 클릭된 요소가 드롭다운이나 폰트 버튼이 아니면 모든 드롭다운 닫기
-          if (!e.target.closest('.lite-editor-dropdown-menu') && 
-              !e.target.closest('.lite-editor-font-button')) {
-            document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(dropdown => {
-              dropdown.classList.remove('show');
-            });
-          }
-        });
-        window.fontDropdownInitialized = true;
-      }
-      
-      return fontContainer;
-    }
   });
   
   // Font Color plugin
@@ -482,9 +428,49 @@ const LiteEditor = (function() {
         colorCell.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          
+          console.log('색상 셀 클릭됨:', color);
+          
+          // 선택한 색상 가져오기
           const selectedColor = e.target.getAttribute('data-color');
-          document.execCommand('foreColor', false, selectedColor);
+          
+          try {
+            // 현재 선택 영역 복원 및 색상 적용 과정
+            if (window.liteEditorSelection) {
+              console.log('저장된 선택 정보:', window.liteEditorSelection.get());
+              
+              // 1. 에디터 포커스
+              contentArea.focus();
+              
+              // 2. 선택 영역 복원 시도
+              const restored = window.liteEditorSelection.restore();
+              console.log('선택 영역 복원 결과:', restored ? '성공' : '실패');
+              
+              // 3. 색상 적용
+              if (document.queryCommandSupported('foreColor')) {
+                document.execCommand('foreColor', false, selectedColor);
+                console.log('색상 명령 실행됨:', selectedColor);
+              }
+              
+              // 4. 선택 영역 재저장 (명령 실행 직후)
+              window.liteEditorSelection.save();
+              console.log('색상 적용 후 선택 영역 재저장');
+            } else {
+              console.log('저장된 선택 정보 없음, 기본 색상 적용');
+              contentArea.focus();
+              document.execCommand('foreColor', false, selectedColor);
+            }
+          } catch (err) {
+            console.error('색상 적용 중 오류:', err);
+            // 오류 발생 시 기본 방식으로 시도
+            contentArea.focus();
+            document.execCommand('foreColor', false, selectedColor);
+          }
+          
+          // 드롭다운 닫기
           dropdownMenu.classList.remove('show');
+          
+          // 컨텐츠 영역에 포커스
           contentArea.focus();
         });
         
@@ -501,7 +487,15 @@ const LiteEditor = (function() {
       colorContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation(); // 이벤트 버블링 방지
-        console.log('커러 버튼 클릭됨');
+        console.log('컬러 버튼 클릭됨'); // 오타 수정: '커러' → '컬러'
+        
+        // 1. 포커스 전에 먼저 현재 선택 영역 저장
+        if (window.liteEditorSelection) {
+          console.log('컬러 버튼 클릭 시 선택 영역 저장 중...');
+          const saved = window.liteEditorSelection.save();
+          console.log('선택 영역 저장 상태:', saved ? '성공' : '실패', 
+                   '활성화된 선택영역:', window.liteEditorSelection.isActive ? window.liteEditorSelection.isActive() : 'N/A');
+        }
         
         // 다른 모든 드롭다운 먼저 닫기
         document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {

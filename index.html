@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LiteEditor 데모</title>
+    <!-- Material Icons 두 가지 방식으로 로드하여 호환성 확보 -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
 
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- 외부 폰트 추가 -->
@@ -17,9 +19,9 @@
     <!-- 코딩 폰트 -->
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
-    <!-- D2 Coding 폰트 -->
-    <link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_three@1.0/D2Coding.woff" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" href="editor.css">
+    <!-- Core & Plugin CSS -->
+    <link rel="stylesheet" href="css/core.css">
+    <link rel="stylesheet" href="css/plugins.css">
 </head>
 <body class="bg-gray-100 p-8">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -27,7 +29,7 @@
 
         <div class="mb-6">
             <h2 class="text-lg font-semibold mb-2">고정형 에디터 예제:</h2>
-            <div id="editor-div" class="w-full min-h-40 p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" contenteditable="true">
+            <div id="lite-editor" class="w-full min-h-40 p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" contenteditable="true">
                 <h2>LiteEditor 소개</h2>
                 <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
 
@@ -41,30 +43,65 @@
 
                 <h2>지원 서식</h2>
                 <ul>
+                    <li><strong>undo</strong>: 실행 취소.</li>
+                    <li><strong>redo</strong>: 재실행.</li>
+                    
+                    <li><strong>폰트</strong>: 지정된 텍스트에 폰트를 적용합니다.</li>
+                    <li><strong>폰트 컬러</strong>지정한 컬러를 폰트에 적용합니다.</li>
                     <li><strong>제목 (Heading)</strong>: 제목 텍스트 스타일을 적용합니다.</li>
+                    
+                    <li><strong>하이라이트</strong>지정한 텍스트에 하일라이트 처리 합니다.</li>
                     <li><strong>굵게 (Bold)</strong>: 텍스트를 굵게 표시합니다.</li>
-                    <li><strong>기울임꼴 (Italic)</strong>: 텍스트를 기울임꼴로 표시합니다.</li>
+                    <li><strong>기울임 (Italic)</strong>: 텍스트를 기울임꼴로 표시합니다.</li>
                     <li><strong>밑줄 (Underline)</strong>: 텍스트에 밑줄을 추가합니다.</li>
                     <li><strong>취소선 (Strike)</strong>: 텍스트에 취소선을 추가합니다.</li>
+                    
                     <li><strong>코드 (Code)</strong>: 텍스트를 코드 블록으로 형식화합니다.</li>
+                    <li><strong>코드블럭 (CodeBlock)</strong>: 선택한 텍스트를 코드 블록으로 형식화합니다.</li>
                     <li><strong>링크 (Link)</strong>: 선택한 텍스트에 하이퍼링크를 추가합니다.</li>
+                    <li><strong>이미지 (Image)</strong>: 선택한 텍스트에 이미지를 추가합니다.</li>
+                    <li><strong>테이블 (Table)</strong>: 텍스트를 테이블로 형식화합니다.</li>
                     <li><strong>서식 지우기 (Reset Format)</strong>: 모든 서식을 제거합니다.</li>
+
+                    전체 플러그인 ['fontFamily', 'heading', 'fontColor', 'bold', 'italic', 'underline', 'strike', 'align', 'formatIndent', 'blockquote', 'code', 'list', 'link', 'reset'],
+
+                    plugins: [
+                    'undo', 'redo', // 실행 취소/되돌리기
+                    'fontFamily', 'fontSize', 'fontColor', 'highlight', // 폰트 서식
+                    'bold', 'italic', 'underline', 'strike', // 기본 텍스트 서식
+                    'align', 'indent', 'outdent', // 정렬 및 들여쓰기
+                    'blockquote', 'code', 'codeBlock', // 인용 및 코드
+                    'bulletList', 'numberList', 'checkList', // 목록
+                    'link', 'image', 'table', // 삽입
+                    'reset' // 서식 초기화
+                  ],
                 </ul>
             </div>
         </div>
     </div>
 
-    <script src="editor.js"></script>
+    <!-- Core JS -->
+    <script src="js/core.js"></script>
+
+    <!-- Plugin JS -->
+    <script src="plugins/history.js"></script>
+    <script src="plugins/format.js"></script>
+    <script src="plugins/fontFamily.js"></script>
+    <script src="plugins/fontColor.js"></script>
+    <script src="plugins/highlight.js"></script>
+    <script src="plugins/heading.js"></script>
+    <script src="plugins/list.js"></script>
+    <script src="plugins/link.js"></script>
+    
     <script>
         // 에디터 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            // 기본 에디터 초기화 - 새 아이콘 없용 및 폰트 선택기 추가
-            const editor1 = LiteEditor.init('#editor-div', {
-                // 순서: 실행 취소(undo), 재실행(redo), 폰트 선택(fontFamily), 제목(heading), 폰트 색상(fontcolor), 나머지 버튼들
-                plugins: ['undo', 'redo', 'fontFamily', 'heading', 'fontcolor', 'highlight', 'bold', 'italic', 'underline', 'strike', 'textalign', 'formatindentincrease', 'formatindentdecrease', 'blockquote', 'code', 'codeblock', 'bulletedlist', 'numberlist', 'checklist', 'link', 'image', 'table', 'reset'],
-                // dividers 옵션을 사용하여 디바이더가 필요한 플러그인 지정
-                // 해당 플러그인 앞에 디바이더가 추가됨
-                dividers: ['fontFamily', 'heading', 'textalign', 'blockquote', 'codeblock', 'link']
+            // 기본 에디터 초기화
+            const editor1 = LiteEditor.init('#lite-editor', {
+                // 활성화할 플러그인
+                plugins: ['historyInit', 'undo', 'redo', 'fontFamily', 'heading', 'fontColor', 'highlight', 'bold', 'italic', 'underline', 'strike', 'align', 'formatIndent', 'blockquote', 'code', 'list', 'link', 'reset'],
+                // 구분선 위치 설정
+                dividers: [3, 4, 7, 11, 14, 17]
             });
             
             // 디버그 정보 표시

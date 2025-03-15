@@ -1,0 +1,235 @@
+/* LiteEditor Core Styles - 에디터 핵심 스타일 */
+
+.lite-editor {
+  width: 100%; /* 전체 영역으로 수정 */
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.lite-editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap; /* 필요시 줄바꿈 */
+  min-height: 36px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%; /* 전체 너비 사용 */
+}
+
+.lite-editor-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  margin: 0 2px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative; /* 상대 위치 지정 */
+  padding: 0;
+  min-width: 28px;
+}
+
+/* Material Icons 스타일링 */
+.lite-editor-button .material-icons {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+/* Material Icons 기본 스타일링 - 클래스에 직접 적용 */
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
+  /* 기본 아이콘 렌더링 지원 */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+}
+
+.lite-editor-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.lite-editor-button.active {
+  color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.1);
+}
+
+.lite-editor-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background-color: #e0e0e0;
+}
+
+.lite-editor-content {
+  padding: 12px;
+  min-height: 120px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  overflow: auto;
+  flex: 1; /* 남은 공간 차지 */
+  width: 100%; /* 전체 너비 사용 */
+}
+
+/* 선택 영역 스타일 */
+.lite-editor-content ::selection {
+  background: rgba(0, 120, 215, 0.4) !important;
+  color: inherit !important;
+}
+
+.lite-editor-content:empty:before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
+/* 블럭 요소 기본 스타일 */
+.lite-editor-content h1, 
+.lite-editor-content h2, 
+.lite-editor-content h3, 
+.lite-editor-content h4, 
+.lite-editor-content h5, 
+.lite-editor-content h6 {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* 각 헤딩 태그별 폰트 크기 설정 */
+.lite-editor-content h1 {
+  font-size: 2em;
+}
+
+.lite-editor-content h2 {
+  font-size: 1.5em;
+}
+
+.lite-editor-content h3 {
+  font-size: 1.17em;
+}
+
+.lite-editor-content h4 {
+  font-size: 1em;
+}
+
+.lite-editor-content h5 {
+  font-size: 0.83em;
+}
+
+.lite-editor-content h6 {
+  font-size: 0.67em;
+}
+
+.lite-editor-content p {
+  margin-top: 0;
+  margin-bottom: 0.85em;
+}
+
+.lite-editor-content blockquote {
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 3px solid #e1e4e8;
+  color: #6a737d;
+}
+
+.lite-editor-content pre {
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  padding: 16px;
+  overflow: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 85%;
+  line-height: 1.45;
+  margin-bottom: 1em;
+}
+
+.lite-editor-content code {
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 85%;
+  margin: 0;
+  padding: 0.2em 0.4em;
+}
+
+.lite-editor-content ul, 
+.lite-editor-content ol {
+  margin-top: 0;
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.lite-editor-content li + li {
+  margin-top: 0.25em;
+}
+
+/* 링크 스타일 */
+.lite-editor-content a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.lite-editor-content a:hover {
+  text-decoration: underline;
+}
+
+/* 테이블 스타일 */
+.lite-editor-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.lite-editor-content table th,
+.lite-editor-content table td {
+  border: 1px solid #ddd;
+  padding: 6px 13px;
+}
+
+.lite-editor-content table th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+/* 이미지 스타일 */
+.lite-editor-content img {
+  max-width: 100%;
+  height: auto;
+}
