@@ -10,6 +10,7 @@
       // 컬러 컨테이너 생성
       const colorContainer = document.createElement('div');
       colorContainer.className = 'lite-editor-button';
+      colorContainer.setAttribute('title', 'Font Color');
       
       
       // 아이콘 추가

@@ -40,6 +40,30 @@
                     <li><strong>웹 표준 준수</strong>: JS와 CSS만으로 구현되어 호환성이 뛰어납니다.</li>
                     <li><strong>반응형 디자인</strong>: 모든 화면 크기에 맞게 조정됩니다.</li>
                 </ul>
+                <p>굴림체</p>
+                <p>바탕체</p>
+                <p>맑은 고딕</p>
+                <p>Noto Sans KR</p>
+                <p>나눔고딕</p>
+                <p>서울고딕</p>
+
+                <pre>
+                    @Controller
+                    public class HomeController {
+
+                        @GetMapping("/home")
+                        public String home(Model model) {
+                            model.addAttribute("message", "Welcome to RabbitMQ Sample!");
+                            return "home"; // src/main/resources/templates/home.html 파일을 찾음
+                        }
+
+                        @GetMapping("/news")
+                        public String news(Model model) {
+                            model.addAttribute("message", "Welcome to RabbitMQ News Sample!");
+                            return "news";
+                        }
+                    }
+                </pre>
 
                 <h2>지원 서식</h2>
                 <ul>
