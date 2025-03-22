@@ -28,9 +28,10 @@
       // 자주 사용하는 색상 목록
       const colors = [
         '#000000', '#666666', '#999999', '#b7b7b7', '#d9d9d9', '#efefef', '#ffffff', 
-        '#ff0000', '#FF00FF', '#f44336', '#ff9c00', '#ffa723', '#ffacb0', '#ffe2e3',  
-        '#9c00ff', '#4caf50', '#00bcd4', '#00ffff', '#00ff00', '#93ccff', '#59b4ff', 
-        '#2196f3', '#107aea', '#0000ff', '#fbffa9', '#ffff00', '#ffea00', '#e9d201'
+        '#ffdcdc', '#ffbfbf', '#ff9292', '#ff5454', '#ff0000', '#db0000', '#b20000',
+        '#d5ebff', '#b3d8ff', '#85bcff', '#5692ff', '#2f67ff', '#002aff', '#102d9f',
+        '#eaffe4', '#d0ffc4', '#6bff50', '#15e600', '#0cb800', '#0d6d07', '#003400',
+        '#f9ffc1', '#f8ff86', '#efee03', '#ffea00',  '#d1ae00', '#a67d02', '#89610a'
       ];
       
       // 드롭다운 메뉴 생성
@@ -105,14 +106,16 @@
         document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
           if (menu !== dropdownMenu) {
             menu.classList.remove('show');
+            menu.style.display = 'none';
           }
         });
         
-        // 이 드롭다운 토글
-        dropdownMenu.classList.toggle('show');
+        // 이 드롭다운 토글 (토글 결과값 확인)
+        const isShowing = dropdownMenu.classList.toggle('show');
         
-        // 드롭다운 위치 조정
-        if (dropdownMenu.classList.contains('show')) {
+        // 드롭다운 위치 조정 (토글 상태에 따라 처리)
+        if (isShowing) {
+          // 드롭다운이 표시되는 경우
           const buttonRect = colorContainer.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = buttonRect.left + 'px';
@@ -121,6 +124,13 @@
           dropdownMenu.style.pointerEvents = 'auto';
           dropdownMenu.style.display = 'block';
           dropdownMenu.style.zIndex = '99999';
+          console.log('Font color dropdown opened');
+        } else {
+          // 드롭다운이 닫히는 경우
+          dropdownMenu.style.display = 'none';
+          dropdownMenu.style.visibility = 'hidden';
+          dropdownMenu.style.opacity = '0';
+          console.log('Font color dropdown closed by toggle');
         }
         
         // 선택 영역 복원
@@ -129,15 +139,22 @@
         }
       });
       
-      // 바디 클릭 시 드롭다운 닫기
-      const closeColorDropdown = () => {
-        if (dropdownMenu.classList.contains('show')) {
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
+      // 바디 클릭 시 드롭다운 닫기 (개선된 버전)
+      const closeColorDropdown = (e) => {
+        // 팔레트 영역이나 컬러 버튼 클릭이 아닌 경우에만 닫기
+        if (!dropdownMenu.contains(e.target) && !colorContainer.contains(e.target)) {
+          if (dropdownMenu.classList.contains('show')) {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            dropdownMenu.style.visibility = 'hidden';
+            dropdownMenu.style.opacity = '0';
+            console.log('Font color dropdown closed by body click');
+          }
         }
       };
       
-      document.body.addEventListener('click', closeColorDropdown);
+      // 전역 문서에 이벤트 리스너 추가 (캡처 단계에서)
+      document.addEventListener('click', closeColorDropdown, true);
       
       return colorContainer;
     }

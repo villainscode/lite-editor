@@ -11,11 +11,11 @@
       const highlightContainer = document.createElement('div');
       highlightContainer.className = 'lite-editor-button';
       
-      
       // 아이콘 추가
       const icon = document.createElement('i');
       icon.className = 'material-icons';
       icon.textContent = 'format_color_fill';
+      highlightContainer.setAttribute('title', 'Highlight');
       highlightContainer.appendChild(icon);
       
       // 선택된 색상 표시기
@@ -34,7 +34,7 @@
       const highlightColors = [
         '#ffff00', '#ffffcc', '#ffcc00', '#ffecb3', '#e6ffcc', 
         '#ccffcc', '#ccffff', '#cce6ff', '#ccccff', '#e6ccff',
-        '#ffccff', '#ffcce6', '#ffd9cc'
+        '#ffccff', '#ffcce6', '#ffd9cc', '#d9d9d9'
       ];
       
       // 색상 그리드 생성
@@ -80,18 +80,6 @@
         colorGrid.appendChild(colorCell);
       });
       
-      // 'None' 옵션 추가 (하이라이트 제거)
-      const noneOption = document.createElement('div');
-      noneOption.className = 'lite-editor-color-cell lite-editor-color-none';
-      noneOption.textContent = 'None';
-      noneOption.style.textAlign = 'center';
-      noneOption.addEventListener('click', () => {
-        document.execCommand('hiliteColor', false, 'transparent');
-        colorIndicator.style.backgroundColor = 'transparent';
-        colorIndicator.style.border = '1px solid #ccc';
-        dropdownMenu.classList.remove('show');
-      });
-      colorGrid.appendChild(noneOption);
       
       // 드롭다운 메뉴를 document.body에 추가
       document.body.appendChild(dropdownMenu);
@@ -101,27 +89,32 @@
         e.stopPropagation();
       });
       
-      // 버튼 클릭 시 드롭다운 표시/숨김
+      // 버튼 클릭 시 드롭다운 표시/숨김 (fontColor 플러그인과 동일하게 구현)
       highlightContainer.addEventListener('click', (e) => {
+        e.preventDefault(); // 기본 동작 방지
         e.stopPropagation();
         
         // 현재 선택 영역 저장
         if (window.liteEditorSelection) {
           window.liteEditorSelection.save();
+          // 해딩 플러그인처럼 선택 영역 복원
+          window.liteEditorSelection.restore();
         }
         
         // 다른 모든 드롭다운 닫기
         document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
           if (menu !== dropdownMenu) {
             menu.classList.remove('show');
+            menu.style.display = 'none';
           }
         });
         
-        // 현재 드롭다운 토글
-        dropdownMenu.classList.toggle('show');
+        // 현재 드롭다운 토글 (토글 결과값 확인)
+        const isShowing = dropdownMenu.classList.toggle('show');
         
-        // 드롭다운 메뉴 위치 조정
-        if (dropdownMenu.classList.contains('show')) {
+        // 드롭다운 메뉴 위치 조정 (토글 상태에 따라 처리)
+        if (isShowing) {
+          // 드롭다운이 표시되는 경우
           const buttonRect = highlightContainer.getBoundingClientRect();
           
           // 절대 위치로 계산
@@ -134,20 +127,34 @@
           dropdownMenu.style.pointerEvents = 'auto';
           dropdownMenu.style.display = 'block';
           dropdownMenu.style.zIndex = '99999';
+          console.log('Highlight dropdown opened');
+        } else {
+          // 드롭다운이 닫히는 경우
+          dropdownMenu.style.display = 'none';
+          dropdownMenu.style.visibility = 'hidden';
+          dropdownMenu.style.opacity = '0';
+          console.log('Highlight dropdown closed by toggle');
         }
         
         console.log('드롭다운 상태:', dropdownMenu.classList.contains('show') ? '열림' : '닫힘');
       });
       
-      // 바디 클릭 시 드롭다운 닫기
-      const closeHighlightDropdown = () => {
-        if (dropdownMenu.classList.contains('show')) {
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
+      // 바디 클릭 시 드롭다운 닫기 (개선된 버전)
+      const closeHighlightDropdown = (e) => {
+        // 팔레트 영역이나 하이라이트 버튼 클릭이 아닌 경우에만 닫기
+        if (!dropdownMenu.contains(e.target) && !highlightContainer.contains(e.target)) {
+          if (dropdownMenu.classList.contains('show')) {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            dropdownMenu.style.visibility = 'hidden';
+            dropdownMenu.style.opacity = '0';
+            console.log('Highlight dropdown closed by body click');
+          }
         }
       };
       
-      document.body.addEventListener('click', closeHighlightDropdown);
+      // 전역 문서에 이벤트 리스너 추가 (캡처 단계에서)
+      document.addEventListener('click', closeHighlightDropdown, true);
       
       return highlightContainer;
     }
