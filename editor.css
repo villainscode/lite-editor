@@ -325,3 +325,14 @@
     width: 100%;
   }
 }
+/* 체크박스 스타일 */
+.lite-editor-checkbox {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* 체크리스트 스타일 */
+ul.lite-editor-checklist {
+  list-style-type: none;
+  padding-left: 20px;
+}
