@@ -132,40 +132,98 @@
       return sel && sel.rangeCount > 0 && !sel.isCollapsed;
     }
     
-    // 6. 안정적인 실행을 위한 적절한 지연 시간 설정
+    // 6. 현재 선택이 code 태그 내에 있는지 확인하는 함수
+    function isSelectionInCode() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+      
+      let node = sel.anchorNode;
+      while (node && node !== contentArea) {
+        if (node.nodeName && node.nodeName.toLowerCase() === 'code') {
+          return true;
+        }
+        node = node.parentNode;
+      }
+      return false;
+    }
+    
+    // 7. 선택된 HTML 가져오기
+    function getSelectedHtml() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return '';
+      
+      const range = sel.getRangeAt(0);
+      const container = document.createElement('div');
+      container.appendChild(range.cloneContents());
+      return container.innerHTML;
+    }
+    
+    // 8. 안정적인 실행을 위한 적절한 지연 시간 설정
     setTimeout(function executeCommand() {
       try {
-        // 7. 선택 영역 복원
+        // 9. 선택 영역 복원
         if (window.liteEditorSelection) {
           const restored = window.liteEditorSelection.restore();
           
-          // 8. 안정적인 명령 실행 순서 보장
+          // 10. 안정적인 명령 실행 순서 보장
           setTimeout(function() {
             try {
-              // 9. 모바일 브라우저에서도 작동하도록 Range 확인
+              // 11. 모바일 브라우저에서도 작동하도록 Range 확인
               if (!isSelectionValid()) {
                 // 선택이 유효하지 않으면 다시 복원 시도
                 window.liteEditorSelection.restore();
               }
               
-              // 10. 추가 포커스 유지(일부 브라우저에서 필요)
+              // 12. 추가 포커스 유지(일부 브라우저에서 필요)
               contentArea.focus();
               
-              // 11. 명령 실행 - code 태그에 대한 특별 처리
-              if (document.queryCommandSupported('formatBlock')) {
-                document.execCommand('formatBlock', false, '<CODE>');
-              } else {
-                // 폴백: code 태그로 대체
-                const selectedText = document.getSelection().toString();
-                document.execCommand('insertHTML', false, '<code>' + selectedText + '</code>');
-              }
+              // 13. code 태그 토글 적용
+              const isInCode = isSelectionInCode();
               
-              // 12. 선택 영역 유지를 위한 추가 작업
-              setTimeout(function() {
-                // 13. Selection.anchorNode와 focusNode 상태 확인
+              if (isInCode) {
+                // 이미 code 태그 내부에 있다면 서식 제거
+                // 부모 code 태그를 찾아 내용만 유지하고 태그는 제거
                 const sel = window.getSelection();
                 if (sel && sel.rangeCount > 0) {
-                  // 14. 선택이 유효한지 확인
+                  const range = sel.getRangeAt(0);
+                  
+                  // 선택 영역의 공통 조상 요소 찾기
+                  let node = range.commonAncestorContainer;
+                  while (node && node !== contentArea) {
+                    if (node.nodeName && node.nodeName.toLowerCase() === 'code') {
+                      // code 태그의 내용을 유지하면서 태그만 제거
+                      const docFrag = document.createDocumentFragment();
+                      const children = Array.from(node.childNodes);
+                      children.forEach(child => docFrag.appendChild(child.cloneNode(true)));
+                      
+                      const parentNode = node.parentNode;
+                      parentNode.replaceChild(docFrag, node);
+                      
+                      // 새로운 선택 영역 설정
+                      const newRange = document.createRange();
+                      newRange.setStartBefore(docFrag.firstChild);
+                      newRange.setEndAfter(docFrag.lastChild);
+                      sel.removeAllRanges();
+                      sel.addRange(newRange);
+                      break;
+                    }
+                    node = node.parentNode;
+                  }
+                }
+              } else {
+                // code 태그 내부가 아니라면 선택 영역을 code 태그로 감싸기
+                const selectedHtml = getSelectedHtml();
+                
+                // HTML 구조를 보존하면서 code 태그 적용
+                document.execCommand('insertHTML', false, '<code>' + selectedHtml + '</code>');
+              }
+              
+              // 14. 선택 영역 유지를 위한 추가 작업
+              setTimeout(function() {
+                // 15. Selection.anchorNode와 focusNode 상태 확인
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0) {
+                  // 16. 선택이 유효한지 확인
                   if (sel.anchorNode && sel.focusNode) {
                     // 포커스 유지
                     contentArea.focus();
@@ -175,7 +233,7 @@
                   }
                 }
                 
-                // 15. 처리 상태 플래그 제거
+                // 17. 처리 상태 플래그 제거
                 buttonElement.removeAttribute('data-processing');
                 console.log('Code 서식 적용 완료');
               }, 10);
