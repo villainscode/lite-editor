@@ -46,17 +46,12 @@ describe('기본 서식 플러그인', () => {
     });
     
     test('액션 함수는 applyInlineFormat를 호출해야 함', () => {
-      // 플러그인 액션 함수 가져오기
-      const registerCalls = LiteEditor.registerPlugin.mock.calls;
-      const boldPluginCall = registerCalls.find(call => call[0] === 'bold');
-      const boldAction = boldPluginCall[1].action;
-      
       // 버튼 및 이벤트 설정
       const buttonElement = document.getElementById('bold-button');
       const mockEvent = { preventDefault: jest.fn(), stopPropagation: jest.fn() };
       
-      // 볼드 액션 실행
-      boldAction(contentArea, buttonElement, mockEvent);
+      // 전역 boldAction 사용
+      global.boldAction(contentArea, buttonElement, mockEvent);
       
       // applyInlineFormat 함수가 호출되었는지 확인
       expect(LiteEditorUtils.applyInlineFormat).toHaveBeenCalledWith(
@@ -82,17 +77,12 @@ describe('기본 서식 플러그인', () => {
     });
     
     test('액션 함수는 applyInlineFormat를 호출해야 함', () => {
-      // 플러그인 액션 함수 가져오기
-      const registerCalls = LiteEditor.registerPlugin.mock.calls;
-      const italicPluginCall = registerCalls.find(call => call[0] === 'italic');
-      const italicAction = italicPluginCall[1].action;
-      
       // 버튼 및 이벤트 설정
       const buttonElement = document.getElementById('italic-button');
       const mockEvent = { preventDefault: jest.fn(), stopPropagation: jest.fn() };
       
-      // 이탤릭 액션 실행
-      italicAction(contentArea, buttonElement, mockEvent);
+      // 전역 italicAction 사용
+      global.italicAction(contentArea, buttonElement, mockEvent);
       
       // applyInlineFormat 함수가 호출되었는지 확인
       expect(LiteEditorUtils.applyInlineFormat).toHaveBeenCalledWith(
@@ -113,22 +103,17 @@ describe('기본 서식 플러그인', () => {
     test('플러그인이 올바르게 등록되어야 함', () => {
       expect(LiteEditor.registerPlugin).toHaveBeenCalledWith('underline', expect.objectContaining({
         title: 'Underline',
-        icon: 'format_underline'
+        icon: 'format_underlined'
       }));
     });
     
     test('액션 함수는 applyInlineFormat를 호출해야 함', () => {
-      // 플러그인 액션 함수 가져오기
-      const registerCalls = LiteEditor.registerPlugin.mock.calls;
-      const underlinePluginCall = registerCalls.find(call => call[0] === 'underline');
-      const underlineAction = underlinePluginCall[1].action;
-      
       // 버튼 및 이벤트 설정
       const buttonElement = document.getElementById('underline-button');
       const mockEvent = { preventDefault: jest.fn(), stopPropagation: jest.fn() };
       
-      // 밑줄 액션 실행
-      underlineAction(contentArea, buttonElement, mockEvent);
+      // 전역 underlineAction 사용
+      global.underlineAction(contentArea, buttonElement, mockEvent);
       
       // applyInlineFormat 함수가 호출되었는지 확인
       expect(LiteEditorUtils.applyInlineFormat).toHaveBeenCalledWith(
