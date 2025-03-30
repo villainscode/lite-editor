@@ -9,8 +9,8 @@
     title: 'Code',
     icon: 'code',
     action: function(contentArea, buttonElement, event) {
-      // applyInlineFormat 함수를 활용하여 코드 중복 제거
-      LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, 'code', event);
+      // 코드 태그는 특별한 처리가 필요하므로 전용 함수 사용
+      LiteEditorUtils.applyCodeFormat(contentArea, buttonElement, event);
     }
   });
 })();
