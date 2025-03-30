@@ -1,211 +1,61 @@
 /**
- * LiteEditor Format Plugins
- * 텍스트 서식 관련 플러그인 (굵게, 기울임, 밑줄, 취소선)
+ * LiteEditor Format - Legacy Format File
+ * 이 파일은 후반 호환을 위해 유지합니다.
+ * 실제 기능은 각각 서식 플러그인 파일로 분리되었습니다.
  */
 
 (function() {
-  // 굵게 플러그인
-  LiteEditor.registerPlugin('bold', {
-    title: 'Bold',
-    icon: 'format_bold',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        // 현재 선택범위가 이미 b 태그 안에 있는지 확인
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) { // Text node
-          container = container.parentNode;
-        }
-        
-        // 이미 굵게 태그가 적용된 경우 해제
-        if (container.nodeName === 'B' || container.nodeName === 'STRONG' || 
-            container.closest('b') || container.closest('strong')) {
-          // 기존 태그 제거를 위해 execCommand 사용
-          document.execCommand('removeFormat', false, null);
-        } else {
-          // 새 B 태그 생성 및 적용
-          const strong = document.createElement('STRONG');
-          strong.appendChild(range.extractContents());
-          range.insertNode(strong);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
+  // 이미 각 플러그인이 파일 분리되어 있으므로 필요한 호환성 코드만 유지
+
+  // 플러그인이 실제로 분리된 이후에도 format.js를 사용하는 기존 코드를 위해
+  // 각 플러그인을 호출할 수 있도록 처리
+  const getPlugin = function(name) {
+    return LiteEditor.plugins[name];
+  };
+
+  // 플러그인 인터페이스 호환성 유지
+  const formatActions = {
+    'bold': function(contentArea) {
+      const boldPlugin = getPlugin('bold');
+      if (boldPlugin && boldPlugin.action) {
+        boldPlugin.action(contentArea);
+      }
+    },
+    'italic': function(contentArea) {
+      const italicPlugin = getPlugin('italic');
+      if (italicPlugin && italicPlugin.action) {
+        italicPlugin.action(contentArea);
+      }
+    },
+    'underline': function(contentArea) {
+      const underlinePlugin = getPlugin('underline');
+      if (underlinePlugin && underlinePlugin.action) {
+        underlinePlugin.action(contentArea);
+      }
+    },
+    'strike': function(contentArea) {
+      const strikePlugin = getPlugin('strike');
+      if (strikePlugin && strikePlugin.action) {
+        strikePlugin.action(contentArea);
+      }
+    },
+    'code': function(contentArea) {
+      const codePlugin = getPlugin('code');
+      if (codePlugin && codePlugin.action) {
+        codePlugin.action(contentArea);
+      }
+    },
+    'blockquote': function(contentArea) {
+      const blockquotePlugin = getPlugin('blockquote');
+      if (blockquotePlugin && blockquotePlugin.action) {
+        blockquotePlugin.action(contentArea);
       }
     }
-  });
-  
-  // 기울임 플러그인
-  LiteEditor.registerPlugin('italic', {
-    title: 'Italic',
-    icon: 'format_italic',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) {
-          container = container.parentNode;
-        }
-        
-        // 이미 기울임 태그가 적용된 경우 해제
-        if (container.nodeName === 'I' || container.nodeName === 'EM' || 
-            container.closest('i') || container.closest('em')) {
-          document.execCommand('removeFormat', false, null);
-        } else {
-          // 새 I 태그 생성 및 적용
-          const italic = document.createElement('EM');
-          italic.appendChild(range.extractContents());
-          range.insertNode(italic);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-    }
-  });
-  
-  // 밑줄 플러그인
-  LiteEditor.registerPlugin('underline', {
-    title: 'Underline',
-    icon: 'format_underlined',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) {
-          container = container.parentNode;
-        }
-        
-        // 이미 밑줄 태그가 적용된 경우 해제
-        if (container.nodeName === 'U' || container.closest('u')) {
-          document.execCommand('removeFormat', false, null);
-        } else {
-          // 새 U 태그 생성 및 적용
-          const underline = document.createElement('U');
-          underline.appendChild(range.extractContents());
-          range.insertNode(underline);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-    }
-  });
-  
-  // 취소선 플러그인
-  LiteEditor.registerPlugin('strike', {
-    title: 'Strikethrough',
-    icon: 'strikethrough_s',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) {
-          container = container.parentNode;
-        }
-        
-        // 이미 취소선 태그가 적용된 경우 해제
-        if (container.nodeName === 'STRIKE' || container.nodeName === 'S' || 
-            container.closest('strike') || container.closest('s')) {
-          document.execCommand('removeFormat', false, null);
-        } else {
-          // 새 S 태그 생성 및 적용
-          const strike = document.createElement('S');
-          strike.appendChild(range.extractContents());
-          range.insertNode(strike);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-    }
-  });
-  
-  // 코드 플러그인
-  LiteEditor.registerPlugin('code', {
-    title: 'Code',
-    icon: 'code',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) {
-          container = container.parentNode;
-        }
-        
-        // 이미 코드 태그가 적용된 경우 제거
-        if (container.nodeName === 'CODE' || container.closest('code')) {
-          document.execCommand('removeFormat', false, null);
-        } else {
-          // 새 CODE 태그 생성 및 적용
-          const code = document.createElement('CODE');
-          code.appendChild(range.extractContents());
-          range.insertNode(code);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-    }
-  });
-  
-  // 인용구 플러그인
-  LiteEditor.registerPlugin('blockquote', {
-    title: 'Blockquote',
-    icon: 'format_quote',
-    action: function(contentArea) {
-      // Range API를 사용한 DOM 조작
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
-        
-        // 텍스트 노드인 경우 부모 노드 확인
-        if (container.nodeType === 3) {
-          container = container.parentNode;
-        }
-        
-        // 이미 인용구 태그가 적용된 경우 해제
-        if (container.nodeName === 'BLOCKQUOTE' || container.closest('blockquote')) {
-          document.execCommand('formatBlock', false, 'P');
-        } else {
-          // 새 BLOCKQUOTE 태그 생성 및 적용
-          const blockquote = document.createElement('BLOCKQUOTE');
-          blockquote.appendChild(range.extractContents());
-          range.insertNode(blockquote);
-          
-          // 선택 영역 정리
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-    }
-  });
-  
-  // reset 플러그인은 reset.js로 분리했습니다.
+  };
+
+  // 호환성을 위한 포맷 행위 객체 노출
+  window.LiteEditorFormatActions = formatActions;
+
+  // 로그 메세지
+  console.info('LiteEditor: 서식 기능이 플러그인으로 분리되었습니다. 각 서식 플러그인 파일을 사용하세요.');
 })();

@@ -546,15 +546,6 @@
           // 7. UI 업데이트 - 현재 선택된 폰트 표시
           fontText.textContent = font.name;
           console.log('폰트 적용 완료 :', font.name);
-          
-          // 8. 적용된 태그 HTML 시각화 (디버깅용)
-          console.log('%c적용된 태그 HTML 시각화', 'background: #e91e63; color: white; font-size: 16px; padding: 5px;');
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const selectedText = selection.toString();
-            const tagHTML = `<font face="${font.value}">${selectedText}</font>`;
-            console.log('%c' + tagHTML, 'font-size: 16px; background: #f8bbd0; padding: 3px; border: 1px solid #000;');
-          }
         });
         
         dropdownMenu.appendChild(fontItem);

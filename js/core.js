@@ -400,34 +400,35 @@ const LiteEditor = (function() {
           buttonElement.appendChild(iconElement);
         }
         
-        // 클릭 이벤트 추가
         buttonElement.addEventListener('click', (e) => {
           e.preventDefault();
-          e.stopPropagation(); // 이벤트 버블링 방지
+          e.stopPropagation();
           
-          // 1. 버튼 클릭 전 선택 영역 저장
-          let isActiveSelection = false;
-          if (window.liteEditorSelection) {
-            isActiveSelection = window.liteEditorSelection.save();
-            console.log('버튼 클릭 시 선택 영역 저장:', isActiveSelection);
+          // 이미 처리 중인 버튼인지 확인
+          if (buttonElement.hasAttribute('data-processing')) {
+            console.log('이미 처리 중인 작업이 있음');
+            return;
           }
           
-          // 2. 플러그인 액션 실행 (저장된 선택 영역 정보 유지)
+          // 선택 영역 저장
+          if (window.liteEditorSelection) {
+            window.liteEditorSelection.save();
+          }
+          
+          // 이벤트 객체 전달!
           if (currentPlugin && typeof currentPlugin.action === 'function') {
-            currentPlugin.action(contentArea, buttonElement);
+            currentPlugin.action(contentArea, buttonElement, e);
           }
           
-          // 3. 에디터에 포커스 및 선택 영역 복원
-          contentArea.focus();
-          if (window.liteEditorSelection) {
-            setTimeout(() => {
-              window.liteEditorSelection.restore();
-            }, 10);
-          }
-          
-          // TextArea인 경우 원본 요소 업데이트
-          if (originalElement && originalElement.tagName === 'TEXTAREA') {
-            originalElement.value = contentArea.innerHTML;
+          // 처리 중 플래그가 없는 경우에만 복원 (인라인 태그와 그 외 플러그인 구분)
+          if (!buttonElement.hasAttribute('data-processing')) {
+            // 일반 플러그인 - 코어에서 선택 영역 복원
+            contentArea.focus();
+            if (window.liteEditorSelection) {
+              setTimeout(() => {
+                window.liteEditorSelection.restore();
+              }, 10);
+            }
           }
         });
         
@@ -450,37 +451,63 @@ const LiteEditor = (function() {
     let savedSelection = null;
     let selectionActive = false; // 활성화된 선택 영역이 있는지 추적
     
-    // 선택 영역 저장 함수
+    // 선택 영역 저장 함수 (MDN Selection API 기반 개선)
     const saveSelection = () => {
       try {
         const sel = window.getSelection();
-        if (sel.getRangeAt && sel.rangeCount) {
-          const range = sel.getRangeAt(0);
-          const containerRange = document.createRange();
-          containerRange.selectNodeContents(contentArea);
-          
-          // 선택된 영역이 에디터 내부인지 확인
-          const isWithinEditor = 
-            containerRange.compareBoundaryPoints(Range.START_TO_START, range) <= 0 && 
-            containerRange.compareBoundaryPoints(Range.END_TO_END, range) >= 0;
-          
-          if (isWithinEditor) {
-            savedSelection = range;
-            selectionActive = true;
-            return true;
-          } else {
-            // 에디터 바깥 선택은 처리하지 않음
-            selectionActive = false;
-            return false;
+        // 유효한 선택이 있는지 확인 (sel 자체가 null일 수 있음 고려)
+        if (!sel || sel.rangeCount === 0) {
+          selectionActive = false;
+          return false;
+        }
+        
+        // Range 가져오기
+        const range = sel.getRangeAt(0);
+        if (!range || !range.commonAncestorContainer) {
+          selectionActive = false;
+          return false;
+        }
+        
+        // 선택 영역이 에디터 내부에 있는지 확인
+        let node = range.commonAncestorContainer;
+        // 텍스트 노드인 경우 부모로 이동
+        if (node.nodeType === 3) {
+          node = node.parentNode;
+        }
+        
+        // DOM 트래버설로 에디터 내부 여부 확인
+        let isInEditor = false;
+        while (node) {
+          if (node === contentArea) {
+            isInEditor = true;
+            break;
           }
-        } else {
-          // 현재 선택 영역 체크
-          const isEditorActive = document.activeElement === contentArea;
-          if (isEditorActive) {
-            // 선택된 범위가 없지만 에디터가 활성화된 경우
-            selectionActive = true;
-            return selectionActive; // 실제 선택된 내용이 있는 경우에만 true 반환
+          if (node === document.body) break;
+          node = node.parentNode;
+        }
+        
+        if (isInEditor) {
+          // 복제본 저장 (중요!) - DOM 변경에 영향받지 않도록
+          savedSelection = range.cloneRange();
+          
+          // 선택 영역 활성화 상태 확인 (collapsed 속성 + 내용 확인)
+          selectionActive = !range.collapsed;
+          if (selectionActive) {
+            // 추가 검증: 실제 내용이 있는지 확인
+            const content = range.cloneContents();
+            if (content.textContent.trim() === '') {
+              // 텍스트 내용이 없는 경우 - 선택이 없는 것으로 간주
+              selectionActive = false;
+            }
           }
+          
+          return selectionActive;
+        }
+        
+        // 에디터 활성화 여부 확인
+        if (document.activeElement === contentArea) {
+          selectionActive = true;
+          return true;
         }
       } catch (e) {
         console.error('선택 영역 저장 중 오류:', e);
@@ -488,27 +515,63 @@ const LiteEditor = (function() {
       return false;
     };
     
-    // 선택 영역 복원 함수
+    // 선택 영역 복원 함수 (MDN Selection API 기반 개선)
     const restoreSelection = () => {
-      if (savedSelection) {
-        try {
-          // 에디터에 포커스 먼저 주기 (포커스 가 이미 있는지 확인하고 없으면 맞춰줌)
-          if (document.activeElement !== contentArea) {
-            contentArea.focus();
-          }
-          
-          // 선택 영역 복원
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(savedSelection);
-          
-          console.log('선택 영역 복원됨', '활성화됨:', selectionActive);
-          return selectionActive; // 활성화된 선택 영역이 있는 경우에만 true 반환
-        } catch (e) {
-          console.error('선택 영역 복원 중 오류:', e);
-        }
+      // savedSelection이 있는지 먼저 확인
+      if (!savedSelection) {
+        return false;
       }
-      return false;
+      
+      try {
+        // 저장된 Range가 유효한지 확인
+        if (!savedSelection.startContainer || !savedSelection.endContainer) {
+          console.warn('유효하지 않은 저장된 Range 객체');
+          return false;
+        }
+        
+        // 포커스 확인 및 설정 (포커스가 없으면 선택이 적용되지 않을 수 있음)
+        if (document.activeElement !== contentArea) {
+          contentArea.focus();
+          
+          // iOS와 일부 브라우저에서 포커스 실패 대비 지연
+          if (navigator.userAgent.match(/iPad|iPhone|iPod|Android/i)) {
+            // 모바일 장치에서는 충분한 지연 필요
+            setTimeout(() => applySelection(), 50);
+            return true;
+          }
+        }
+        
+        // 선택 영역 적용 하기 (함수로 분리하여 지연 실행 용이하게)
+        function applySelection() {
+          try {
+            // Selection 오브젝트 가져오기
+            const sel = window.getSelection();
+            if (!sel) {
+              console.warn('Selection 객체를 가져올 수 없음');
+              return false;
+            }
+            
+            // 현재 Range 모두 제거 후 저장된 Range 추가
+            // removeAllRanges와 addRange 사이에 지연이 없도록 연속적으로 실행
+            sel.removeAllRanges();
+            sel.addRange(savedSelection);
+            
+            // 개선된 선택 상태 확인
+            const currentState = !sel.isCollapsed;
+            console.log('선택 영역 복원됨:', currentState);
+            return currentState;
+          } catch (e) {
+            console.error('선택 영역 적용 중 오류:', e);
+            return false;
+          }
+        }
+        
+        // 즉시 실행 (모바일이 아닐 경우)
+        return applySelection();
+      } catch (e) {
+        console.error('선택 영역 복원 중 오류:', e);
+        return false;
+      }
     };
     
     // 선택 영역 가져오기 함수

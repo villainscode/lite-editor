@@ -7,7 +7,21 @@
   LiteEditor.registerPlugin('link', {
     title: 'Link',
     icon: 'link',
-    action: function(contentArea, buttonElement) {
+    action: function(contentArea, buttonElement, event) {
+      // 이벤트 전파 제어 (하이라이트 플러그인과 동일하게)
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      // 현재 선택 영역 저장
+      if (window.liteEditorSelection) {
+        window.liteEditorSelection.save();
+      }
+      
+      // 포커스 확인
+      contentArea.focus();
+      
       // 선택 영역 가져오기
       const selection = window.getSelection();
       const selectedText = selection.toString();
@@ -54,11 +68,22 @@
           if (selectedText) {
             // 표준 명령 사용 시도
             if (document.queryCommandSupported('createLink')) {
-              // 선택 영역 복원 및 링크 생성
+              // 링크 생성 시 선택 영역 복원 및 명령 실행
               if (window.liteEditorSelection) {
                 window.liteEditorSelection.restore();
               }
-              document.execCommand('createLink', false, url);
+              
+              // 하이라이트와 동일하게 지연 후 명령 실행
+              setTimeout(() => {
+                document.execCommand('createLink', false, url);
+                
+                // 선택 영역 재복원
+                setTimeout(() => {
+                  if (window.liteEditorSelection) {
+                    window.liteEditorSelection.restore();
+                  }
+                }, 10);
+              }, 50);
             } else {
               // 수동 링크 생성 (fallback)
               const linkHtml = '<a href="' + url + '" target="_blank">' + selectedText + '</a>';
@@ -84,10 +109,12 @@
         document.execCommand('unlink', false, null);
       }
       
-      // 선택 영역 재저장
-      if (window.liteEditorSelection) {
-        window.liteEditorSelection.save();
-      }
+      // 선택 영역 복원 유지
+      setTimeout(() => {
+        if (window.liteEditorSelection) {
+          window.liteEditorSelection.restore();
+        }
+      }, 10);
     }
   });
 })();

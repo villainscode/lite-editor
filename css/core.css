@@ -181,12 +181,21 @@
 }
 
 .lite-editor-content code {
-  background-color: rgba(27, 31, 35, 0.05);
+  background-color: rgb(223, 221, 221);
   border-radius: 3px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  font-size: 85%;
-  margin: 0;
-  padding: 0.2em 0.4em;
+  font-size: 90%;
+  margin: 3;
+  padding: 3px;
+}
+
+/* 하이라이트된 텍스트에 대한 스타일 */
+.lite-editor-content mark,
+.lite-editor-content [style*="background-color"] {
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 2px;
+  display: inline-block;
 }
 
 .lite-editor-content ul, 
