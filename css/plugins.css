@@ -55,7 +55,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #ddd;
 }
 
 .lite-editor-dropdown-item {
@@ -74,8 +74,26 @@
   text-decoration: none;
 }
 
+/* 정렬 드롭다운 전용 스타일 */
+.lite-editor-align-dropdown {
+  min-width: 48px !important;
+}
+
+.lite-editor-align-dropdown .lite-editor-dropdown-item {
+  padding: 8px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lite-editor-align-dropdown .lite-editor-dropdown-item:hover {
+  background-color: #e9e9e9;
+  color: #16181b;
+}
+
 .lite-editor-dropdown-item:hover {
-  background-color: #f8f9fa;
+  background-color: #e9e9e9;
   color: #16181b;
 }
 
@@ -97,6 +115,14 @@
   white-space: nowrap;
   position: relative; /* 상대적 위치 지정 */
   overflow: hidden;
+}
+
+/* 폰트 패밀리 드롭다운 구분선 스타일 */
+.lite-editor-font-divider {
+  border: 0;
+  border-top: 1px solid #ddd;
+  margin: 5px 10px;
+  height: 0;
 }
 
 .lite-editor-font-button:hover {

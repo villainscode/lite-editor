@@ -22,8 +22,8 @@
       
       // 드롭다운 메뉴 생성
       const alignDropdown = document.createElement('div');
-      alignDropdown.className = 'lite-editor-dropdown-menu';
-      alignDropdown.style.width = '120px';
+      alignDropdown.className = 'lite-editor-dropdown-menu lite-editor-align-dropdown';
+      alignDropdown.style.width = '48px';
       
       // 정렬 옵션 정의
       const alignOptions = [
@@ -39,17 +39,14 @@
         alignOption.className = 'lite-editor-dropdown-item';
         alignOption.setAttribute('data-command', option.command);
         
-        // 옵션 아이콘 추가
+        // 옵션 아이콘만 추가 (텍스트 제거)
         const optionIcon = document.createElement('i');
         optionIcon.className = 'material-icons';
         optionIcon.textContent = option.icon;
-        optionIcon.style.marginRight = '8px';
         alignOption.appendChild(optionIcon);
         
-        // 옵션 텍스트 추가
-        const optionText = document.createElement('span');
-        optionText.textContent = option.name;
-        alignOption.appendChild(optionText);
+        // 툴팁 제공을 위한 title 속성 추가
+        alignOption.setAttribute('title', option.name + ' Align');
         
         // 클릭 이벤트 추가
         alignOption.addEventListener('click', (e) => {

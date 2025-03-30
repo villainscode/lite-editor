@@ -395,6 +395,7 @@
       const fonts = [
         // 한글 폰트 그룹 (상단)
         { type: 'group_header', name: '한글 폰트' },
+        { type: 'divider' },
         { name: '바탕', value: 'Batang, Batangche, serif' },
         { name: '굴림', value: 'Gulim, sans-serif' },
         { name: '맑은 고딕', value: 'Malgun Gothic, AppleGothic, sans-serif' },
@@ -407,6 +408,7 @@
         
         // 코딩 폰트 그룹 (중단)
         { type: 'group_header', name: '코딩 폰트' },
+        { type: 'divider' },
         { name: 'IBM Plex Mono', value: 'IBM Plex Mono, monospace' },
         { name: 'Source Code Pro', value: 'Source Code Pro, monospace' },
         { name: 'JetBrains Mono', value: 'JetBrains Mono, monospace' },
@@ -419,6 +421,7 @@
         
         // 영문 폰트 그룹 (하단)
         { type: 'group_header', name: '영문 폰트' },
+        { type: 'divider' },
         { name: 'Arial', value: 'Arial, sans-serif' },
         { name: 'Helvetica', value: 'Helvetica, sans-serif' },
         { name: 'Times New Roman', value: 'Times New Roman, serif' },
@@ -435,9 +438,10 @@
         // 구분선 처리
         if (font.type === 'divider') {
           const divider = document.createElement('hr');
+          divider.className = 'lite-editor-font-divider';
+          // 인라인 스타일 일부 유지 (위치 관련)
           divider.style.margin = '5px 0';
-          divider.style.border = '0';
-          divider.style.borderTop = '1px solid #eee';
+          // 색상과 관련된 스타일은 CSS로 이동
           dropdownMenu.appendChild(divider);
           return;
         }
@@ -463,7 +467,7 @@
         
         // 호버 이벤트
         fontItem.addEventListener('mouseover', () => {
-          fontItem.style.backgroundColor = '#f0f0f0';
+          fontItem.style.backgroundColor = '#e9e9e9';
         });
         
         fontItem.addEventListener('mouseout', () => {
