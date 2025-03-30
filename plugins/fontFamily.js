@@ -168,11 +168,6 @@
       .lite-editor-content span[style*="JetBrains Mono"] { font-family: "JetBrains Mono", monospace !important; }
       .lite-editor-content span[style*="Source Code Pro"] { font-family: "Source Code Pro", monospace !important; }
       .lite-editor-content span[style*="Hack"] { font-family: Hack, monospace !important; }
-      
-      /* 디버깅용 스타일 - 기본 적용된 폰트 요소에 테두리 추가 */
-      .lite-editor-content font[face] {
-        outline: 1px solid #ff00ff;
-      }
     `;
     document.head.appendChild(styleElement);
   }
