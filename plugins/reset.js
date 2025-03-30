@@ -3,208 +3,183 @@
  * 선택된 텍스트의 모든 서식(인라인 및 블록 레벨)을 제거합니다.
  */
 (function() {
-  // 서식 초기화 플러그인 - 완전히 새로운 방식으로 구현
+  // 서식 초기화 플러그인
   LiteEditor.registerPlugin('reset', {
     title: 'Clear Formatting',
     icon: 'format_clear',
     action: function(contentArea) {
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-      
-      const range = selection.getRangeAt(0);
-      if (range.collapsed) return;
-      
-      // 선택된 텍스트 추출
-      const plainText = range.toString();
-      if (!plainText.trim()) return; // 빈 텍스트는 처리하지 않음
-      
-      // 디버깅 로그 추가
-      console.log('선택된 내용:', plainText);
-      
-      // 선택 영역을 포함하는 가장 가까운 역성 요소 찾기
-      // (이것은 다양한 중첩 레벨의 태그를 생략하기 위한 것임)
-      let container = range.commonAncestorContainer;
-      
-      // 텍스트 노드인 경우 부모로 이동
-      if (container.nodeType === Node.TEXT_NODE) {
-        container = container.parentNode;
-      }
-      
-      // 에디터 콘텐트 영역(최상위 컨테이너) 찾기
-      let editorContent = container;
-      while (editorContent && !editorContent.classList.contains('lite-editor-content')) {
-        editorContent = editorContent.parentNode;
-      }
-      
-      if (!editorContent) {
-        editorContent = contentArea; // 찾을 수 없으면 기본 contentArea 사용
-      }
-      
-      // **핵심** 새 접근방식: 선택 영역을 새로운 임시 레이어로 복사
-      // 하위 태그 구조를 모두 생략하고 완전히 새로운 P 태그를 생성
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '-9999px';
-      document.body.appendChild(tempDiv);
-      
-      // 순수 텍스트만 삽입
-      tempDiv.textContent = plainText;
-      
-      // 완전히 새로운 방식 - 순수 텍스트만 추출 후 새로운 요소로 대체
-      console.log('컨텐츠 바꾸기 방식으로 실행');
-      
-      // 1. 현재 선택된 순수 텍스트만 추출
-      const selectedText = range.toString().trim();
-      if (!selectedText) {
-        console.log('선택된 텍스트 없음');
-        return;
-      }
-      
-      console.log('선택된 텍스트:', selectedText);
-      
-      // 2. 선택 영역 저장 (기존 영역에 다시 삽입하기 위해)
-      const selectionRange = range.cloneRange();
-      
-      // 3. 선택된 영역의 내용을 완전히 삭제
-      selectionRange.deleteContents();
-      
-      // 4. 새로운 노드 생성 - 순수 텍스트만 포함
-      const newTextNode = document.createTextNode(selectedText);
-      
-      // 5. 새로운 p 태그 생성
-      const newParagraph = document.createElement('p');
-      newParagraph.appendChild(newTextNode);
-      
-      // 6. 아무런 스타일 없이 초기화 (원하는 기본 스타일만 설정)
-      newParagraph.style.margin = '0';
-      newParagraph.style.padding = '0';
-      
-      // 7. 새로운 노드를 원래 위치에 삽입
-      selectionRange.insertNode(newParagraph);
-      
-      // 3. 모든 스타일 압도적으로 초기화
-      const resetStyles = {
-        margin: '0', 
-        padding: '0',
-        textIndent: '0',
-        border: 'none',
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-        textDecoration: 'none',
-        textAlign: 'left',
-        backgroundColor: 'transparent',
-        color: 'inherit',
-        display: 'block',
-        lineHeight: 'normal',
-        fontSize: 'inherit',
-        fontFamily: 'inherit',
-        boxShadow: 'none',
-        position: 'static',
-        float: 'none',
-        clear: 'none',
-        listStyle: 'none',
-        borderSpacing: '0',
-        verticalAlign: 'baseline'
-      };
-      
-      // 스타일 적용
-      Object.assign(newP.style, resetStyles);
-      
-      // 4. 순수 텍스트 노드 생성
-      const textNode = document.createTextNode(plainText);
-      newP.appendChild(textNode);
-      
-      // 5. 새 P 태그 삽입
-      range.insertNode(newP);
-      
-      // 6. 임시 레이어 제거
-      document.body.removeChild(tempDiv);
-      
-      // 7. 새로 삽입된 요소에 추가 스타일 설정 (필요한 경우)
-      try {
-        // 새로 생성된 paragraphNode에 추가 스타일 설정을 할 수 있음
-        // 예: 기본 가로 정렬을 left로 강제 설정
-        if (newParagraph) {
-          // 만약 중앙정렬이나 다른 정렬이 유지되지 않도록 안전장치
-          newParagraph.style.textAlign = 'left';
-          
-          // 추가로 모든 스타일 및 클래스 제거 확인
-          newParagraph.removeAttribute('class');
-          newParagraph.removeAttribute('align');
-          
-          // 구글 스타일 글자 스타일 초기화
-          Object.assign(newParagraph.style, resetStyles);
-          
-          console.log('새 노드 스타일 초기화 완료');
-        }
-        
-        // 8. 선택 영역 재설정
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        const newRange = document.createRange();
-        newRange.selectNodeContents(newParagraph);
-        selection.addRange(newRange);
-        
-        console.log('선택 영역 재설정 완료');
-
-        // 이제 만약 적용된 요소가 span이나 다른 인라인 요소였다면 p로 변환
-        // 이 과정은 document.execCommand('formatBlock', false, 'p')에서 수행
-        
-        // 추가로 선택된 요소의 하위 요소들 처리는 더 이상 필요 없음
-      } catch (e) {
-        console.error('태그 정리 중 오류:', e);
-      }
-      
-      // 8. 추가 안정화 조치 - 지연을 통해 추가 점검
-      setTimeout(() => {
-        try {
-          // 현재 선택 확인
-          const currentSelection = window.getSelection();
-          if (!currentSelection.rangeCount) return;
-          
-          // 현재 선택된 요소를 찾아서 추가 검사
-          const focusNode = currentSelection.focusNode;
-          let currentNode = focusNode;
-          
-          // 텍스트 노드면 부모로 이동
-          if (currentNode.nodeType === Node.TEXT_NODE) {
-            currentNode = currentNode.parentNode;
-          }
-          
-          console.log('추가 점검 노드 태그:', currentNode.tagName);
-          
-          // center 정렬이 여전히 남아있는지 확인
-          if (currentNode.style && (currentNode.style.textAlign === 'center' || 
-              currentNode.getAttribute('align') === 'center')) {
-            console.log('center 정렬 발견 - 강제 제거');
-            currentNode.style.textAlign = 'left';
-            currentNode.removeAttribute('align');
-          }
-          
-          // 중요: 필요한 경우 부모 노드도 확인
-          if (currentNode.parentNode && currentNode.parentNode.tagName !== 'BODY') {
-            const parentNode = currentNode.parentNode;
-            if (parentNode.style && (parentNode.style.textAlign === 'center' || 
-                parentNode.getAttribute('align') === 'center')) {
-              console.log('부모에서 center 정렬 발견 - 강제 제거');
-              parentNode.style.textAlign = 'left';
-              parentNode.removeAttribute('align');
-            }
-          }
-          
-          // 메모: 더 이상 부모 노드 가져오기/바꾸기 로직이 필요하지 않음
-          // 정확한 범위만 처리하기 때문
-        } catch (e) {
-          console.error('추가 안정화 조치 오류:', e);
-        }
-      }, 10);
-      
-      // 9. 최종 아웃풋을 사용자가 확인할 수 있도록 함
-      console.log('순수 텍스트만 남기기 방식으로 완전히 서식 초기화 완료');
-      
-      // 10. 포커스 유지
-      contentArea.focus();
+      // 서식 초기화 함수 호출
+      resetFormattingInSelection(contentArea);
+      return true;
     }
   });
+  
+  /**
+   * 선택 영역의 서식을 초기화하는 함수
+   */
+  function resetFormattingInSelection(contentArea) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) return;
+    
+    // 포커스 확인
+    if (document.activeElement !== contentArea) {
+      contentArea.focus();
+    }
+    
+    try {
+      // 시작 전 범위의 정보를 저장
+      const startContainer = range.startContainer;
+      const startOffset = range.startOffset;
+      const endContainer = range.endContainer;
+      const endOffset = range.endOffset;
+      
+      // 텍스트 콘텐츠만 추출 (나중에 사용할 수 있음)
+      const plainText = range.toString();
+      
+      // 1. 먼저 브라우저 내장 removeFormat 명령 실행
+      document.execCommand('removeFormat');
+      
+      // 2. removeFormat으로 처리되지 않는 특수 인라인 태그 제거
+      const tagsToRemove = ['SUB', 'SUP', 'STRIKE', 'CODE', 'FONT', 'A', 'SPAN', 'BLOCKQUOTE', "H1", "H2", "H3"];
+      
+      // 현재 선택 영역 확인 (removeFormat 후 선택 영역이 변경되었을 수 있음)
+      if (selection.rangeCount === 0) {
+        console.log('선택 영역이 사라졌습니다. 복원 시도...');
+        
+        // 원래 선택 영역 복원 시도
+        const newRange = document.createRange();
+        try {
+          newRange.setStart(startContainer, startOffset);
+          newRange.setEnd(endContainer, endOffset);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } catch (e) {
+          console.error('선택 영역 복원 실패:', e);
+          // 복원에 실패하면 선택 영역이 없는 상태로 함수 종료
+          return;
+        }
+      }
+      
+      // 새로운 선택 영역 범위
+      const currentRange = selection.getRangeAt(0);
+      
+      // 3. 선택 영역의 공통 조상 컨테이너 찾기
+      let commonAncestor = currentRange.commonAncestorContainer;
+      if (commonAncestor.nodeType === Node.TEXT_NODE) {
+        commonAncestor = commonAncestor.parentNode;
+      }
+      
+      // 4. 지정된 인라인 태그 제거 함수
+      function unwrapTags(node) {
+        if (!node) return;
+        
+        // 노드 복사본으로 작업 (실시간 변경 피하기 위함)
+        const childNodes = Array.from(node.childNodes);
+        
+        // 자식 노드 먼저 처리 (깊이 우선)
+        childNodes.forEach(child => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            unwrapTags(child);
+          }
+        });
+        
+        // 현재 노드가 제거 대상 태그인지 확인
+        if (node.nodeType === Node.ELEMENT_NODE && 
+            tagsToRemove.includes(node.tagName) &&
+            node.parentNode) {
+          
+          // 태그 언래핑 (내용물만 보존)
+          const parent = node.parentNode;
+          while (node.firstChild) {
+            parent.insertBefore(node.firstChild, node);
+          }
+          parent.removeChild(node);
+        }
+      }
+      
+      // 5. 선택 영역 내 태그 제거 실행
+      unwrapTags(commonAncestor);
+      
+      // 6. 텍스트 기반 직접 교체 방식으로 모든 서식 제거
+      // 이 방법은 모든 서식을 제거하면서 불필요한 라인이 추가되는 문제를 방지
+      const currentText = currentRange.toString();
+      
+      // 서식 제거 이후 내용이 많이 변경되었거나, blockquote/리스트 등이 포함된 경우만 처리
+      if (currentText !== plainText || 
+          (commonAncestor.nodeType === Node.ELEMENT_NODE && 
+           (commonAncestor.querySelector('blockquote, ul, ol, li, h1, h2, h3, h4, h5, h6') ||
+            commonAncestor.tagName.match(/^(BLOCKQUOTE|UL|OL|LI|H[1-6])$/i)))) {
+        
+        console.log('복잡한 서식 감지, 텍스트 기반 교체 실행');
+        
+        // 1단계: 현재 선택 영역 내용 완전히 삭제
+        currentRange.deleteContents();
+        
+        // 2단계: 단순 텍스트 노드 생성
+        const textNode = document.createTextNode(plainText);
+        
+        // 3단계: 노드 삽입
+        currentRange.insertNode(textNode);
+        
+        // 4단계: 노드 재선택
+        selection.removeAllRanges();
+        const textRange = document.createRange();
+        textRange.selectNode(textNode);
+        selection.addRange(textRange);
+        
+        // 5단계: 텍스트 노드의 부모가 인라인 요소일 경우에만 조정
+        // (불필요한 추가 p 태그 방지)
+        const parent = textNode.parentNode;
+        if (parent && parent.tagName !== 'P' && parent.tagName !== 'DIV') {
+          // 부모 요소가 p나 div가 아닌 경우만 포맷 블록 실행
+          document.execCommand('formatBlock', false, 'p');
+        }
+      }
+      
+      // 7. 선택 영역 복원 확인
+      const restoredSelection = window.getSelection();
+      const isSelectionRestored = restoredSelection && 
+                                restoredSelection.rangeCount > 0 && 
+                                !restoredSelection.getRangeAt(0).collapsed;
+      
+      console.log('선택 영역 복원됨:', isSelectionRestored);
+      
+      // 8. 선택 영역이 복원되지 않았다면 다시 시도
+      if (!isSelectionRestored && contentArea.contains(startContainer) && contentArea.contains(endContainer)) {
+        try {
+          const finalRange = document.createRange();
+          finalRange.setStart(startContainer, startOffset);
+          finalRange.setEnd(endContainer, endOffset);
+          selection.removeAllRanges();
+          selection.addRange(finalRange);
+          console.log('선택 영역 복원 재시도 성공');
+        } catch (e) {
+          console.error('선택 영역 최종 복원 실패:', e);
+        }
+      }
+    } catch (error) {
+      // 오류 발생 시 fallback 처리: 텍스트만 보존
+      console.error('서식 초기화 중 오류 발생:', error);
+      try {
+        // 순수 텍스트만 삽입
+        const plainText = range.toString();
+        range.deleteContents();
+        const textNode = document.createTextNode(plainText);
+        range.insertNode(textNode);
+        
+        // 선택 영역 복원
+        selection.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNode(textNode);
+        selection.addRange(newRange);
+      } catch (fallbackError) {
+        console.error('fallback 처리 중 오류:', fallbackError);
+      }
+    }
+    
+    console.log('서식 초기화 완료');
+  }
 })();
