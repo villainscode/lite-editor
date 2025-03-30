@@ -100,198 +100,100 @@
    * 선택 영역의 공통 조상 컨테이너 찾기
    */
   function findCommonAncestor(range) {
-    let commonAncestor = range.commonAncestorContainer;
-    if (commonAncestor.nodeType === Node.TEXT_NODE) {
-      commonAncestor = commonAncestor.parentNode;
+    let ancestor = range.commonAncestorContainer;
+    
+    // 텍스트 노드인 경우 부모 요소로 이동
+    if (ancestor.nodeType === Node.TEXT_NODE) {
+      ancestor = ancestor.parentNode;
     }
-    return commonAncestor;
+    
+    return ancestor;
   }
   
   /**
-   * 선택 영역의 서식을 초기화하는 함수
+   * 인라인 태그를 완전히 새로운 방식으로 제거하는 함수
+   * - 임시 요소를 사용하여 서식만 제거하고 텍스트는 보존
    */
-  /**
-   * 특정 태그 제거를 위한 함수
-   */
-  function unwrapTags(node, tagsToRemove) {
-    if (!node) return;
+  function removeInlineFormatting(contentArea, selectionInfo) {
+    const originalText = selectionInfo.plainText;
     
-    // 노드 복사본으로 작업 (실시간 변경 피하기 위함)
-    const childNodes = Array.from(node.childNodes);
-    
-    // 자식 노드 먼저 처리 (깊이 우선)
-    childNodes.forEach(child => {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        unwrapTags(child, tagsToRemove);
-      }
-    });
-    
-    // 현재 노드가 제거 대상 태그인지 확인
-    if (node.nodeType === Node.ELEMENT_NODE && 
-        tagsToRemove.includes(node.tagName) &&
-        node.parentNode) {
+    try {
+      // 기본 서식 제거 명령 먼저 실행 (기본적인 서식 제거)
+      document.execCommand('removeFormat', false, null);
       
-      // 태그 언래핑 (내용물만 보존)
-      const parent = node.parentNode;
-      while (node.firstChild) {
-        parent.insertBefore(node.firstChild, node);
+      // 현재 선택 영역 확인
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return false;
+      
+      // 이미 서식이 제거되었는지 확인
+      const currentRange = selection.getRangeAt(0);
+      const currentText = currentRange.toString();
+      
+      // 내용이 같고 중복이 없으면 성공한 것으로 간주
+      if (currentText === originalText) {
+        return true;
       }
-      parent.removeChild(node);
+      
+      // 여전히 문제가 있다면 더 직접적인 방법 사용
+      // 완전히 새로운 방식: 선택 영역을 지우고 직접 텍스트 삽입
+      
+      // 1. 현재 선택 영역의 범위 저장
+      const startContainer = currentRange.startContainer;
+      const startOffset = currentRange.startOffset;
+      const endContainer = currentRange.endContainer;
+      const endOffset = currentRange.endOffset;
+      
+      // 2. 임시 span 요소를 생성하여 순수 텍스트 래핑
+      const tempSpan = document.createElement('span');
+      tempSpan.setAttribute('data-temp-reset', 'true');
+      tempSpan.textContent = originalText;
+      
+      // 3. 기존 선택 영역 삭제
+      currentRange.deleteContents();
+      
+      // 4. 임시 span 삽입
+      currentRange.insertNode(tempSpan);
+      
+      // 5. 새 span 선택
+      selection.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.selectNodeContents(tempSpan);
+      selection.addRange(newRange);
+      
+      // 6. span의 내용만 추출하여 부모에 직접 삽입
+      const parent = tempSpan.parentNode;
+      const textNode = document.createTextNode(originalText);
+      parent.replaceChild(textNode, tempSpan);
+      
+      // 7. 새 텍스트 노드 선택
+      selection.removeAllRanges();
+      const finalRange = document.createRange();
+      finalRange.setStart(textNode, 0);
+      finalRange.setEnd(textNode, originalText.length);
+      selection.addRange(finalRange);
+      
+      return true;
+    } catch (error) {
+      console.error('서식 제거 중 오류 발생:', error);
+      
+      // 최후의 방법: execCommand 직접 사용
+      try {
+        // 다시 선택하여 기본 명령 실행
+        if (restoreSelection(contentArea, selectionInfo)) {
+          document.execCommand('removeFormat', false, null);
+          document.execCommand('insertText', false, originalText);
+          return true;
+        }
+      } catch (failsafeError) {
+        console.error('최종 안전망 처리 실패:', failsafeError);
+      }
+      
+      return false;
     }
   }
 
   /**
-   * 완전히 새로운 방식으로 blockquote와 내부 태그(ul, li 등) 처리
-   * @returns true - blockquote 요소를 처리한 경우, false - blockquote 요소가 없거나 처리에 실패한 경우
-   */
-  function handleBlockquote(contentArea, selectionInfo) {
-    // 현재 선택 영역 가져오기
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return false;
-    
-    const range = selection.getRangeAt(0);
-    
-    // 순서: 1. contentArea에서 모든 blockquote 찾기
-    const blockquotes = contentArea.querySelectorAll('blockquote');
-    if (!blockquotes.length) return false;
-    
-    console.log(`물리적으로 ${blockquotes.length}개의 blockquote 요소 발견`);
-    
-    try {
-      // 2. 순수 텍스트 추출 (서식은 제거)
-      const plainText = selectionInfo ? selectionInfo.plainText.trim() : range.toString().trim();
-      if (!plainText) {
-        console.warn('추출할 텍스트가 없음');
-        return false;
-      }
-      
-      console.log('추출된 텍스트:', plainText.substring(0, 30) + (plainText.length > 30 ? '...' : ''));
-      
-      // 3. 임시 div 사용하여 텍스트만 추출하는 안전한 방법
-      const tempDiv = document.createElement('div');
-      tempDiv.textContent = plainText; // textContent는 태그를 이스케이프함
-      
-      // 4. 중요: 현재 선택된 blockquote와 그 내부 구조를 모두 제거
-      // 순회하면서 반복해야 하는 이유는 DOM 구조가 변경되기 때문
-      for (let i = 0; i < blockquotes.length; i++) {
-        const bq = blockquotes[i];
-        if (bq.parentNode && contentArea.contains(bq)) {
-          // 5. 새 p 요소 생성 및 순수 텍스트 삽입
-          const p = document.createElement('p');
-          p.textContent = plainText;
-          
-          // 6. 전체 blockquote 교체
-          bq.parentNode.replaceChild(p, bq);
-          
-          console.log(`blockquote ${i+1} 제거 및 대체 완료`);
-          
-          // 7. 첫번째 바뀐 요소에 선택 영역 설정 (1번만 실행)
-          if (i === 0) {
-            selection.removeAllRanges();
-            const newRange = document.createRange();
-            newRange.selectNodeContents(p);
-            selection.addRange(newRange);
-          }
-        }
-      }
-      
-      console.log('blockquote 및 중첩 태그 처리 성공');
-      return true;
-    } catch (e) {
-      console.error('blockquote 처리 중 오류:', e);
-      return false;
-    }
-  }
-  
-  /**
-   * 선택 영역 내의 모든 blockquote 요소 찾기
-   */
-  function findBlockquotesInSelection(contentArea) {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return [];
-    
-    const range = selection.getRangeAt(0);
-    let node = range.commonAncestorContainer;
-    
-    // 텍스트 노드인 경우 부모로 이동
-    if (node.nodeType === Node.TEXT_NODE) {
-      node = node.parentNode;
-    }
-    
-    // 조상 요소를 찾아 올라가면서 blockquote 검색
-    const blockquotes = [];
-    while (node && node !== contentArea) {
-      if (node.nodeName.toLowerCase() === 'blockquote') {
-        blockquotes.push(node);
-      }
-      node = node.parentNode;
-    }
-    
-    return blockquotes;
-  }
-  
-  /**
-   * 선택된 텍스트 노드에 직접 가조에서 서식 제거
-   */
-  function resetTextNodeFormatting(range, plainText) {
-    // 텍스트 노드 내부 선택인지 확인
-    if (range.startContainer.nodeType === Node.TEXT_NODE && 
-        range.startContainer === range.endContainer) {
-      
-      const textNode = range.startContainer;
-      const start = range.startOffset;
-      const end = range.endOffset;
-      const fullText = textNode.nodeValue;
-      
-      // 숫자 범위 확인
-      if (start < end && start >= 0 && end <= fullText.length) {
-        // 선택된 텍스트만 교체
-        const newText = fullText.substring(0, start) + plainText + fullText.substring(end);
-        textNode.nodeValue = newText;
-        
-        // 선택 영역 복원
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        const newRange = document.createRange();
-        newRange.setStart(textNode, start);
-        newRange.setEnd(textNode, start + plainText.length);
-        selection.addRange(newRange);
-        
-        return true;
-      }
-    }
-    
-    return false;
-  }
-  
-  /**
-   * 복잡한 태그 구조에서 텍스트 삽입
-   */
-  function replaceWithPlainText(range, plainText) {
-    try {
-      // 기존 내용 삭제
-      range.deleteContents();
-      
-      // 새 텍스트 노드 생성 및 삽입
-      const textNode = document.createTextNode(plainText);
-      range.insertNode(textNode);
-      
-      // 선택 영역 재설정
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      const newRange = document.createRange();
-      newRange.selectNode(textNode);
-      selection.addRange(newRange);
-      
-      return true;
-    } catch (e) {
-      console.error('텍스트 교체 실패:', e);
-      return false;
-    }
-  }
-  
-  /**
-   * 선택 영역의 서식을 초기화하는 함수 - 무결성 보장을 위한 재거함
+   * 선택 영역의 서식을 초기화하는 함수 - 모듈화된 접근 방식
    */
   function resetFormattingInSelection(contentArea) {
     // 선택 영역 정보 가져오기
@@ -304,21 +206,28 @@
     try {
       // 선택한 텍스트 저장
       const originalText = selectionInfo.plainText;
-      console.log('서식 초기화 시작: 선택 내용:', originalText.substring(0, 20) + (originalText.length > 20 ? '...' : ''));
-      
-      // 중요: 먼저 blockquote 처리를 시도 - DOM 구조 변경 전에 실행
-      const blockquoteProcessed = handleBlockquote(contentArea, selectionInfo);
-      
-      // blockquote가 처리된 경우, 다른 처리 과정을 건너뛰고 초기화 완료
-      if (blockquoteProcessed) {
-        console.log('blockquote 처리 완료, 추가 서식 처리 건너뛀');
+      if (!originalText.trim()) {
+        console.warn('선택된 텍스트가 없습니다.');
         return;
       }
       
-      // 기본 서식 제거 명령 실행 - blockquote가 없는 경우에만 실행
-      applyBasicFormatRemoval();
+      console.log('서식 초기화 시작: 선택 내용:', originalText.substring(0, 20) + (originalText.length > 20 ? '...' : ''));
       
-      // 선택 영역 복원
+      // 각 핸들러 순서대로 적용 (중요: 처리 순서가 결과에 영향을 미침)
+      
+      // 1. 먼저 blockquote 처리 - 다른 DOM 구조 변경 전에 실행
+      const blockquoteProcessed = handleBlockquote(contentArea, selectionInfo);
+      
+      // blockquote가 처리된 경우, 추가 처리 수행하지 않음
+      if (blockquoteProcessed) {
+        console.log('blockquote 처리 완료, 추가 서식 처리 건너뛸');
+        return;
+      }
+      
+      // 2. 블록 태그 처리
+      const blockTagsProcessed = handleBlockTags(contentArea, selectionInfo);
+      
+      // 3. 선택 영역 복원 (블록 태그 처리 후)
       if (!restoreSelection(contentArea, selectionInfo)) {
         console.warn('선택 영역 복원 실패, 기본 복원 시도');
         try {
@@ -334,69 +243,123 @@
         }
       }
       
-      // 현재 선택 영역 가져오기
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        console.warn('선택 영역 없음, 처리 중단');
-        return;
-      }
-      
-      const currentRange = selection.getRangeAt(0);
-      const commonAncestor = findCommonAncestor(currentRange);
-      
-      // 특수 태그 제거 (인라인 및 블록 태그)
-      const tagsToRemove = [...INLINE_TAGS, ...BLOCK_TAGS];
-      unwrapTags(commonAncestor, tagsToRemove);
-      
-      // 현재 텍스트와 원본 비교
-      const currentText = currentRange.toString();
-      if (currentText !== originalText) {
-        console.log('텍스트 불일치: 수정 필요');
-        
-        // 텍스트 노드 직접 수정 시도
-        if (!resetTextNodeFormatting(currentRange, originalText)) {
-          // 실패하면 완전 교체
-          replaceWithPlainText(currentRange, originalText);
-        }
-      }
+      // 4. 인라인 태그 제거 (새로운 안전한 방식)
+      const inlineProcessed = removeInlineFormatting(contentArea, selectionInfo);
       
       console.log('서식 초기화 성공');
     } catch (error) {
       console.error('서식 초기화 중 오류:', error);
-      // 오류 발생 시 텍스트만이라도 보존
-      applyFailsafeReset(contentArea, selectionInfo);
+      
+      // 오류 발생 시 텍스트만이라도 보존 (failsafe)
+      try {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          replaceWithPlainText(range, selectionInfo.plainText);
+        }
+      } catch (failsafeError) {
+        console.error('최종 안전망 처리 실패:', failsafeError);
+      }
     }
   }
   
   /**
-   * 오류 발생 시 순수 텍스트만 삽입하는 최종 안전망 처리
+   * 완전히 새로운 방식으로 blockquote와 내부 태그(ul, li 등) 처리
+   * @returns true - blockquote 요소를 처리한 경우, false - blockquote 요소가 없거나 처리에 실패한 경우
    */
-  function applyFailsafeReset(contentArea, selectionInfo) {
+  function handleBlockquote(contentArea, selectionInfo) {
     try {
-      if (!selectionInfo || !selectionInfo.range) {
-        console.error('Failsafe 처리를 위한 선택 영역 정보 부족');
-        return;
+      // 컨텐츠 영역 내의 모든 blockquote 요소 찾기
+      const blockquotes = contentArea.querySelectorAll('blockquote');
+      if (blockquotes.length === 0) {
+        return false; // blockquote 요소가 없으면 처리 불필요
       }
       
-      // 순수 텍스트만 삽입
-      const plainText = selectionInfo.plainText;
-      const range = selectionInfo.range.cloneRange();
+      // 각 blockquote에 대해 처리
+      for (let i = 0; i < blockquotes.length; i++) {
+        const blockquote = blockquotes[i];
+        
+        // 블록인용구의 텍스트 내용 추출 (모든 HTML 태그 제거)
+        const plainText = blockquote.textContent;
+        
+        // 새로운 p 요소 생성
+        const p = document.createElement('p');
+        p.textContent = plainText;
+        
+        // 블록인용구를 p 요소로 교체
+        blockquote.parentNode.replaceChild(p, blockquote);
+      }
       
-      // 기존 내용 삭제
+      return true;
+    } catch (error) {
+      console.error('blockquote 처리 중 오류:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * 블록 태그 처리 함수
+   * - 헤딩, PRE 등의 블록 태그를 안전하게 p 태그로 변환
+   */
+  function handleBlockTags(contentArea, selectionInfo) {
+    try {
+      const blockSelector = BLOCK_TAGS.filter(tag => tag !== 'BLOCKQUOTE').join(',');
+      
+      if (!blockSelector) {
+        return false;
+      }
+      
+      // 공통 조상 요소 내에서 블록 태그 검색
+      const commonAncestor = findCommonAncestor(selectionInfo.range);
+      const blockElements = commonAncestor.querySelectorAll(blockSelector);
+      
+      if (blockElements.length === 0) {
+        return false;
+      }
+      
+      // 각 블록 태그 처리
+      for (let i = 0; i < blockElements.length; i++) {
+        const blockElement = blockElements[i];
+        
+        // 블록 태그의 텍스트 내용 추출
+        const plainText = blockElement.textContent;
+        
+        // 새로운 p 요소 생성
+        const p = document.createElement('p');
+        p.textContent = plainText;
+        
+        // 블록 태그를 p 요소로 교체
+        blockElement.parentNode.replaceChild(p, blockElement);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('블록 태그 처리 중 오류:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * 복잡한 태그 구조에서 텍스트 삽입
+   */
+  function replaceWithPlainText(range, plainText) {
+    try {
+      // 현재 선택 영역 내용 삭제
       range.deleteContents();
       
-      // 새 텍스트 노드 생성 및 삽입
+      // 순수 텍스트 노드 생성
       const textNode = document.createTextNode(plainText);
+      
+      // 텍스트 노드 삽입
       range.insertNode(textNode);
       
-      // 선택 영역 복원
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      const newRange = document.createRange();
-      newRange.selectNode(textNode);
-      selection.addRange(newRange);
-    } catch (fallbackError) {
-      console.error('Failsafe 처리 중 오류:', fallbackError);
+      // 삽입한 텍스트 노드로 선택 영역 설정
+      range.selectNodeContents(textNode);
+      
+      return true;
+    } catch (error) {
+      console.error('텍스트 대체 중 오류:', error);
+      return false;
     }
   }
 })();
