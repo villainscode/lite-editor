@@ -13,17 +13,17 @@ const LiteEditor = (function() {
   // 기본 설정
   const defaultConfig = {
     plugins: [
-      'undo', 'redo', // 실행 취소/되돌리기
-      'heading', 'fontFamily', 'fontSize', 'fontColor', 'highlight', // 폰트 서식
+      'historyInit', 'undo', 'redo', // 실행 취소/되돌리기
+      'heading', 'fontFamily', 'fontColor', 'highlight', // 폰트 서식
       'bold', 'italic', 'underline', 'strike', // 기본 텍스트 서식
-      'align', 'indent', 'outdent', // 정렬 및 들여쓰기
-      'blockquote', 'code', 'codeBlock', // 인용 및 코드
-      'bulletList', 'numberList', 'checkList', // 목록
+      'align', 'formatIndent', // 정렬 및 들여쓰기
+      'blockquote', 'code', 'codeblock', // 인용 및 코드
+      'unorderedList', 'orderedList', 'checkList', // 목록
       'link', 'image', 'table', // 삽입
       'reset' // 서식 초기화
     ],
     placeholder: '내용을 입력하세요...',
-    dividers: [2, 7, 11, 14, 17, 20, 23] // 구분선 위치 정의
+    dividers: [3, 7, 11, 13, 16, 19, 22] // 구분선 위치 정의
   };
   
   /**
