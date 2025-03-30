@@ -17,7 +17,7 @@
       // 아이콘 추가
       const alignIcon = document.createElement('i');
       alignIcon.className = 'material-icons';
-      alignIcon.textContent = 'format_align_left'; // 기본 아이콘은 왼쪽 정렬
+      alignIcon.textContent = 'format_align_justify'; // 기본 아이콘은 왼쪽 정렬
       alignContainer.appendChild(alignIcon);
       
       // 드롭다운 메뉴 생성

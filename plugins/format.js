@@ -207,12 +207,5 @@
     }
   });
   
-  // 서식 초기화 플러그인
-  LiteEditor.registerPlugin('reset', {
-    title: 'Clear Formatting',
-    icon: 'format_clear',
-    action: function(contentArea) {
-      document.execCommand('removeFormat', false, null);
-    }
-  });
+  // reset 플러그인은 reset.js로 분리했습니다.
 })();
