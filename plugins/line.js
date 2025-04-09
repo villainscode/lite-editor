@@ -29,13 +29,6 @@
                 // 버튼의 아이콘 요소 찾기
                 const iconElement = lineButton.querySelector('i.material-icons');
                 
-                // 아이콘 요소의 텍스트 내용(아이콘 이름) 가져오기
-                if (iconElement) {
-                    const iconName = iconElement.textContent || iconElement.innerText;
-                    alert('아이콘 이름: ' + iconName);
-                } else {
-                    alert('아이콘을 찾을 수 없습니다');
-                }
                 // insertLine(contentArea);
             });
             

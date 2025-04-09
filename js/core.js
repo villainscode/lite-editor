@@ -17,9 +17,9 @@ const LiteEditor = (function() {
       'heading', 'fontFamily', 'fontColor', 'highlight', // 폰트 서식
       'bold', 'italic', 'underline', 'strike', // 기본 텍스트 서식
       'align', 'formatIndent', // 정렬 및 들여쓰기
-      'blockquote', 'code', 'codeblock', // 인용 및 코드
+      'blockquote', 'code', 'codeBlocks', // 인용 및 코드
       'unorderedList', 'orderedList', 'checkList', // 목록
-      'link', 'image', 'table', 'split', 'line', // 삽입
+      'link', 'imageUpload', 'table', 'line', // 삽입
       'reset' // 서식 초기화
     ],
     placeholder: '내용을 입력하세요...',

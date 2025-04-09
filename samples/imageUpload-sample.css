@@ -1,0 +1,46 @@
+@layer components {
+    .modal {
+        @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden;
+    }
+    .modal-content {
+        @apply bg-white p-6 rounded-lg w-full max-w-md;
+    }
+    .form-field {
+        @apply w-full mb-4;
+    }
+    .input-field {
+        @apply w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
+    }
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-content {
+    position: relative;
+    background-color: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+} 
+/* Add Icon */
+.material-symbols-outlined {
+    font-size: 20px;
+    color: var(--selection-border);
+    cursor: pointer;
+}
