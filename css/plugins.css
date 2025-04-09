@@ -336,3 +336,59 @@ mark {
 .lite-editor-heading-option:hover {
   background-color: #f1f1f1;
 }
+
+/* 테이블 버튼 스타일 */
+.lite-editor-table-button {
+  position: relative;
+}
+
+/* 에디터 내 테이블 스타일 */
+.lite-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+
+.lite-editor-content th,
+.lite-editor-content td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.lite-editor-content th {
+  background-color: #f2f2f2;
+  text-align: left;
+}
+
+.lite-editor-content tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* 분할 화면 스타일 */
+.lite-editor-split-button {
+  position: relative;
+}
+
+.lite-editor-container.split-mode {
+  display: flex !important;
+  flex-direction: row;
+}
+
+.lite-editor-split-second {
+  border-left: 1px solid #ddd;
+}
+
+
+/* 라인 추가 */
+.lite-editor-line-button {
+  position: relative;
+}
+
+.lite-editor-container.line-mode {
+  display: flex !important;
+  flex-direction: row;
+}
+
+.lite-editor-line-second {
+  border-left: 1px solid #ddd;
+}

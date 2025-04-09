@@ -9,7 +9,7 @@
     title: 'Code',
     icon: 'code',
     action: function(contentArea, buttonElement, event) {
-      // 코드 태그는 특별한 처리가 필요하므로 전용 함수 사용
+      // 특별한 코드 처리 함수 사용
       LiteEditorUtils.applyCodeFormat(contentArea, buttonElement, event);
     }
   });

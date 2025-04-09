@@ -19,7 +19,7 @@ const LiteEditor = (function() {
       'align', 'formatIndent', // 정렬 및 들여쓰기
       'blockquote', 'code', 'codeblock', // 인용 및 코드
       'unorderedList', 'orderedList', 'checkList', // 목록
-      'link', 'image', 'table', // 삽입
+      'link', 'image', 'table', 'split', 'line', // 삽입
       'reset' // 서식 초기화
     ],
     placeholder: '내용을 입력하세요...',
