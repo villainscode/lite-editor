@@ -29,6 +29,19 @@ const LiteEditor = (function() {
   };
   
   /**
+   * 안전하게 Selection 객체 가져오기
+   * @returns {Selection|null} Selection 객체 또는 null
+   */
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (e) {
+      console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
+      return null;
+    }
+  }
+  
+  /**
    * 에디터 초기화
    * @param {string|HTMLElement} selector - CSS 선택자 또는 DOM 요소
    * @param {Object} customConfig - 사용자 설정 옵션
@@ -67,6 +80,14 @@ const LiteEditor = (function() {
     contentArea.className = 'lite-editor-content';
     contentArea.setAttribute('contenteditable', 'true');
     contentArea.setAttribute('data-placeholder', config.placeholder);
+    
+    // 외부 확장 프로그램 간섭 방지 속성 추가
+    contentArea.setAttribute('data-editor', 'lite-editor');
+    contentArea.setAttribute('data-exclude-from-extensions', 'true');
+    contentArea.setAttribute('autocomplete', 'off');
+    contentArea.setAttribute('autocorrect', 'off');
+    contentArea.setAttribute('autocapitalize', 'off');
+    contentArea.setAttribute('spellcheck', 'false');
     
     // 초기 콘텐츠 설정
     if (isTextarea && originalElement.value) {
@@ -482,7 +503,7 @@ const LiteEditor = (function() {
     // 선택 영역 저장 함수 (MDN Selection API 기반 개선)
     const saveSelection = () => {
       try {
-        const sel = window.getSelection();
+        const sel = getSafeSelection();
         // 유효한 선택이 있는지 확인 (sel 자체가 null일 수 있음 고려)
         if (!sel || sel.rangeCount === 0) {
           selectionActive = false;
@@ -573,7 +594,7 @@ const LiteEditor = (function() {
         function applySelection() {
           try {
             // Selection 오브젝트 가져오기
-            const sel = window.getSelection();
+            const sel = getSafeSelection();
             if (!sel) {
               console.warn('Selection 객체를 가져올 수 없음');
               return false;
@@ -655,15 +676,17 @@ const LiteEditor = (function() {
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
       
       // 선택 영역이 있으면 해당 영역을 대체, 없으면 커서 위치에 삽입
-      if (window.getSelection) {
-        const sel = window.getSelection();
-        if (sel.getRangeAt && sel.rangeCount) {
+      try {
+        const sel = getSafeSelection();
+        if (sel && sel.getRangeAt && sel.rangeCount) {
           const range = sel.getRangeAt(0);
           range.deleteContents();
           range.insertNode(document.createTextNode(text));
         }
-      } else if (document.selection && document.selection.type !== 'Control') {
-        document.selection.createRange().text = text;
+      } catch (e) {
+        console.warn('붙여넣기 중 오류:', e);
+        // 대체 방법으로 삽입
+        contentArea.textContent += text;
       }
       
       // TextArea인 경우 원본 요소 업데이트
