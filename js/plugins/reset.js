@@ -3,6 +3,16 @@
  * 선택된 텍스트의 모든 서식(인라인 및 블록 레벨)을 제거합니다.
  */
 (function() {
+  // Safe selection getter - adds error handling for selection retrieval
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (error) {
+      console.warn('Error getting selection:', error);
+      return null;
+    }
+  }
+
   // 서식 초기화 플러그인 등록
   LiteEditor.registerPlugin('reset', {
     title: 'Clear Formatting',
@@ -24,7 +34,7 @@
    * 현재 선택 영역의 상세 정보 가져오기
    */
   function getSelectionInfo(contentArea) {
-    const selection = window.getSelection();
+    const selection = getSafeSelection();
     if (!selection || selection.rangeCount === 0) return null;
     
     const range = selection.getRangeAt(0);
@@ -67,7 +77,9 @@
     if (!selectionInfo || !selectionInfo.range) return false;
     
     try {
-      const selection = window.getSelection();
+      const selection = getSafeSelection();
+      if (!selection) return false;
+      
       selection.removeAllRanges();
       selection.addRange(selectionInfo.range.cloneRange());
       return true;
@@ -83,7 +95,9 @@
           fallbackRange.setStart(selectionInfo.startContainer, selectionInfo.startOffset);
           fallbackRange.setEnd(selectionInfo.endContainer, selectionInfo.endOffset);
           
-          const selection = window.getSelection();
+          const selection = getSafeSelection();
+          if (!selection) return false;
+          
           selection.removeAllRanges();
           selection.addRange(fallbackRange);
           return true;
@@ -122,7 +136,7 @@
       document.execCommand('removeFormat', false, null);
       
       // 현재 선택 영역 확인
-      const selection = window.getSelection();
+      const selection = getSafeSelection();
       if (!selection || selection.rangeCount === 0) return false;
       
       // 이미 서식이 제거되었는지 확인
@@ -231,7 +245,9 @@
       if (!restoreSelection(contentArea, selectionInfo)) {
         console.warn('선택 영역 복원 실패, 기본 복원 시도');
         try {
-          const selection = window.getSelection();
+          const selection = getSafeSelection();
+          if (!selection) return;
+          
           selection.removeAllRanges();
           const range = document.createRange();
           range.setStart(selectionInfo.startContainer, selectionInfo.startOffset);
@@ -252,7 +268,7 @@
       
       // 오류 발생 시 텍스트만이라도 보존 (failsafe)
       try {
-        const selection = window.getSelection();
+        const selection = getSafeSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           replaceWithPlainText(range, selectionInfo.plainText);

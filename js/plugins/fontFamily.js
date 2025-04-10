@@ -6,12 +6,25 @@
 
 (function() {
   /**
+   * 안전하게 Selection 객체 가져오기
+   * @returns {Selection|null} Selection 객체 또는 null
+   */
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (e) {
+      console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
+      return null;
+    }
+  }
+
+  /**
    * 에디터 영역의 텍스트 선택 시 선택된 블록의 시작점과 끝점을 계산하는 함수
    * @param {Element} element - contenteditable 요소
    * @returns {Object|null} 선택 영역 정보 또는 null
    */
   function processContentEditableSelection(element) {
-    const selection = window.getSelection();
+    const selection = getSafeSelection();
     if (!selection || selection.rangeCount === 0) {
       // 선택 영역이 없는 경우 처리 중단
       console.log('선택 영역이 없음 (processContentEditableSelection)');
@@ -198,7 +211,7 @@
     contentArea.focus();
     
     // 2. 표준 선택 영역 가져오기
-    const selection = window.getSelection();
+    const selection = getSafeSelection();
     if (!selection || !selection.rangeCount) {
       console.error('선택 영역이 없습니다');
       return false;
@@ -258,11 +271,13 @@
       range.insertNode(outerSpan);
       
       // 10. 선택 영역 변경
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      const newRange = document.createRange();
-      newRange.selectNode(outerSpan);
-      selection.addRange(newRange);
+      const newSelection = getSafeSelection();
+      if (newSelection) {
+        newSelection.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNode(outerSpan);
+        newSelection.addRange(newRange);
+      }
       
       // 최종적으로 생성된 요소 저장 (콘솔 출력용)
       const finalElement = outerSpan;
@@ -391,8 +406,8 @@
         // 한글 폰트 그룹 (상단)
         { type: 'group_header', name: '한글 폰트' },
         { type: 'divider' },
-        { name: '바탕', value: 'Batang, Batangche, serif' },
-        { name: '굴림', value: 'Gulim, sans-serif' },
+        { name: '바탕체', value: 'Batang, Batangche, serif' },
+        { name: '굴림체', value: 'Gulim, sans-serif' },
         { name: '맑은 고딕', value: 'Malgun Gothic, AppleGothic, sans-serif' },
         { name: 'Noto Sans KR', value: 'Noto Sans KR, sans-serif' },
         { name: '나눔고딕', value: 'Nanum Gothic, sans-serif' },
@@ -501,7 +516,7 @@
           // 코딩 폰트 특별 처리 (IBM Plex Mono, Fira Code 등)
           if (font.name.includes('Mono') || font.name.includes('Code') || font.name.includes('Hack')) {
             // 1. CSS 클래스를 사용한 호환성 높은 적용 (코딩 폰트용)
-            const selection = window.getSelection();
+            const selection = getSafeSelection();
             if (selection && selection.rangeCount > 0) {
               const range = selection.getRangeAt(0);
               

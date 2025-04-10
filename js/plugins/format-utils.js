@@ -4,6 +4,16 @@
  */
 
 (function() {
+  // Safe selection getter - adds error handling for selection retrieval
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (error) {
+      console.warn('Error getting selection:', error);
+      return null;
+    }
+  }
+
   // 전역 네임스페이스 생성
   window.LiteEditorUtils = window.LiteEditorUtils || {};
   
@@ -39,7 +49,7 @@
     
     // 5. 선택이 유효한지 확인하는 함수
     function isSelectionValid() {
-      const sel = window.getSelection();
+      const sel = getSafeSelection();
       return sel && sel.rangeCount > 0 && !sel.isCollapsed;
     }
     
@@ -68,7 +78,7 @@
               // 12. 선택 영역 유지를 위한 추가 작업
               setTimeout(function() {
                 // 13. Selection.anchorNode와 focusNode 상태 확인
-                const sel = window.getSelection();
+                const sel = getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   // 14. 선택이 유효한지 확인
                   if (sel.anchorNode && sel.focusNode) {
@@ -128,13 +138,13 @@
     
     // 5. 선택이 유효한지 확인하는 함수
     function isSelectionValid() {
-      const sel = window.getSelection();
+      const sel = getSafeSelection();
       return sel && sel.rangeCount > 0 && !sel.isCollapsed;
     }
     
     // 6. 현재 선택이 code 태그 내에 있는지 확인하는 함수
     function isSelectionInCode() {
-      const sel = window.getSelection();
+      const sel = getSafeSelection();
       if (!sel || sel.rangeCount === 0) return false;
       
       let node = sel.anchorNode;
@@ -149,7 +159,7 @@
     
     // 7. 선택된 HTML 가져오기
     function getSelectedHtml() {
-      const sel = window.getSelection();
+      const sel = getSafeSelection();
       if (!sel || sel.rangeCount === 0) return '';
       
       const range = sel.getRangeAt(0);
@@ -183,7 +193,7 @@
               if (isInCode) {
                 // 이미 code 태그 내부에 있다면 서식 제거
                 // 부모 code 태그를 찾아 내용만 유지하고 태그는 제거
-                const sel = window.getSelection();
+                const sel = getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   const range = sel.getRangeAt(0);
                   
@@ -221,7 +231,7 @@
               // 14. 선택 영역 유지를 위한 추가 작업
               setTimeout(function() {
                 // 15. Selection.anchorNode와 focusNode 상태 확인
-                const sel = window.getSelection();
+                const sel = getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   // 16. 선택이 유효한지 확인
                   if (sel.anchorNode && sel.focusNode) {
@@ -326,7 +336,7 @@
     }
     
     // 선택 영역 확인
-    const selection = window.getSelection();
+    const selection = getSafeSelection();
     if (!selection || selection.rangeCount === 0) {
       console.log('유효한 선택 영역이 없습니다.');
       return;
@@ -363,7 +373,7 @@
   };
   // 선택 영역 관리를 위한 문서 레벨 이벤트 수신기
   document.addEventListener('click', function(e) {
-    const sel = window.getSelection();
+    const sel = getSafeSelection();
     
     // LiteEditor 에디터 컨텐츠 영역 찾기
     const editorContainers = document.querySelectorAll('.lite-editor-content');

@@ -5,6 +5,16 @@
 
 // 순서 없는 목록 플러그인
 (function() {
+  // Safe selection getter - adds error handling for selection retrieval
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (error) {
+      console.warn('Error getting selection:', error);
+      return null;
+    }
+  }
+
   LiteEditor.registerPlugin('unorderedList', {
     title: 'Bullet List',
     icon: 'format_list_bulleted',
@@ -124,8 +134,8 @@
   
   // 체크리스트 생성 유틸리티 함수
   function createChecklist(contentArea) {
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    const selection = getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
     const selectedText = range.toString();

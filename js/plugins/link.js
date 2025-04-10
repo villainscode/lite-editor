@@ -4,6 +4,16 @@
  */
 
 (function() {
+    // Safe selection getter - adds error handling for selection retrieval
+    function getSafeSelection() {
+      try {
+        return window.getSelection();
+      } catch (error) {
+        console.warn('Error getting selection:', error);
+        return null;
+      }
+    }
+
     // 상수 및 변수 선언
     const PLUGIN_ID = 'link';
     const STYLE_ID = 'linkStyles';
@@ -60,7 +70,7 @@
                 e.stopPropagation();
                 
                 // 선택된 텍스트 확인
-                const selection = window.getSelection();
+                const selection = getSafeSelection();
                 if (!selection || !selection.toString().trim()) {
                     LiteEditorModal.alert('텍스트를 선택한 후 링크를 적용해주세요.');
                     return;

@@ -4,6 +4,16 @@
  */
 
 (function() {
+  // Safe selection getter - adds error handling for selection retrieval
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (error) {
+      console.warn('Error getting selection:', error);
+      return null;
+    }
+  }
+
   // 텍스트 정렬 플러그인 (드롭다운 형태)
   LiteEditor.registerPlugin('align', {
     title: 'Alignment',

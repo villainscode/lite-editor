@@ -4,6 +4,16 @@
  */
 
 (function() {
+  // 안전하게 Selection 객체를 가져오는 함수
+  function getSafeSelection() {
+    try {
+      return window.getSelection();
+    } catch (e) {
+      console.warn('Error getting selection:', e);
+      return null;
+    }
+  }
+
   // 제목 플러그인
   LiteEditor.registerPlugin('heading', {
     title: 'Heading',
@@ -84,8 +94,8 @@
           console.log('level : ', level);
           
           // Range API를 사용한 heading 적용 (직접 DOM 조작)
-          const selection = window.getSelection();
-          if (selection.rangeCount > 0) {
+          const selection = getSafeSelection();
+          if (selection && selection.rangeCount > 0) {
             // 선택한 영역의 범위 가져오기
             const range = selection.getRangeAt(0);
             let container = range.commonAncestorContainer;
