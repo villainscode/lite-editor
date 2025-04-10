@@ -5,91 +5,56 @@
 
 (function() {
     /**
-     * 안전하게 Selection 객체 가져오기
-     * @returns {Selection|null} Selection 객체 또는 null
-     */
-    function getSafeSelection() {
-        try {
-            return window.getSelection();
-        } catch (e) {
-            console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
-            return null;
-        }
-    }
-    
-    /**
      * 현재 커서 위치에 가로선(HR 태그)을 삽입하는 함수
      * @param {Element} contentArea - 에디터의 편집 가능한 영역
      */
     function insertLine(contentArea) {
-        try {
-            // 에디터에 포커스 설정
-            contentArea.focus();
-            
-            // 선택 영역 가져오기
-            const selection = getSafeSelection();
-            if (!selection || selection.rangeCount === 0) {
-                // Selection 객체를 가져올 수 없는 경우 간단히 처리
-                insertHRWithParagraph(contentArea);
-                return;
-            }
-            
-            let range = selection.getRangeAt(0);
-            
-            // 현재 블록 요소 찾기
-            let node = range.startContainer;
-            let block = node;
-            
-            // 텍스트 노드인 경우 부모 노드 찾기
-            if (node.nodeType === Node.TEXT_NODE) {
-                block = node.parentNode;
-            }
-            
-            // contentArea까지 올라가면서 가장 가까운 블록 요소 찾기
-            while (block !== contentArea && !isBlockElement(block)) {
-                block = block.parentNode;
-            }
-            
-            // 커서 위치가 블록의 시작인지 확인
-            const isAtStart = isAtStartOfBlock(range);
-            
-            if (block === contentArea) {
-                // contentArea 자체인 경우 간단히 처리
-                insertHRWithParagraph(contentArea);
-            } else {
-                if (isAtStart) {
-                    // 블록 시작 위치인 경우 블록 앞에 HR 삽입
-                    contentArea.insertBefore(createHR(), block);
-                    
-                    // 빈 단락 생성 및 삽입
-                    const p = createEmptyParagraph();
-                    contentArea.insertBefore(p, block);
-                    
-                    // 커서를 빈 단락으로 이동
-                    moveCursorTo(p, 0);
-                } else {
-                    // 블록 중간이나 끝인 경우 현재 블록을 분할
-                    splitBlockAndInsertHR(contentArea, block, range);
-                }
-            }
-            
-            // 변경 이벤트 발생
-            contentArea.dispatchEvent(new Event('input', { bubbles: true }));
-        } catch (e) {
-            console.error('HR 태그 삽입 중 오류:', e);
-            // 오류 발생 시 간단히 처리
-            try {
-                const hr = createHR();
-                contentArea.appendChild(hr);
+        // 에디터에 포커스 설정
+        contentArea.focus();
+        
+        // 선택 영역 가져오기
+        const selection = window.getSelection();
+        let range = selection.getRangeAt(0);
+        
+        // 현재 블록 요소 찾기
+        let node = range.startContainer;
+        let block = node;
+        
+        // 텍스트 노드인 경우 부모 노드 찾기
+        if (node.nodeType === Node.TEXT_NODE) {
+            block = node.parentNode;
+        }
+        
+        // contentArea까지 올라가면서 가장 가까운 블록 요소 찾기
+        while (block !== contentArea && !isBlockElement(block)) {
+            block = block.parentNode;
+        }
+        
+        // 커서 위치가 블록의 시작인지 확인
+        const isAtStart = isAtStartOfBlock(range);
+        
+        if (block === contentArea) {
+            // contentArea 자체인 경우 간단히 처리
+            insertHRWithParagraph(contentArea);
+        } else {
+            if (isAtStart) {
+                // 블록 시작 위치인 경우 블록 앞에 HR 삽입
+                contentArea.insertBefore(createHR(), block);
                 
+                // 빈 단락 생성 및 삽입
                 const p = createEmptyParagraph();
-                contentArea.appendChild(p);
+                contentArea.insertBefore(p, block);
                 
-                contentArea.focus();
-            } catch (innerError) {
-                console.error('복구 시도 중 추가 오류:', innerError);
+                // 커서를 빈 단락으로 이동
+                moveCursorTo(p, 0);
+            } else {
+                // 블록 중간이나 끝인 경우 현재 블록을 분할
+                splitBlockAndInsertHR(contentArea, block, range);
             }
         }
+        
+        // 변경 이벤트 발생
+        contentArea.dispatchEvent(new Event('input', { bubbles: true }));
     }
     
     /**
@@ -110,8 +75,6 @@
      * @returns {boolean} - 시작 위치 여부
      */
     function isAtStartOfBlock(range) {
-        if (!range) return false;
-        
         if (range.startOffset > 0) return false;
         
         const node = range.startContainer;
@@ -216,20 +179,14 @@
      * @param {number} offset - 오프셋 위치
      */
     function moveCursorTo(node, offset) {
-        try {
-            const selection = getSafeSelection();
-            if (!selection) return;
-            
-            const range = document.createRange();
-            
-            range.setStart(node, offset);
-            range.collapse(true);
-            
-            selection.removeAllRanges();
-            selection.addRange(range);
-        } catch (e) {
-            console.warn('커서 이동 중 오류:', e);
-        }
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        range.setStart(node, offset);
+        range.collapse(true);
+        
+        selection.removeAllRanges();
+        selection.addRange(range);
     }
 
     // 플러그인 등록
