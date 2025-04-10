@@ -14,5 +14,6 @@
 
 
 /* 4. 추가 스타일 및 테마 (필요시 추가) */
+@import url('plugins/imageUpload.css');
 /* @import url('themes/dark.css'); */
 /* @import url('themes/light.css'); */ 

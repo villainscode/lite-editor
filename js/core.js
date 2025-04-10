@@ -10,11 +10,22 @@ const LiteEditor = (function() {
   // 플러그인 레지스트리
   const plugins = {};
   
+  // 플러그인 순서 - 한 곳에서만 정의 (중복 제거)
+  const PLUGIN_ORDER = [
+    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+    'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
+    'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
+    'link', 'imageUpload', 'table', 'line',                   // 오브젝트 삽입 
+    'blockquote', 'code', 'codeBlock',                        // 인용 및 코드 
+    'unorderedList', 'orderedList', 'checkList',              // 목록 
+    'align', 'formatIndent',                                  // 정렬과 인덴트 
+  ];
+  
   // 기본 설정
   const defaultConfig = {
-    plugins: ['historyInit', 'undo', 'redo', 'fontFamily', 'heading', 'fontColor', 'highlight', 'bold', 'italic', 'underline', 'strike', 'align', 'formatIndent', 'blockquote', 'code', 'unorderedList', 'orderedList', 'checkList', 'link', 'table', 'split', 'line', 'reset'],
+    plugins: PLUGIN_ORDER,  // 플러그인 순서 상수 참조
     placeholder: '내용을 입력하세요...',
-    dividers: [3, 7, 11, 13, 16, 19] // 구분선 위치 정의
+    dividers: [4, 8, 12, 16, 19] // 구분선 위치 정의
   };
   
   /**
@@ -152,26 +163,26 @@ const LiteEditor = (function() {
     const { plugins: enabledPlugins, dividers } = config;
     let pluginCount = 0;
     
-    // 클래스 추가로 툴바 스타일 강화
-    toolbar.classList.add('lite-editor-toolbar'); 
-    toolbar.style.width = '100%';
-    toolbar.style.display = 'flex';
-    toolbar.style.flexWrap = 'wrap';
-    
-    // 활성화된 플러그인을 도구 모음에 추가
-    enabledPlugins.forEach((pluginName, index) => {
-      // 구분선 추가 (구분선 위치 배열에 현재 플러그인 인덱스가 있으면)
+    // 플러그인 렌더링 함수
+    function renderPlugin(pluginName) {
+      // enabledPlugins에 없으면 스킵
+      if (!enabledPlugins.includes(pluginName)) {
+        return;
+      }
+      
+      // 구분선 추가 로직
       if (dividers && dividers.includes(pluginCount)) {
         const divider = document.createElement('div');
         divider.className = 'lite-editor-divider';
         toolbar.appendChild(divider);
       }
       
-      // 현재 플러그인 가져오기
+      // 플러그인 객체 가져오기
       let currentPlugin = plugins[pluginName];
       
       // 플러그인이 없는 경우, 임시 플러그인 생성
       if (!currentPlugin) {
+        // 기존 코드와 동일한 플러그인 생성 로직 유지
         // 플러그인 이름에 맞는 기본 아이콘과 제목 설정
         let defaultIcon = 'edit';
         let defaultTitle = pluginName;
@@ -350,7 +361,7 @@ const LiteEditor = (function() {
           }
         };
         
-        // 플러그인 갱신
+        // 생성된 플러그인 사용
         currentPlugin = plugins[pluginName];
       }
       
@@ -452,7 +463,10 @@ const LiteEditor = (function() {
       
       // 플러그인 카운트 증가
       pluginCount++;
-    });
+    }
+    
+    // 순서에 따라 플러그인 렌더링 - PLUGIN_ORDER 상수 사용
+    PLUGIN_ORDER.forEach(renderPlugin);
   }
   
   /**

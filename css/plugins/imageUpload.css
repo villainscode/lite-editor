@@ -1,0 +1,45 @@
+/* 모달 기본 스타일 */
+.modal-overlay {
+    position: absolute;
+    background-color: transparent;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    position: relative;
+    width: 280px;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 12px;
+}
+
+/* 입력 요소 스타일 */
+.modal-content input:focus {
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.5);
+}
+
+/* 버튼 호버 효과 */
+.modal-content button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 파일 업로드 영역 호버 효과 */
+.modal-content label:hover {
+    background-color: #f1f1f1;
+}
+
+/* 모달 내 텍스트 전체 크기 조정 */
+.modal-content {
+  font-size: smaller;
+}

@@ -19,4 +19,5 @@
 
 /* 4. 코딩 폰트 */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css'); 
+@import url('https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'); 

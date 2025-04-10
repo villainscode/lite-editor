@@ -57,6 +57,12 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+.material-symbols-outlined {
+  font-size: 20px;
+  color: var(--selection-border);
+  cursor: pointer;
+}
+
 /* 클릭 시 효과 */
 .lite-editor-button:active {
   transform: scale(0.95);

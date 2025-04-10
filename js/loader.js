@@ -15,6 +15,7 @@
         // 2. 유틸리티 및 기본 기능
         'plugins/history.js',
         'plugins/format-utils.js',
+        'plugins/reset.js',
         
         // 3. 텍스트 서식 관련 플러그인
         'plugins/bold.js',
@@ -23,7 +24,7 @@
         'plugins/strike.js',
         'plugins/code.js',
         'plugins/blockquote.js',
-        
+        'plugins/codeBlock.js',
         // 4. 폰트 및 색상 관련 플러그인
         'plugins/fontFamily.js',
         'plugins/fontColor.js',
@@ -37,14 +38,14 @@
         
         // 6. 삽입 관련 플러그인
         'plugins/link.js',
+        'plugins/imageUpload.js',
         'plugins/table.js',
         
         // 7. 레이아웃 관련 플러그인
-        'plugins/split.js',
         'plugins/line.js',
         
         // 8. 기타 플러그인
-        'plugins/reset.js'
+        
     ];
     
     // 스크립트 순차적 로드 함수
