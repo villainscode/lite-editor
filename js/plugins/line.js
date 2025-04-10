@@ -4,6 +4,33 @@
  */
 
 (function() {
+    // 스타일 요소 생성 및 추가
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        .lite-editor-hr {
+            display: block;
+            height: 1px;
+            border: 0;
+            border-top: 1px solid #c9c9c9;
+            margin: 5px 0;
+            padding: 0;
+        }
+    `;
+    document.head.appendChild(styleEl);
+    
+    /**
+     * 안전하게 Selection 객체 가져오기
+     * @returns {Selection|null} Selection 객체 또는 null
+     */
+    function getSafeSelection() {
+        try {
+            return window.getSelection();
+        } catch (e) {
+            console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
+            return null;
+        }
+    }
+    
     /**
      * 현재 커서 위치에 가로선(HR 태그)을 삽입하는 함수
      * @param {Element} contentArea - 에디터의 편집 가능한 영역
@@ -13,7 +40,13 @@
         contentArea.focus();
         
         // 선택 영역 가져오기
-        const selection = window.getSelection();
+        const selection = getSafeSelection();
+        if (!selection || selection.rangeCount === 0) {
+            // Selection 객체를 가져올 수 없는 경우 간단히 처리
+            insertHRWithParagraph(contentArea);
+            return;
+        }
+        
         let range = selection.getRangeAt(0);
         
         // 현재 블록 요소 찾기
@@ -75,6 +108,8 @@
      * @returns {boolean} - 시작 위치 여부
      */
     function isAtStartOfBlock(range) {
+        if (!range) return false;
+        
         if (range.startOffset > 0) return false;
         
         const node = range.startContainer;
@@ -97,10 +132,7 @@
      */
     function createHR() {
         const hr = document.createElement('hr');
-        hr.style.margin = '5px 0 0 0';
-        hr.style.border = 'none';
-        hr.style.borderTop = '1px solid #c9c9c9';
-        hr.style.height = '1px';
+        hr.className = 'lite-editor-hr';
         return hr;
     }
     
@@ -179,14 +211,20 @@
      * @param {number} offset - 오프셋 위치
      */
     function moveCursorTo(node, offset) {
-        const selection = window.getSelection();
-        const range = document.createRange();
-        
-        range.setStart(node, offset);
-        range.collapse(true);
-        
-        selection.removeAllRanges();
-        selection.addRange(range);
+        try {
+            const selection = getSafeSelection();
+            if (!selection) return;
+            
+            const range = document.createRange();
+            
+            range.setStart(node, offset);
+            range.collapse(true);
+            
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } catch (e) {
+            console.warn('커서 이동 중 오류:', e);
+        }
     }
 
     // 플러그인 등록

@@ -13,38 +13,39 @@
         'js/core.js',
         
         // 2. 유틸리티 및 기본 기능
-        'plugins/history.js',
-        'plugins/format-utils.js',
-        'plugins/reset.js',
+        'js/plugins/history.js',
+        'js/plugins/format-utils.js',
+        'js/plugins/reset.js',
         
         // 3. 텍스트 서식 관련 플러그인
-        'plugins/bold.js',
-        'plugins/italic.js',
-        'plugins/underline.js',
-        'plugins/strike.js',
-        'plugins/code.js',
-        'plugins/blockquote.js',
-        'plugins/codeBlock.js',
+        'js/plugins/bold.js',
+        'js/plugins/italic.js',
+        'js/plugins/underline.js',
+        'js/plugins/strike.js',
+        'js/plugins/code.js',
+        'js/plugins/blockquote.js',
+        'js/plugins/codeBlock.js',
         // 4. 폰트 및 색상 관련 플러그인
-        'plugins/fontFamily.js',
-        'plugins/fontColor.js',
-        'plugins/highlight.js',
-        'plugins/heading.js',
+        'js/plugins/fontFamily.js',
+        'js/plugins/fontColor.js',
+        'js/plugins/highlight.js',
+        'js/plugins/heading.js',
         
         // 5. 구조 및 정렬 관련 플러그인
-        'plugins/list.js',
-        'plugins/align.js',
-        'plugins/formatIndent.js',
+        'js/plugins/list.js',
+        'js/plugins/align.js',
+        'js/plugins/formatIndent.js',
         
         // 6. 삽입 관련 플러그인
-        'plugins/link.js',
-        'plugins/imageUpload.js',
-        'plugins/table.js',
+        'js/plugins/link.js',
+        'js/plugins/imageUpload.js',
+        'js/plugins/table.js',
         
         // 7. 레이아웃 관련 플러그인
-        'plugins/line.js',
+        'js/plugins/line.js',
         
         // 8. 기타 플러그인
+        'js/plugins/modal.js',
         
     ];
     
