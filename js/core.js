@@ -391,6 +391,27 @@ const LiteEditor = (function() {
           buttonElement.appendChild(iconElement);
         }
         
+        // 마우스 다운 이벤트 - 버튼 누름 효과
+        buttonElement.addEventListener('mousedown', () => {
+          // 누름 효과 적용
+          buttonElement.style.transform = 'scale(0.95)';
+          buttonElement.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+          buttonElement.style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.2)';
+        });
+        
+        // 마우스 업/아웃 이벤트 - 버튼 누름 효과 제거
+        const resetButtonStyle = () => {
+          // 버튼 누름 효과 제거 (active 클래스는 유지)
+          buttonElement.style.transform = '';
+          buttonElement.style.backgroundColor = '';
+          buttonElement.style.boxShadow = '';
+        };
+        
+        // 여러 이벤트에 동일한 핸들러 연결
+        buttonElement.addEventListener('mouseup', resetButtonStyle);
+        buttonElement.addEventListener('mouseout', resetButtonStyle);
+        
+        // 클릭 이벤트 - 실제 기능 실행
         buttonElement.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -400,6 +421,8 @@ const LiteEditor = (function() {
             console.log('이미 처리 중인 작업이 있음');
             return;
           }
+          
+          // active 클래스를 토글하지 않음 - 시각적 상태는 mousedown/mouseup 이벤트만으로 처리
           
           // 선택 영역 저장
           if (window.liteEditorSelection) {
