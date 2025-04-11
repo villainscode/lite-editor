@@ -8,78 +8,16 @@
     let isTextSelected = false;
     let isEventHandlerRegistered = false;
 
-    const SelectionManager = {
-        save: function() {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) {
-                return false;
-            }
-            
-            const range = selection.getRangeAt(0).cloneRange();
-            
-            isTextSelected = !selection.isCollapsed && selection.toString().trim().length > 0;
-            
-            if (isTextSelected) {
-                try {
-                    const wrapper = document.createElement('span');
-                    wrapper.setAttribute('data-temp-link', 'true');
-                    range.surroundContents(wrapper);
-                    savedRange = wrapper;
-                    return true;
-                } catch (e) {
-                    console.warn('선택 영역 감싸기 실패:', e);
-                    return false;
-                }
-            } else {
-                savedRange = range;
-                return true;
-            }
-        },
-        
-        restore: function() {
-            if (!savedRange) return false;
-            
-            try {
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                
-                if (isTextSelected) {
-                    const range = document.createRange();
-                    range.selectNodeContents(savedRange);
-                    selection.addRange(range);
-                } else {
-                    selection.addRange(savedRange);
-                }
-                
-                return true;
-            } catch (e) {
-                console.warn('선택 영역 복원 실패:', e);
-                return false;
-            }
-        },
-        
-        cleanup: function() {
-            const wrapper = document.querySelector('[data-temp-link]');
-            if (wrapper) {
-                const parent = wrapper.parentNode;
-                while (wrapper.firstChild) {
-                    parent.insertBefore(wrapper.firstChild, wrapper);
-                }
-                parent.removeChild(wrapper);
-            }
-        },
-        
-        hasSelection: function() {
-            return isTextSelected;
-        }
-    };
-
     const LinkModal = {
         show: function(buttonElement, contentArea) {
-            if (!SelectionManager.save()) {
+            const selectionResult = window.LiteEditorSelection.saveSelection();
+            if (!selectionResult.success) {
                 console.warn('선택 영역 저장 실패');
                 return;
             }
+            
+            savedRange = selectionResult.range;
+            isTextSelected = selectionResult.isTextSelected;
             
             this.close();
             
@@ -115,6 +53,7 @@
                 activeModal.parentNode.removeChild(activeModal);
                 activeModal = null;
             }
+            window.LiteEditorSelection.cleanupSelection();
         },
         
         setupEvents: function(urlInput, okButton, contentArea, buttonElement) {
@@ -136,14 +75,12 @@
             
             document.addEventListener('click', (e) => {
                 if (activeModal && !activeModal.contains(e.target) && !buttonElement.contains(e.target)) {
-                    SelectionManager.cleanup();
                     this.close();
                 }
             }, true);
             
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && activeModal) {
-                    SelectionManager.cleanup();
                     this.close();
                 }
             });
@@ -158,18 +95,14 @@
             const finalUrl = /^https?:\/\//i.test(url) ? url : 'https://' + url;
             
             try {
-                if (SelectionManager.hasSelection()) {
-                    if (savedRange && savedRange.tagName === 'SPAN' && savedRange.dataset.tempLink === 'true') {
-                        SelectionManager.restore();
-                        
-                        document.execCommand('createLink', false, finalUrl);
-                        
-                        const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
-                        if (newLink) {
-                            newLink.setAttribute('target', '_blank');
-                        }
-                        
-                        SelectionManager.cleanup();
+                if (isTextSelected) {
+                    window.LiteEditorSelection.restoreSelection(savedRange, isTextSelected);
+                    
+                    document.execCommand('createLink', false, finalUrl);
+                    
+                    const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
+                    if (newLink) {
+                        newLink.setAttribute('target', '_blank');
                     }
                 } else {
                     const linkText = url.replace(/^https?:\/\//i, '');
@@ -181,7 +114,6 @@
                 
             } catch (e) {
                 console.error('링크 적용 실패:', e);
-                SelectionManager.cleanup();
             } finally {
                 this.close();
             }
