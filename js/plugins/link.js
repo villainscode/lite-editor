@@ -23,7 +23,6 @@
                 try {
                     const wrapper = document.createElement('span');
                     wrapper.setAttribute('data-temp-link', 'true');
-                    wrapper.style.backgroundColor = '#d0e8ff';
                     range.surroundContents(wrapper);
                     savedRange = wrapper;
                     return true;

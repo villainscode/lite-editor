@@ -145,4 +145,13 @@
 
 .lite-editor-link-popup button:hover {
     background: #3367d6;
+}
+
+/* 선택된 텍스트 블록 스타일 */
+[data-temp-link] {
+    background-color: #a6c9f0;
+    padding: 2px 0;  /* 좌우 패딩 제거 */
+    display: inline-block;
+    line-height: 1.3;
+    margin: 0;  /* 모든 마진 제거 */
 } 
