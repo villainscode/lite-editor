@@ -34,11 +34,6 @@
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* 파일 업로드 영역 호버 효과 */
-.modal-content label:hover {
-    background-color: #f1f1f1;
-}
-
 /* 모달 내 텍스트 전체 크기 조정 */
 .modal-content {
   font-size: smaller;

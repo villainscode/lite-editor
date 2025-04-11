@@ -91,10 +91,18 @@
             const modal = document.querySelector('.modal-overlay.show');
             const button = document.querySelector('.lite-editor-image-upload-button');
             
-            if (modal && !modal.contains(e.target) && e.target !== button && !button.contains(e.target)) {
+            // 모달이 표시 중이고, 클릭된 요소가 모달 내부가 아니고, 
+            // 현재 이미지 업로드 버튼을 클릭한 것이 아니면 모달 닫기
+            if (modal && !modal.contains(e.target)) {
+                // 이미지 업로드 버튼 클릭 시에는 닫지 않음 (모달 토글 동작을 위해)
+                if (button === e.target || button.contains(e.target)) {
+                    return;
+                }
+                
+                // 그 외의 모든 클릭(다른 툴바 버튼 포함)은 모달 닫기
                 closeModal(modal);
             }
-        });
+        }, true);
         
         // ESC 키로 닫기 - 전역 한 번만 등록
         document.addEventListener('keydown', (e) => {
