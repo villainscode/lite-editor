@@ -60,18 +60,11 @@
         save: function() {
             const selection = window.getSelection();
             if (!selection || selection.rangeCount === 0) {
-                // 선택 영역이 없어도 true 반환하여 모달이 표시되도록 함
                 savedRange = null;
                 return true;
             }
             
             const range = selection.getRangeAt(0);
-            if (range.collapsed) {
-                // 선택 영역이 없어도 true 반환하여 모달이 표시되도록 함
-                savedRange = null;
-                return true;
-            }
-            
             savedRange = range.cloneRange();
             return true;
         },
@@ -113,11 +106,7 @@
          * @returns {HTMLElement} 생성된 모달 요소
          */
         show: function(buttonElement, contentArea) {
-            if (!SelectionManager.save()) {
-                console.warn('선택 영역 저장 실패');
-                return;
-            }
-            
+            SelectionManager.save();
             this.close();
             
             activeModal = document.createElement('div');
@@ -160,9 +149,8 @@
             const urlInput = modal.querySelector('input');
             const okButton = modal.querySelector('button');
             
-            // 확인 버튼 클릭 이벤트
-            okButton.addEventListener('click', () => {
-                const url = urlInput.value.trim();
+            // URL 처리 함수
+            const processUrl = (url) => {
                 if (!URLUtils.isValid(url)) {
                     LiteEditorModal.alert('올바른 URL을 입력해주세요.\n예: https://example.com');
                     return;
@@ -170,6 +158,12 @@
                 
                 contentArea.focus();
                 setTimeout(() => this.applyLink(url, contentArea), 0);
+            };
+            
+            // 확인 버튼 클릭 이벤트
+            okButton.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                processUrl(url);
             });
             
             // URL 입력 필드 엔터 이벤트
@@ -177,13 +171,7 @@
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const url = urlInput.value.trim();
-                    if (!URLUtils.isValid(url)) {
-                        LiteEditorModal.alert('올바른 URL을 입력해주세요.\n예: https://example.com');
-                        return;
-                    }
-                    
-                    contentArea.focus();
-                    setTimeout(() => this.applyLink(url, contentArea), 0);
+                    processUrl(url);
                 }
             });
 
@@ -191,18 +179,6 @@
             modal.addEventListener('click', (e) => e.stopPropagation());
             
             // 전역 이벤트 설정
-            this.setupGlobalEvents(buttonElement);
-            
-            // URL 입력 필드에 포커스
-            setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
-        },
-        
-        /**
-         * 전역 이벤트 핸들러 설정
-         * @param {HTMLElement} buttonElement - 링크 버튼 요소
-         */
-        setupGlobalEvents: function(buttonElement) {
-            // 모달 외부 클릭 시 닫기
             document.addEventListener('click', (e) => {
                 if (activeModal && !activeModal.contains(e.target) && !buttonElement.contains(e.target)) {
                     SelectionManager.clear();
@@ -210,13 +186,15 @@
                 }
             }, true);
             
-            // ESC 키로 모달 닫기
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && activeModal) {
                     SelectionManager.clear();
                     this.close();
                 }
             });
+            
+            // URL 입력 필드에 포커스
+            setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
         },
         
         /**
@@ -242,39 +220,30 @@
             
             try {
                 if (savedRange && SelectionManager.restore()) {
-                    // 선택 영역이 있는 경우 기존 로직 실행
+                    // 선택 영역이 있는 경우
                     document.execCommand('createLink', false, finalUrl);
                     
                     const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
                     if (newLink) {
                         newLink.setAttribute('target', '_blank');
-                        
-                        // 커서를 링크 뒤로 이동
-                        const range = document.createRange();
-                        range.setStartAfter(newLink);
-                        range.collapse(true);
-                        
-                        const selection = window.getSelection();
-                        selection.removeAllRanges();
-                        selection.addRange(range);
                     }
                 } else {
                     // 선택 영역이 없는 경우 현재 커서 위치에 링크 삽입
                     const linkText = URLUtils.extractDomain(url);
                     const linkElement = `<a href="${finalUrl}" target="_blank">${linkText}</a>`;
                     document.execCommand('insertHTML', false, linkElement);
+                }
+                
+                // 커서를 링크 뒤로 이동
+                const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
+                if (newLink) {
+                    const range = document.createRange();
+                    range.setStartAfter(newLink);
+                    range.collapse(true);
                     
-                    // 커서를 링크 뒤로 이동
-                    const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
-                    if (newLink) {
-                        const range = document.createRange();
-                        range.setStartAfter(newLink);
-                        range.collapse(true);
-                        
-                        const selection = window.getSelection();
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                    }
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
                 }
                 
                 contentArea.dispatchEvent(new Event('input', { bubbles: true }));
