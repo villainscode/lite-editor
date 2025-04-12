@@ -23,8 +23,11 @@
          */
         isValid: function(url) {
             // IP 주소, 로컬호스트, 포트 번호를 포함한 URL 검증
-            const urlRegex = /^(https?:\/\/)?([\w\-]+(\.[\w\-]+)+|localhost|(\d{1,3}\.){3}\d{1,3})(:\d+)?([\/#?][\w\-\.~:/?#[\]@!$&'()*+,;=]*)?$/;
-            return urlRegex.test(url);
+            const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9\u3131-\u314E\uAC00-\uD7A3-]+\.)+([a-zA-Z\u3131-\u314E\uAC00-\uD7A3]{2,}))(:\d+)?(\/[^\s]*)?(\?.*)?$/;
+            // 유효하지 않은 형식 검사 (wwww 등)
+            const invalidPrefixRegex = /^(https?:\/\/)?(wwww\.|ww\.|w{5,}\.|w{1,2}\.)/i;
+            
+            return domainRegex.test(url) && !invalidPrefixRegex.test(url);
         },
 
         /**
