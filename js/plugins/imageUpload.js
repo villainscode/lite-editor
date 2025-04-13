@@ -33,13 +33,13 @@
     <div class="modal-overlay">
         <div class="modal-content">            
             <!-- 상단 제목 및 컨텐츠 영역 -->
-            <div style="padding: 16px;">
+            <div>
                 <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #333;">Insert Image</h3>
                 
                 <!-- URL 입력 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
-                        Image URL
+                    URL
                     </label>
                     <input type="url" 
                            id="image-url-input"
@@ -49,14 +49,14 @@
                 
                 <!-- 구분선 -->
                 <div style="display: flex; align-items: center; margin: 15px 0;">
-                    <div style="font-size: 13px; color: #888; margin-right: 8px;">OR</div>
+                    <div style="font-size: 11px; color: #888; margin-right: 8px;">OR</div>
                     <div style="flex-grow: 1; height: 1px; background-color: #e0e0e0;"></div>
                 </div>
 
                 <!-- 파일 업로드 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
-                        Image File
+                     File
                     </label>
                     <div style="display: flex; align-items: center; justify-content: center; width: 100%;">
                         <label style="width: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px; background-color: #f8f9fa; color: #666; border-radius: 4px; border: 1px dashed #ccc; cursor: pointer;">
@@ -69,7 +69,7 @@
             </div>
             
             <!-- 버튼 -->
-            <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+            <div style="display: flex; justify-content: flex-end;">
                 <button type="button" data-action="close"
                         style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
                         title="Cancel">
@@ -286,6 +286,14 @@
             }
         });
 
+        // 모달 오버레이의 클릭 이벤트: 버튼 클릭은 통과시키고,
+        // 나머지 영역 클릭 시 닫도록 처리
+        modal.addEventListener('click', (e) => {
+            if (e.target.tagName.toLowerCase() !== 'button') {
+                closeModal(modal);
+            }
+        });
+        
         // 모달 표시 후 URL 입력 필드에 자동 포커스 추가
         // 모달 표시 로직 최적화
         setTimeout(() => {

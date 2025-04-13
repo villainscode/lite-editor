@@ -152,7 +152,7 @@
             // URL 처리 함수
             const processUrl = (url) => {
                 if (!URLUtils.isValid(url)) {
-                    LiteEditorModal.alert('올바른 URL을 입력해주세요.\n예: https://example.com');
+                    LiteEditorModal.alert('올바른 URL을 입력해주세요.<BR>예: https://example.com');
                     return;
                 }
                 
