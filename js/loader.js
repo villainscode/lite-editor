@@ -45,7 +45,7 @@
         'js/plugins/line.js',
         
         // 8. 기타 플러그인
-        'js/plugins/modal.js',
+        'js/modal.js',
         
     ];
     
