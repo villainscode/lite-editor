@@ -158,6 +158,10 @@
         padding: 0 2px;
         background-color: rgba(0, 102, 204, 0.05);
       }
+
+      /* 도현체와 Black Han Sans 관련 코드 */
+      .lite-editor-content span[style*="Do Hyeon"] { font-family: "Do Hyeon", sans-serif !important; }
+      .lite-editor-content span[style*="Black Han Sans"] { font-family: "Black Han Sans", sans-serif !important; }
       
       /* font 태그 스타일 강화 - attr()가 지원되지 않을 수 있으니 직접 선택자로 처리 */
       .lite-editor-content font[face="Arial"] { font-family: Arial !important; }
@@ -410,8 +414,8 @@
         { name: '굴림체', value: 'Gulim, sans-serif' },
         { name: '맑은 고딕', value: 'Malgun Gothic, AppleGothic, sans-serif' },
         { name: 'Noto Sans KR', value: 'Noto Sans KR, sans-serif' },
-        { name: '나눔고딕', value: 'Nanum Gothic, sans-serif' },
-        { name: '서울나무', value: 'Seoul Namsan, sans-serif' },
+        { name: 'Do Hyeon', value: '"Do Hyeon", sans-serif' },
+        { name: 'Black Han Sans', value: '"Black Han Sans", sans-serif' },
         
         // 구분선
         { type: 'divider' },
