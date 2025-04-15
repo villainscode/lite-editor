@@ -37,3 +37,18 @@
 .modal-content {
   font-size: smaller;
 }
+
+/* 에디터 영역 안의 이미지 컨테이너에 resize 허용 */
+.lite-editor-content div[contenteditable="false"] {
+    resize: both;
+    overflow: auto;
+    display: inline-block;
+    max-width: 100%;
+}
+
+/* 컨테이너 내부 이미지 스타일 */
+.lite-editor-content div[contenteditable="false"] img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
