@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>표 만들기 기능 예제</title>
+  <style>
+    body {
+      color: #666;
+      font: 14px/24px "Open Sans", "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", Sans-Serif;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    /* "표 만들기" 버튼 스타일 */
+    #createTableBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    /* 그리드 레이어 (팝업) */
+    #gridLayer {
+      display: none;
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      border: 1px solid #ccc;
+      background: #fff;
+      padding: 10px;
+      z-index: 100;
+    }
+    table.grid {
+      border-collapse: collapse;
+    }
+    table.grid td {
+      width: 15px;
+      height: 15px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    table.grid td.selected {
+      background-color: #007bff;
+    }
+    /* 결과 테이블 스타일 - #resultContainer 내에 적용 */
+    #resultContainer table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+    #resultContainer th,
+    #resultContainer td {
+      padding: 6px 15px;
+      width: 25px;
+      height: 25px;
+    }
+    #resultContainer th {
+      background: #828282;
+      color: #fff;
+      text-align: left;
+    }
+    #resultContainer tr:first-child th:first-child {
+      border-top-left-radius: 6px;
+    }
+    #resultContainer tr:first-child th:last-child {
+      border-top-right-radius: 6px;
+    }
+    #resultContainer td {
+      border-right: 1px solid #c6c9cc;
+      border-bottom: 1px solid #c6c9cc;
+    }
+    #resultContainer td:first-child {
+      border-left: 1px solid #c6c9cc;
+    }
+    #resultContainer tr:nth-child(even) td {
+      background: #f6f6f6;
+    }
+    #resultContainer tr:last-child td:first-child {
+      border-bottom-left-radius: 6px;
+    }
+    #resultContainer tr:last-child td:last-child {
+      border-bottom-right-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <button id="createTableBtn">표 만들기</button>
+
+  <!-- 그리드 레이어 (셀렉트 박스 포함) -->
+  <div id="gridLayer">
+    <p>드래그하여 표 크기를 선택하세요 (최대 10×10)</p>
+    <table class="grid">
+      <tbody>
+        <!-- 10행 10열 그리드 JavaScript로 생성 -->
+      </tbody>
+    </table>
+    <!-- 옵션 영역 추가 -->
+    <div id="tableOptions" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <label for="tableStyleSelect" style="font-size: 13px;">Select table style:</label>
+        <select id="tableStyleSelect" style="margin-left: 5px;">
+          <option value="basic">Basic table</option>
+          <option value="title">Title column table</option>
+          <option value="emphasized">Emphasized</option>
+        </select>
+      </div>
+      <div>
+        <label for="lineStyleSelect" style="font-size: 13px;">Line style:</label>
+        <select id="lineStyleSelect" style="margin-left: 5px;">
+          <option value="border">border</option>
+          <option value="dotted">dotted line</option>
+          <option value="none">none</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 결과가 삽입될 영역 -->
+  <div id="resultContainer"></div>
+
+  <script>
+    // 그리드 생성: 10 x 10 셀 생성
+    const gridLayer = document.getElementById("gridLayer");
+    const gridTbody = gridLayer.querySelector("table.grid tbody");
+    for (let i = 0; i < 10; i++) {
+      const tr = document.createElement("tr");
+      for (let j = 0; j < 10; j++) {
+        const td = document.createElement("td");
+        td.dataset.row = i;
+        td.dataset.col = j;
+        tr.appendChild(td);
+      }
+      gridTbody.appendChild(tr);
+    }
+
+    let isMouseDown = false;
+    let startRow = null, startCol = null, endRow = null, endCol = null;
+
+    function clearSelection() {
+      document.querySelectorAll("table.grid td").forEach(cell => {
+        cell.classList.remove("selected");
+      });
+    }
+
+    function highlightSelection(sRow, sCol, eRow, eCol) {
+      clearSelection();
+      const minRow = Math.min(sRow, eRow);
+      const maxRow = Math.max(sRow, eRow);
+      const minCol = Math.min(sCol, eCol);
+      const maxCol = Math.max(sCol, eCol);
+      document.querySelectorAll("table.grid td").forEach(cell => {
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        if (r >= minRow && r <= maxRow && c >= minCol && c <= maxCol) {
+          cell.classList.add("selected");
+        }
+      });
+    }
+
+    gridTbody.addEventListener("mousedown", e => {
+      if (e.target.tagName === "TD") {
+        isMouseDown = true;
+        startRow = parseInt(e.target.dataset.row);
+        startCol = parseInt(e.target.dataset.col);
+        highlightSelection(startRow, startCol, startRow, startCol);
+      }
+      e.preventDefault();
+    });
+
+    gridTbody.addEventListener("mouseover", e => {
+      if (isMouseDown && e.target.tagName === "TD") {
+        endRow = parseInt(e.target.dataset.row);
+        endCol = parseInt(e.target.dataset.col);
+        highlightSelection(startRow, startCol, endRow, endCol);
+      }
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (isMouseDown) {
+        isMouseDown = false;
+        const minRow = Math.min(startRow, endRow !== null ? endRow : startRow);
+        const maxRow = Math.max(startRow, endRow !== null ? endRow : startRow);
+        const minCol = Math.min(startCol, endCol !== null ? endCol : startCol);
+        const maxCol = Math.max(startCol, endCol !== null ? endCol : startCol);
+        const selectedRows = maxRow - minRow + 1;
+        const selectedCols = maxCol - minCol + 1;
+        // 결과 테이블 생성 (옵션 값 적용 - 추가 개발 필요)
+        generateTable(selectedRows, selectedCols);
+        gridLayer.style.display = "none";
+      }
+    });
+
+    document.getElementById("createTableBtn").addEventListener("click", () => {
+      gridLayer.style.display = "block";
+      clearSelection();
+      startRow = startCol = endRow = endCol = null;
+    });
+
+    function generateTable(rows, cols) {
+      const resultContainer = document.getElementById("resultContainer");
+      resultContainer.innerHTML = ""; // 이전 테이블 제거
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+
+      // 헤더 행 생성
+      const headerRow = document.createElement("tr");
+      for (let j = 0; j < cols; j++) {
+        const th = document.createElement("th");
+        th.setAttribute("contenteditable", "true");
+        th.textContent = `Header ${j + 1}`;
+        headerRow.appendChild(th);
+      }
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      // 데이터 행 생성
+      for (let i = 0; i < rows; i++) {
+        const tr = document.createElement("tr");
+        for (let j = 0; j < cols; j++) {
+          const td = document.createElement("td");
+          td.setAttribute("contenteditable", "true");
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      resultContainer.appendChild(table);
+
+      // (옵션 메뉴의 선택값에 따라 스타일을 추가하는 로직은 이후 확장 가능)
+    }
+  </script>
+</body>
+</html>

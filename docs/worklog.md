@@ -1,7 +1,9 @@
 
 # Worklog
+파일명은 {@date}-{@function이름}-worklog.md 로 docs 폴더 하위에 그날의 작업 기록을 남겨놓는다. 
+현재 기준 작업 브랜치를 기록하고 오늘 수정사항, 추가사항, 남은 사항들을 아래의 형식에 맞춰 바꿔준다.
 
-## 2025-04-13
+## 2025-04-13 (작업한 날짜)
 
 ### 수정 완료 사항 
 1. Do Hyeon, Black Han Sans 폰트 추가 - fontFamily.js
@@ -16,3 +18,8 @@
 
 ### 유의사항 
 1. index.html에 class="lite-editor-content" 추가할 경우 에디터 아이콘 깨짐 
+
+
+### 주요 소스 설명 
+
+
