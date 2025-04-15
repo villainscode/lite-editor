@@ -65,13 +65,64 @@
 
     // 3. 유틸리티 함수
     function insertImage(src) {
+        const contentArea = document.querySelector('.lite-editor-content');
+        if (!contentArea) {
+            console.error('Content area not found');
+            return;
+        }
+
+        // 에디터에 포커스
+        contentArea.focus();
+
+        // 현재 선택 영역 복원
+        if (window.liteEditorSelection) {
+            window.liteEditorSelection.restore();
+        }
+
+        // 이미지 요소 생성
         const img = document.createElement('img');
         img.src = src;
         img.style.maxWidth = '100%';
-        
-        const contentArea = document.querySelector('.lite-editor-content');
-        if (contentArea) {
-            contentArea.appendChild(img);
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '10px 0';
+
+        // 현재 선택 영역 가져오기
+        const selection = window.getSelection();
+        let range;
+
+        if (selection.rangeCount > 0) {
+            range = selection.getRangeAt(0);
+        } else {
+            // 선택 영역이 없으면 새로운 범위 생성
+            range = document.createRange();
+            range.selectNodeContents(contentArea);
+            range.collapse(false); // 끝에 커서 위치
+        }
+
+        // 선택된 내용 삭제 (있는 경우)
+        range.deleteContents();
+
+        // 이미지 삽입
+        range.insertNode(img);
+
+        // 이미지 뒤에 줄바꿈 추가
+        const br = document.createElement('br');
+        img.parentNode.insertBefore(br, img.nextSibling);
+
+        // 커서를 이미지 뒤로 이동
+        const newRange = document.createRange();
+        newRange.setStartAfter(br);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        // 변경 이벤트 발생
+        contentArea.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // 선택 영역 저장
+        if (window.liteEditorSelection) {
+            window.liteEditorSelection.save();
         }
     }
 
@@ -96,6 +147,12 @@
             if (modal && !modal.contains(e.target)) {
                 // 이미지 업로드 버튼 클릭 시에는 닫지 않음 (모달 토글 동작을 위해)
                 if (button === e.target || button.contains(e.target)) {
+                    return;
+                }
+                
+                // 입력창이 포커스된 상태라면 모달을 닫지 않음
+                const urlInput = modal.querySelector('input[type="url"]');
+                if (urlInput && urlInput === document.activeElement) {
                     return;
                 }
                 
@@ -136,11 +193,37 @@
         // 이벤트 핸들러 설정
         closeButton.addEventListener('click', () => closeModal(modal));
         
+        // URL 입력창 이벤트 핸들러 추가
+        urlInput.addEventListener('input', (e) => {
+            const url = e.target.value.trim();
+            if (url) {
+                // URL이 입력되었을 때 파일 입력을 비활성화
+                fileInput.disabled = true;
+            } else {
+                fileInput.disabled = false;
+            }
+        });
+
+        // URL 입력창 포커스 이벤트 추가
+        urlInput.addEventListener('focus', () => {
+            urlInput.style.borderColor = '#9ca3af';
+            urlInput.style.boxShadow = '0 0 0 1px rgba(156, 163, 175, 0.5)';
+        });
+
+        urlInput.addEventListener('blur', () => {
+            urlInput.style.borderColor = '#ccc';
+            urlInput.style.boxShadow = 'none';
+        });
+        
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 const fileName = e.target.files[0].name;
                 const textSpan = modal.querySelector('.flex-col span:last-child');
                 textSpan.textContent = fileName;
+                // 파일이 선택되었을 때 URL 입력을 비활성화
+                urlInput.disabled = true;
+            } else {
+                urlInput.disabled = false;
             }
         });
 
@@ -151,14 +234,33 @@
             const file = fileInput.files[0];
             
             if (url) {
+                // 현재 선택 영역 저장
+                if (window.liteEditorSelection) {
+                    window.liteEditorSelection.save();
+                }
+                
+                // 이미지 삽입
                 insertImage(url);
             } else if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => insertImage(e.target.result);
+                reader.onload = (e) => {
+                    // 현재 선택 영역 저장
+                    if (window.liteEditorSelection) {
+                        window.liteEditorSelection.save();
+                    }
+                    
+                    // 이미지 삽입
+                    insertImage(e.target.result);
+                };
                 reader.readAsDataURL(file);
             }
             
             closeModal(modal);
+        });
+
+        // 모달 내부 클릭 이벤트 전파 방지
+        modal.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
 
         // 스타일 및 위치 설정
