@@ -181,9 +181,6 @@
                 </div>
             </div>
             <div style="display: flex; justify-content: flex-end;">
-                <button type="button" data-action="close" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;" title="Cancel">
-                    <span class="material-icons" style="font-size: 18px; color: #5f6368;">close</span>
-                </button>
                 <button type="submit" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;" title="Insert">
                     <span class="material-icons" style="font-size: 18px; color: #5f6368;">add_circle</span>
                 </button>
@@ -217,13 +214,9 @@
         });
 
         // 내부 요소 참조
-        const closeBtn = modal.querySelector('button[data-action="close"]');
         const insertBtn = modal.querySelector('button[type="submit"]');
         const urlInput = modal.querySelector('#image-url-input');
         const fileInput = modal.querySelector('#image-file-input');
-
-        // 이벤트 설정
-        closeBtn.addEventListener('click', () => closeModal(modal));
         
         // 모달 컨텐츠 클릭 시 이벤트 전파 중단
         modal.querySelector('.modal-content').addEventListener('click', e => e.stopPropagation());
@@ -378,4 +371,40 @@
             setupGlobalEvents();
         }
     });
+
+    // 함수 선언 (파일 상단 다른 함수들과 함께 선언)
+    function addTableHoverStyles() {
+        const styleId = 'tableHoverStyles';
+        if (document.getElementById(styleId)) return;
+        
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.type = 'text/css';
+        styleEl.innerText = `
+            .grid-layer button {
+                transition: transform 0.1s ease !important;
+            }
+            .grid-layer button:hover {
+                transform: scale(0.95) !important;
+                background-color: rgba(0, 0, 0, 0.05) !important;
+            }
+        `;
+        document.head.appendChild(styleEl);
+    }
+
+    // 4. 그리드 레이어 스타일 추가 함수 수정
+    function addTableStyles() {
+        if (document.getElementById(STYLE_ID)) return;
+        
+        // CSS 파일 로드
+        const linkEl = document.createElement('link');
+        linkEl.id = STYLE_ID;
+        linkEl.rel = 'stylesheet';
+        linkEl.type = 'text/css';
+        linkEl.href = CSS_PATH;
+        document.head.appendChild(linkEl);
+        
+        // 호버 스타일 추가
+        addTableHoverStyles();
+    }
 })();

@@ -119,213 +119,89 @@
         const optionsPanel = document.createElement('div');
         optionsPanel.className = 'options-panel';
         
-        // Style 선택 그룹
-        const styleGroup = document.createElement('div');
-        styleGroup.className = 'form-group';
+        // Style 드롭다운 생성
+        const styleDropdown = createStyledDropdown(
+            'Style', 
+            ['Basic', 'Header', 'Column', 'Complex'],
+            'Basic'
+        );
         
-        const styleLabel = document.createElement('label');
-        styleLabel.textContent = 'Style';
-        
-        // Style 커스텀 셀렉트 생성
-        const styleSelectContainer = document.createElement('div');
-        styleSelectContainer.className = 'custom-select-container';
-        styleSelectContainer.style.width = '90px';
-        
-        // Style 선택 버튼
-        const styleButton = document.createElement('button');
-        styleButton.type = 'button';
-        styleButton.className = 'custom-select-button';
-        styleButton.style.width = '90px';
-        styleButton.style.border = '1px solid #e5e7eb';
-        
-        // 선택된 텍스트
-        const styleSelectedText = document.createElement('span');
-        styleSelectedText.textContent = 'Basic';
-        styleSelectedText.className = 'selected-text';
-        styleSelectedText.style.width = '65px';
-        styleSelectedText.style.border = '1px solid transparent';
-        
-        // 화살표 아이콘
-        const styleArrow = document.createElement('svg');
-        styleArrow.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        styleArrow.setAttribute('fill', 'none');
-        styleArrow.setAttribute('viewBox', '0 0 24 24');
-        styleArrow.setAttribute('stroke-width', '1.5');
-        styleArrow.setAttribute('stroke', 'currentColor');
-        styleArrow.setAttribute('width', '12');
-        styleArrow.setAttribute('height', '12');
-        styleArrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />';
-        
-        styleButton.appendChild(styleSelectedText);
-        styleButton.appendChild(styleArrow);
-        
-        // Style 드롭다운
-        const styleDropdown = document.createElement('div');
-        styleDropdown.className = 'custom-select-dropdown hidden';
-        styleDropdown.style.width = '90px';
-        
-        // Style 옵션들
-        const styleOptions = ['Basic', 'Header', 'Column'];
-        styleOptions.forEach(option => {
-            const optionEl = document.createElement('div');
-            optionEl.className = `custom-select-option ${option === 'Basic' ? 'selected' : ''}`;
-            optionEl.textContent = option;
-            optionEl.dataset.value = option.toLowerCase();
-            
-            optionEl.addEventListener('click', () => {
-                // 선택된 옵션 업데이트
-                styleSelectedText.textContent = option;
-                
-                // 선택된 클래스 업데이트
-                styleDropdown.querySelectorAll('.custom-select-option').forEach(el => {
-                    el.classList.remove('selected');
-                });
-                optionEl.classList.add('selected');
-                
-                // 드롭다운 닫기
-                styleDropdown.classList.add('hidden');
-            });
-            
-            styleDropdown.appendChild(optionEl);
-        });
-        
-        // 토글 이벤트 추가
-        styleButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            styleDropdown.classList.toggle('hidden');
-            lineDropdown.classList.add('hidden'); // 다른 드롭다운 닫기
-        });
-        
-        styleSelectContainer.appendChild(styleButton);
-        styleSelectContainer.appendChild(styleDropdown);
-        
-        styleGroup.appendChild(styleLabel);
-        styleGroup.appendChild(styleSelectContainer);
-        
-        // Line 선택 그룹
-        const lineGroup = document.createElement('div');
-        lineGroup.className = 'form-group';
-        
-        const lineLabel = document.createElement('label');
-        lineLabel.textContent = 'Line';
-        
-        // Line 커스텀 셀렉트 생성
-        const lineSelectContainer = document.createElement('div');
-        lineSelectContainer.className = 'custom-select-container';
-        lineSelectContainer.style.width = '90px';
-        
-        // Line 선택 버튼
-        const lineButton = document.createElement('button');
-        lineButton.type = 'button';
-        lineButton.className = 'custom-select-button';
-        lineButton.style.width = '90px';
-        lineButton.style.border = '1px solid #e5e7eb';
-        
-        // 선택된 텍스트
-        const lineSelectedText = document.createElement('span');
-        lineSelectedText.textContent = 'Solid';
-        lineSelectedText.className = 'selected-text';
-        lineSelectedText.style.width = '65px';
-        lineSelectedText.style.border = '1px solid transparent';
-        
-        // 화살표 아이콘
-        const lineArrow = document.createElement('svg');
-        lineArrow.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        lineArrow.setAttribute('fill', 'none');
-        lineArrow.setAttribute('viewBox', '0 0 24 24');
-        lineArrow.setAttribute('stroke-width', '1.5');
-        lineArrow.setAttribute('stroke', 'currentColor');
-        lineArrow.setAttribute('width', '12');
-        lineArrow.setAttribute('height', '12');
-        lineArrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />';
-        
-        lineButton.appendChild(lineSelectedText);
-        lineButton.appendChild(lineArrow);
-        
-        // Line 드롭다운
-        const lineDropdown = document.createElement('div');
-        lineDropdown.className = 'custom-select-dropdown hidden';
-        lineDropdown.style.width = '90px';
-        
-        // Line 옵션들
-        const lineOptions = ['Solid', 'Dotted', 'No border'];
-        lineOptions.forEach(option => {
-            const optionEl = document.createElement('div');
-            optionEl.className = `custom-select-option ${option === 'Solid' ? 'selected' : ''}`;
-            optionEl.textContent = option;
-            optionEl.dataset.value = option.toLowerCase().replace(' ', '-');
-            
-            optionEl.addEventListener('click', () => {
-                // 선택된 옵션 업데이트
-                lineSelectedText.textContent = option;
-                
-                // 선택된 클래스 업데이트
-                lineDropdown.querySelectorAll('.custom-select-option').forEach(el => {
-                    el.classList.remove('selected');
-                });
-                optionEl.classList.add('selected');
-                
-                // 드롭다운 닫기
-                lineDropdown.classList.add('hidden');
-            });
-            
-            lineDropdown.appendChild(optionEl);
-        });
-        
-        // 토글 이벤트 추가
-        lineButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            lineDropdown.classList.toggle('hidden');
-            styleDropdown.classList.add('hidden'); // 다른 드롭다운 닫기
-        });
-        
-        lineSelectContainer.appendChild(lineButton);
-        lineSelectContainer.appendChild(lineDropdown);
-        
-        lineGroup.appendChild(lineLabel);
-        lineGroup.appendChild(lineSelectContainer);
+        // Line 드롭다운 생성
+        const lineDropdown = createStyledDropdown(
+            'Line', 
+            ['Solid', 'Dotted', 'No border'], 
+            'Solid'
+        );
         
         // 버튼 컨테이너 생성 (우측 정렬용)
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'button-container';
         
-        // 삽입 버튼 생성
+        // 삽입 버튼 생성 - 크기 및 스타일 개선
         const insertButton = document.createElement('button');
         insertButton.type = 'button';
         insertButton.title = 'Insert Table';
+        insertButton.className = 'table-insert-button';
+        insertButton.style.display = 'flex';
+        insertButton.style.alignItems = 'center';
+        insertButton.style.justifyContent = 'center';
+        insertButton.style.borderRadius = '4px';
+        insertButton.style.border = 'none';
+        insertButton.style.backgroundColor = 'transparent';
+        insertButton.style.cursor = 'pointer';
         
-        const buttonIcon = document.createElement('span');
-        buttonIcon.className = 'material-icons';
-        buttonIcon.style.fontSize = '18px';
-        buttonIcon.style.color = '#5f6368';
-        buttonIcon.textContent = 'add_circle';
+        // 아이콘 추가 - 크기를 키움
+        const buttonIcon = document.createElement('div');
+        buttonIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#5f6368">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            </svg>
+        `;
+        buttonIcon.style.display = 'flex';
+        buttonIcon.style.alignItems = 'center';
+        buttonIcon.style.justifyContent = 'center';
         
         insertButton.appendChild(buttonIcon);
         buttonContainer.appendChild(insertButton);
         
         // 옵션 패널에 그룹들 추가
-        optionsPanel.appendChild(styleGroup);
-        optionsPanel.appendChild(lineGroup);
+        optionsPanel.appendChild(styleDropdown.group);
+        optionsPanel.appendChild(lineDropdown.group);
         optionsPanel.appendChild(buttonContainer);
         
         // 그리드 컨테이너에 옵션 패널 추가
         gridContainer.appendChild(optionsPanel);
         
-        // 그리드 레이어에 그리드 컨테이너 추가
+        // 그리드 레이어에 제목과 그리드 컨테이너 추가
+        gridLayer.appendChild(title);
         gridLayer.appendChild(gridContainer);
         
-        // 외부 클릭시 드롭다운 닫기
-        document.addEventListener('click', () => {
-            styleDropdown.classList.add('hidden');
-            lineDropdown.classList.add('hidden');
+        // 그리드 레이어에 클릭 이벤트 추가
+        gridLayer.addEventListener('click', (e) => {
+            // 클릭 이벤트가 드롭다운 버튼이나 드롭다운 메뉴 내부가 아닌 경우에만 처리
+            const isDropdownButton = e.target.closest('.dropdown-button');
+            const isDropdownMenu = e.target.closest('.dropdown-menu');
+            
+            // 드롭다운 버튼이나 메뉴가 아닌 영역 클릭 시 모든 드롭다운 닫기
+            if (!isDropdownButton && !isDropdownMenu) {
+                // 레이어 내 모든 드롭다운 메뉴 닫기
+                const dropdowns = gridLayer.querySelectorAll('.dropdown-menu');
+                dropdowns.forEach(menu => {
+                    menu.classList.add('hidden');
+                    const btn = menu.parentNode.querySelector('.dropdown-button');
+                    if (btn) btn.setAttribute('aria-expanded', 'false');
+                });
+            }
+            
+            // 이벤트 전파는 계속 진행 (레이어 전체 이벤트 핸들링을 위해)
         });
         
         // 삽입 버튼 클릭 이벤트
         insertButton.addEventListener('click', () => {
             const dimensions = getSelectedDimensions();
             if (dimensions) {
-                const selectedStyle = styleSelectedText.textContent.toLowerCase();
-                const selectedLine = lineSelectedText.textContent.toLowerCase().replace(' ', '-');
+                const selectedStyle = styleDropdown.getValue().toLowerCase();
+                const selectedLine = lineDropdown.getValue().toLowerCase().replace(' ', '-');
                 
                 // 테이블 옵션 설정
                 const tableOptions = {
@@ -339,6 +215,7 @@
         });
         
         // 외부 이벤트 핸들러 등록
+        addTableHoverStyles();
         setupOutsideClickHandler();
         setupEscapeKeyHandler();
         
@@ -346,6 +223,7 @@
         gridLayer.addEventListener('click', e => {
             e.stopPropagation();
         });
+        
         return gridLayer;
     }
     
@@ -558,6 +436,30 @@
                 
                 tbody.appendChild(row);
             }
+        } else if (style === 'complex' && rows > 1 && cols > 0) {
+            // Complex 스타일 테이블 (첫 행, 첫 열 모두 회색)
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('tr');
+                
+                for (let j = 0; j < cols; j++) {
+                    // 첫 번째 행이거나 첫 번째 열이면 th 태그 사용
+                    const cell = (i === 0 || j === 0) ? document.createElement('th') : document.createElement('td');
+                    cell.contentEditable = true;
+                    cell.style.padding = '5px 5px';
+                    cell.style.height = '32px';
+                    cell.style.border = borderStyle;
+                    
+                    // 첫 번째 행이거나 첫 번째 열이면 회색 배경 및 굵은 폰트
+                    if (i === 0 || j === 0) {
+                        cell.style.backgroundColor = '#f1f1f1';
+                        cell.style.fontWeight = 'bold';
+                    }
+                    
+                    row.appendChild(cell);
+                }
+                
+                tbody.appendChild(row);
+            }
         } else {
             // 기본 테이블
             for (let i = 0; i < rows; i++) {
@@ -630,6 +532,347 @@
             toolbar.appendChild(tableButton);
         }
     });
+
+    // Style 커스텀 드롭다운 코드 수정
+    function createStyledDropdown(label, options, defaultValue, width = '140px') {
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        
+        const labelEl = document.createElement('label');
+        labelEl.textContent = label;
+        
+        // 드롭다운 컨테이너 - 상대 위치 설정
+        const dropdownContainer = document.createElement('div');
+        dropdownContainer.className = 'relative inline-block';
+        dropdownContainer.style.width = width;
+        
+        // 버튼 컨테이너
+        const buttonContainer = document.createElement('div');
+        
+        // 선택 버튼
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'dropdown-button';
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-haspopup', 'true');
+        button.style.display = 'inline-flex';
+        button.style.width = '100%';
+        button.style.justifyContent = 'space-between';
+        button.style.alignItems = 'center';
+        button.style.borderRadius = '0.375rem';
+        button.style.backgroundColor = 'white';
+        button.style.padding = '0.5rem 0.75rem';
+        button.style.fontSize = '0.875rem';
+        button.style.fontWeight = '600';
+        button.style.color = '#111827';
+        button.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+        button.style.border = '1px solid #d1d5db';
+        
+        // 선택된 텍스트
+        const selectedText = document.createElement('span');
+        selectedText.textContent = defaultValue;
+        selectedText.className = 'selected-text';
+        
+        // 화살표 아이콘
+        const arrowIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        arrowIcon.setAttribute('viewBox', '0 0 20 20');
+        arrowIcon.setAttribute('fill', 'currentColor');
+        arrowIcon.setAttribute('aria-hidden', 'true');
+        arrowIcon.style.width = '1.25rem';
+        arrowIcon.style.height = '1.25rem';
+        arrowIcon.style.color = '#9ca3af';
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('fill-rule', 'evenodd');
+        path.setAttribute('d', 'M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z');
+        path.setAttribute('clip-rule', 'evenodd');
+        
+        arrowIcon.appendChild(path);
+        
+        button.appendChild(selectedText);
+        button.appendChild(arrowIcon);
+        buttonContainer.appendChild(button);
+        
+        // 드롭다운 메뉴
+        const dropdownMenu = document.createElement('div');
+        dropdownMenu.className = 'dropdown-menu hidden';
+        dropdownMenu.setAttribute('role', 'menu');
+        dropdownMenu.setAttribute('aria-orientation', 'vertical');
+        dropdownMenu.setAttribute('tabindex', '-1');
+        dropdownMenu.style.position = 'absolute';
+        dropdownMenu.style.right = '0';
+        dropdownMenu.style.zIndex = '10';
+        dropdownMenu.style.fontSize = '11px'
+        dropdownMenu.style.marginTop = '0';
+        dropdownMenu.style.width = '100%';
+        dropdownMenu.style.borderRadius = '0.375rem';
+        dropdownMenu.style.backgroundColor = 'white';
+        dropdownMenu.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+        dropdownMenu.style.border = '1px solid rgba(0, 0, 0, 0.05)';
+        
+        const menuContent = document.createElement('div');
+        menuContent.className = 'py-1';
+        menuContent.setAttribute('role', 'none');
+        
+        // 옵션 추가 - 스타일 수정된 버전
+        options.forEach((option, index) => {
+            const optionEl = document.createElement('div');
+            optionEl.className = 'dropdown-item';
+            optionEl.setAttribute('role', 'menuitem');
+            optionEl.setAttribute('tabindex', '-1');
+            optionEl.setAttribute('id', `menu-item-${index}`);
+            optionEl.style.display = 'flex';
+            optionEl.style.alignItems = 'center';
+            optionEl.style.padding = '6px 8px';
+            optionEl.style.cursor = 'pointer';
+            
+            // 아이콘 셀 생성 - 크기 조정
+            const iconCell = document.createElement('div');
+            iconCell.style.width = '27px'; // 30px에서 3px 감소
+            iconCell.style.height = '27px'; // 30px에서 3px 감소
+            iconCell.style.marginRight = '10px';
+            iconCell.style.flexShrink = '0';
+            
+            // 메뉴 아이콘 생성 (label이 'Line'인 경우에는 다른 아이콘 적용)
+            const isLineDropdown = label === 'Line';
+            
+            if (isLineDropdown) {
+                // 라인 스타일 아이콘
+                const lineIcon = document.createElement('div');
+                lineIcon.style.width = '27px'; // 30px에서 3px 감소
+                lineIcon.style.height = '27px'; // 30px에서 3px 감소
+                lineIcon.style.display = 'flex';
+                lineIcon.style.alignItems = 'center';
+                lineIcon.style.justifyContent = 'center';
+                lineIcon.style.border = '1px solid #ccc';
+                lineIcon.style.boxSizing = 'border-box';
+                
+                if (option === 'Solid') {
+                    // 실선
+                    const line = document.createElement('div');
+                    line.style.width = '22px';
+                    line.style.height = '0';
+                    line.style.borderTop = '1px solid #555';
+                    lineIcon.appendChild(line);
+                } else if (option === 'Dotted') {
+                    // 점선
+                    const line = document.createElement('div');
+                    line.style.width = '22px';
+                    line.style.height = '0';
+                    line.style.borderTop = '1px dotted #555';
+                    lineIcon.appendChild(line);
+                } else if (option === 'No border') {
+                    // 테두리만 있는 빈 네모 (내부 아이콘 없음)
+                    // 아무것도 추가하지 않음 - 빈 네모 테두리만 표시
+                }
+                
+                iconCell.appendChild(lineIcon);
+            } else {
+                // Style 드롭다운용 아이콘 크기도 변경
+                const tableIcon = document.createElement('div');
+                tableIcon.style.width = '27px'; // 30px에서 3px 감소
+                tableIcon.style.height = '27px'; // 30px에서 3px 감소
+                tableIcon.style.border = '1px solid #ccc';
+                tableIcon.style.display = 'grid';
+                tableIcon.style.gridTemplateColumns = '1fr 1fr';
+                tableIcon.style.gridTemplateRows = '1fr 1fr';
+                
+                // 옵션별 다른 스타일 적용 (기존 코드)
+                if (option === 'Basic') {
+                    // 기본 표 (모든 셀 흰색)
+                    tableIcon.innerHTML = `
+                        <div style="border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;"></div>
+                        <div style="border-bottom: 1px solid #ccc;"></div>
+                        <div style="border-right: 1px solid #ccc;"></div>
+                        <div></div>
+                    `;
+                } else if (option === 'Header') {
+                    // 첫 번째 행에 회색 배경
+                    tableIcon.innerHTML = `
+                        <div style="border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div style="border-bottom: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div style="border-right: 1px solid #ccc;"></div>
+                        <div></div>
+                    `;
+                } else if (option === 'Column') {
+                    // 첫 번째 열에 회색 배경
+                    tableIcon.innerHTML = `
+                        <div style="border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div style="border-bottom: 1px solid #ccc;"></div>
+                        <div style="border-right: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div></div>
+                    `;
+                } else if (option === 'Complex') {
+                    // Complex: 첫 번째 행과 첫 번째 열 모두 회색 배경
+                    tableIcon.innerHTML = `
+                        <div style="border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div style="border-bottom: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div style="border-right: 1px solid #ccc; background-color: #f1f1f1;"></div>
+                        <div></div>
+                    `;
+                }
+                
+                iconCell.appendChild(tableIcon);
+            }
+            
+            // 텍스트 셀 생성
+            const textCell = document.createElement('div');
+            textCell.textContent = option;
+            textCell.style.fontSize = '0.8125rem';
+            textCell.style.color = '#374151';
+            
+            // 활성화된 아이템 스타일 적용
+            if (option === defaultValue) {
+                optionEl.classList.add('active');
+                optionEl.style.backgroundColor = '#f3f4f6';
+                textCell.style.fontWeight = '500';
+            }
+            
+            // 셀 추가
+            optionEl.appendChild(iconCell);
+            optionEl.appendChild(textCell);
+            
+            // 클릭 이벤트 설정
+            optionEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 선택된 옵션 업데이트
+                selectedText.textContent = option;
+                
+                // 활성 클래스 업데이트
+                menuContent.querySelectorAll('.dropdown-item').forEach(el => {
+                    el.classList.remove('active');
+                    el.style.backgroundColor = '';
+                    el.querySelector('div:nth-child(2)').style.fontWeight = 'normal';
+                });
+                
+                optionEl.classList.add('active');
+                optionEl.style.backgroundColor = '#f3f4f6';
+                textCell.style.fontWeight = '500';
+                
+                // 드롭다운 닫기
+                dropdownMenu.classList.add('hidden');
+                button.setAttribute('aria-expanded', 'false');
+            });
+            
+            // 호버 효과 추가
+            optionEl.addEventListener('mouseenter', () => {
+                optionEl.style.backgroundColor = '#f3f4f6';
+            });
+            
+            optionEl.addEventListener('mouseleave', () => {
+                if (!optionEl.classList.contains('active')) {
+                    optionEl.style.backgroundColor = '';
+                }
+            });
+            
+            menuContent.appendChild(optionEl);
+        });
+        
+        dropdownMenu.appendChild(menuContent);
+        
+        // 토글 이벤트 추가
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // 드롭다운 토글
+            const isHidden = dropdownMenu.classList.contains('hidden');
+            
+            // 모든 드롭다운 닫기
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.add('hidden');
+                const btn = menu.parentNode.querySelector('button');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+            
+            // 현재 드롭다운 토글
+            if (isHidden) {
+                dropdownMenu.classList.remove('hidden');
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                dropdownMenu.classList.add('hidden');
+                button.setAttribute('aria-expanded', 'false');
+            }
+        });
+        
+        dropdownContainer.appendChild(buttonContainer);
+        dropdownContainer.appendChild(dropdownMenu);
+        
+        group.appendChild(labelEl);
+        group.appendChild(dropdownContainer);
+        
+        return {
+            group,
+            button,
+            selectedText,
+            dropdownMenu,
+            getValue: () => selectedText.textContent
+        };
+    }
+
+    // 테이블 레이어 너비 및 높이 관리 함수 추가
+    function setTableLayerDimensions(layer, width, height) {
+        if (!layer) return;
+        
+        if (width) {
+            layer.style.width = typeof width === 'number' ? `${width}px` : width;
+        }
+        
+        if (height) {
+            layer.style.height = typeof height === 'number' ? `${height}px` : height;
+        }
+    }
+
+    // 함수 선언 (파일 상단 다른 함수들과 함께 선언)
+    function addTableHoverStyles() {
+        const styleId = 'tableHoverStyles';
+        if (document.getElementById(styleId)) return;
+        
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.type = 'text/css';
+        styleEl.innerText = `
+            .grid-layer button {
+                transition: transform 0.1s ease !important;
+            }
+            .grid-layer button:hover {
+                transform: scale(0.95) !important;
+                background-color: rgba(0, 0, 0, 0.05) !important;
+            }
+        `;
+        document.head.appendChild(styleEl);
+    }
+
+    // 아이콘 크기를 위한 전용 스타일 태그 추가
+    function addTableIconStyles() {
+        const styleId = 'tableIconStyles';
+        if (document.getElementById(styleId)) {
+            // 이미 존재하면 제거 후 다시 추가
+            const existingStyle = document.getElementById(styleId);
+            existingStyle.parentNode.removeChild(existingStyle);
+        }
+        
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.type = 'text/css';
+        styleEl.innerHTML = `
+            .grid-layer .table-insert-icon {
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+                display: inline-block !important;
+                line-height: 1 !important;
+            }
+            
+            .grid-layer .table-insert-button {
+                width: 36px !important;
+                height: 36px !important;
+                padding: 6px !important;
+            }
+        `;
+        document.head.appendChild(styleEl);
+    }
 })();
 
 

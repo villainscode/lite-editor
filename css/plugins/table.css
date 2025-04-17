@@ -9,6 +9,8 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     z-index: 9999;
     font-size: 13px;
+    box-sizing: border-box;
+    width: 335px;
 }
 
 .grid-layer p {
@@ -25,13 +27,17 @@
 .grid-layer table.grid {
     border-collapse: collapse;
     margin-bottom: 10px;
+    width: 150px !important;
+    table-layout: fixed;
 }
 
 .grid-layer table.grid td {
-    width: 15px;
-    height: 15px;
+    width: calc(150px / 10);
+    height: calc(150px / 10);
+    box-sizing: border-box;
     border: 1px solid #ccc;
     cursor: pointer;
+    padding: 0;
 }
 
 .grid-layer table.grid td.selected {
@@ -39,22 +45,21 @@
 }
 
 .options-panel {
-    min-width: 100px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    
+    gap: 12px;
+    padding: 1px;
 }
 
-.options-panel .form-group {
+.form-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
-.options-panel label {
-    font-size: 12px;
-    color: #6b7280;
+.form-group label {
+    font-size: 0.8125rem !important;
+    color: #4b5563;
     font-weight: 500;
 }
 
@@ -131,6 +136,7 @@
 .options-panel .button-container {
     display: flex;
     justify-content: flex-end;
+    width: 150px;
     margin-top: 1px;
 }
 
@@ -150,4 +156,75 @@
 .grid-layer button:hover {
     transform: scale(0.95);
     background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 드롭다운 애니메이션 */
+.dropdown-menu {
+    transition: all 0.2s ease-out;
+    transform-origin: top right;
+}
+
+.dropdown-menu.hidden {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+.dropdown-menu:not(.hidden) {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* 드롭다운 아이템 스타일 */
+.dropdown-item {
+    transition: background-color 0.15s;
+    text-decoration: none;
+    font-size: 0.8125rem !important;
+}
+
+.dropdown-item:hover {
+    background-color: #f3f4f6 !important;
+}
+
+.dropdown-item.active {
+    background-color: #f3f4f6;
+    font-weight: 500;
+}
+
+/* 드롭다운 버튼 스타일 */
+.dropdown-button {
+    transition: all 0.15s;
+    font-size: 0.8125rem !important;
+}
+
+.dropdown-button:hover {
+    background-color: #f9fafb;
+}
+
+.dropdown-button:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+/* 테이블 삽입 버튼 */
+.insert-table-button {
+    transition: background-color 0.15s;
+}
+
+.insert-table-button:hover {
+    background-color: #2563eb;
+}
+
+.insert-table-button:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+/* 또는 전체 드롭다운 관련 텍스트 크기를 한번에 조정 */
+.options-panel, 
+.options-panel * {
+  font-size: 0.8125rem !important;
 }
