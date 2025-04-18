@@ -4,6 +4,42 @@
  */
 
 const PluginUtil = (function() {
+    // 활성화된 레이어/모달 관리를 위한 내부 상태
+    const state = {
+        activeModals: new Set(),  // 현재 활성화된 모달/레이어 추적
+        registeredButtons: new Set()  // 등록된 버튼 추적
+    };
+
+    // 현재 활성화된 모달/레이어 관리 (단순화)
+    const activeModalManager = {
+        activeModals: new Set(),
+        
+        register(modal) {
+            if (modal) this.activeModals.add(modal);
+        },
+        
+        unregister(modal) {
+            if (modal) this.activeModals.delete(modal);
+        },
+        
+        closeAll() {
+            this.activeModals.forEach(modal => {
+                if (modal.closeCallback) modal.closeCallback();
+            });
+            this.activeModals.clear();
+        },
+        
+        // 버튼 등록 로직 단순화
+        registerButton(button) {
+            if (!button) return;
+            
+            // 한 번만 등록하도록
+            if (button._hasClickHandler) return;
+            
+            button._hasClickHandler = true;
+        }
+    };
+
     // DOM 조작 유틸리티
     const dom = {
         /**
@@ -442,23 +478,36 @@ const PluginUtil = (function() {
         return layer;
     };
 
-    // 바깥 영역 클릭 감지
-    const setupOutsideClickHandler = function(element, callback) {
+    // 바깥 영역 클릭 감지 (단순화)
+    const setupOutsideClickHandler = function(element, callback, excludeElements = []) {
+        let isJustOpened = true;
+        
         const handler = (e) => {
-            if (!element.contains(e.target) && document.body.contains(element)) {
+            // 방금 열린 경우는 첫 클릭 무시
+            if (isJustOpened) {
+                isJustOpened = false;
+                return;
+            }
+            
+            // 제외할 요소들 확인
+            const shouldExclude = excludeElements.some(el => 
+                el === e.target || (el && el.contains && el.contains(e.target))
+            );
+            
+            if (!element.contains(e.target) && document.body.contains(element) && !shouldExclude) {
                 callback(e);
             }
         };
         
-        document.addEventListener('click', handler);
+        // 지연 등록으로 현재 클릭이 외부 클릭으로 인식되는 것 방지
+        setTimeout(() => {
+            document.addEventListener('click', handler);
+        }, 100);
         
-        // 핸들러 제거 함수 반환
-        return () => {
-            document.removeEventListener('click', handler);
-        };
+        return () => document.removeEventListener('click', handler);
     };
 
-    // 툴바 버튼 클릭 이벤트 관리
+    // 툴바 버튼 클릭 이벤트 관리 (단순화)
     const setupToolbarButtonEvents = function(button, dropdown, toolbar) {
         button.addEventListener('click', (e) => {
             e.preventDefault();
@@ -476,18 +525,79 @@ const PluginUtil = (function() {
                 });
             }
             
+            // 다른 모든 활성화된 모달 닫기
+            activeModalManager.closeAll();
+            
             // 현재 드롭다운 토글
             dropdown.classList.toggle('show');
             
+            // 열리는 경우 활성 모달로 등록
             if (!isActive) {
                 layer.setLayerPosition(dropdown, button);
+                dropdown.closeCallback = () => {
+                    dropdown.classList.remove('show');
+                };
+                activeModalManager.register(dropdown);
+            } else {
+                activeModalManager.unregister(dropdown);
             }
         });
         
         // 바깥 클릭 시 닫기
         setupOutsideClickHandler(dropdown, () => {
             dropdown.classList.remove('show');
+            activeModalManager.unregister(dropdown);
         });
+    };
+
+    // 툴바 레벨 이벤트 핸들러 추가 (단순화)
+    const setupToolbarModalEvents = function(toolbar) {
+        if (!toolbar || toolbar._hasModalEvents) return;
+        
+        toolbar.addEventListener('click', (e) => {
+            // 툴바 영역 클릭 시 모든 모달 닫기 (단, 레이어 내부 클릭은 제외)
+            if (!e.target.closest('.lite-editor-dropdown-menu') && 
+                !e.target.closest('.lite-editor-link-popup') &&
+                !e.target.closest('.grid-layer')) {
+                activeModalManager.closeAll();
+            }
+        });
+        
+        toolbar._hasModalEvents = true;
+    };
+
+    // 모달 관리 유틸리티
+    const modal = {
+        /**
+         * 모달의 닫기 이벤트(ESC 키 및 외부 클릭)를 설정 (단순화)
+         */
+        setupModalCloseEvents(modalElement, closeCallback, excludeElements = []) {
+            if (!modalElement || !closeCallback) return () => {};
+            
+            modalElement.closeCallback = closeCallback;
+            activeModalManager.register(modalElement);
+            
+            const outsideClickRemover = setupOutsideClickHandler(modalElement, () => {
+                closeCallback();
+                activeModalManager.unregister(modalElement);
+            }, excludeElements);
+            
+            const escKeyHandler = (e) => {
+                if (e.key === 'Escape' && document.body.contains(modalElement)) {
+                    closeCallback();
+                    activeModalManager.unregister(modalElement);
+                    document.removeEventListener('keydown', escKeyHandler);
+                }
+            };
+            
+            document.addEventListener('keydown', escKeyHandler);
+            
+            return function cleanup() {
+                outsideClickRemover();
+                document.removeEventListener('keydown', escKeyHandler);
+                activeModalManager.unregister(modalElement);
+            };
+        }
     };
 
     // 공개 API
@@ -504,9 +614,50 @@ const PluginUtil = (function() {
         createDropdown,
         createPopupLayer,
         setupOutsideClickHandler,
-        setupToolbarButtonEvents
+        setupToolbarButtonEvents,
+        setupToolbarModalEvents,
+        activeModalManager,
+        modal
     };
 })();
 
 // 전역 스코프에 노출
 window.PluginUtil = PluginUtil;
+
+// 더 단순한 토글 구현
+let isModalOpen = false;
+let modalElement = null;
+
+function toggleLinkModal(button, contentArea) {
+    if (isModalOpen && modalElement) {
+        // 닫기
+        modalElement.remove();
+        modalElement = null;
+        isModalOpen = false;
+        return;
+    }
+    
+    // 열기
+    isModalOpen = true;
+    modalElement = createLinkModal(button, contentArea);
+    
+    // 외부 클릭 처리 - 다음 클릭부터 적용되도록 타임아웃 사용
+    setTimeout(() => {
+        document.addEventListener('click', function closeModal(e) {
+            // 모달 내부 또는 버튼 클릭이면 무시
+            if (modalElement.contains(e.target) || button.contains(e.target)) {
+                return;
+            }
+            
+            // 모달 닫기
+            if (modalElement) {
+                modalElement.remove();
+                modalElement = null;
+                isModalOpen = false;
+            }
+            
+            // 이벤트 리스너 제거
+            document.removeEventListener('click', closeModal);
+        });
+    }, 100);
+}

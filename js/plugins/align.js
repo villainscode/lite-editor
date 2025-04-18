@@ -24,91 +24,77 @@
       textContent: commands[0].icon  // 기본 아이콘
     });
     btn.appendChild(icon);
+    
+    // 버튼을 activeModalManager에 등록 (다른 레이어 닫기 위함)
+    util.activeModalManager.registerButton(btn);
+    
     return { btn, icon };
   }
 
-  // 2) 드롭다운 생성
+  // 2) 드롭다운 생성 - PluginUtil의 createDropdown 활용
   function createAlignDropdown(contentArea, iconElement) {
-    const dropdown = util.dom.createElement('div', {
-      className: 'lite-editor-dropdown-menu lite-editor-align-dropdown'
+    // 드롭다운 아이템 생성
+    const items = commands.map(({ cmd, icon, title }) => ({
+      text: '',  // 텍스트 대신 아이콘 사용
+      value: cmd,
+      icon: icon,
+      title: title
+    }));
+    
+    // PluginUtil의 createDropdown 함수로 드롭다운 생성
+    const dropdown = util.createDropdown({
+      className: 'lite-editor-dropdown-menu lite-editor-align-dropdown',
+      items: items,
+      onSelect: (cmd, item) => {
+        applyAlignment(cmd, contentArea, iconElement, item.icon);
+      }
     });
     
-    commands.forEach(({ cmd, icon, title }) => {
-      const item = util.dom.createElement('div', {
-        className: 'lite-editor-dropdown-item',
-        title: title,
-        'data-cmd': cmd
-      }, {
-        width: '32px', 
-        height: '32px', 
-        display: 'flex',
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        padding: '0', 
-        margin: '0'
-      });
-      
-      const i = util.dom.createElement('i', {
-        className: 'material-icons',
-        textContent: icon
-      }, { 
-        fontSize: '18px' 
-      });
-      
-      item.appendChild(i);
-
-      item.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        applyAlignment(cmd, contentArea, iconElement, icon);
-        toggleDropdown(false, dropdown);
-      });
-      
-      dropdown.appendChild(item);
-    });
+    // 가로 배치를 위한 커스텀 스타일 적용
+    configureDropdownStyle(dropdown);
     
-    document.body.appendChild(dropdown);
+    // 드롭다운에 closeCallback 추가 (activeModalManager에서 사용)
+    dropdown.closeCallback = () => {
+      dropdown.classList.remove('show');
+    };
+    
     return dropdown;
   }
 
-  // 3) 드롭다운 토글 - !important 스타일 적용 및 가로 배치 보장
-  function toggleDropdown(show, dropdown, anchor) {
-    if (show) {
-      dropdown.classList.add('show');
+  // 3) 드롭다운 가로 배치 스타일 설정
+  function configureDropdownStyle(dropdown) {
+    // 드롭다운 아이템 스타일 설정
+    const items = dropdown.querySelectorAll('.lite-editor-dropdown-item');
+    items.forEach(item => {
+      Object.assign(item.style, {
+        width: '32px',
+        height: '32px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0',
+        margin: '0'
+      });
       
-      // 기본 스타일 설정 - !important 사용을 위해 setAttribute 활용
-      const dropdownWidth = 146;
-      dropdown.setAttribute('style', 
-        `width: ${dropdownWidth}px !important; 
-         height: 38px !important; 
-         display: flex !important; 
-         flex-direction: row !important;
-         justify-content: space-between !important;
-         padding: 2px !important;
-         overflow: hidden !important;`
-      );
-      
-      // 위치 계산 및 설정 (중앙 정렬)
-      const buttonRect = anchor.getBoundingClientRect();
-      const buttonCenter = buttonRect.left + (buttonRect.width / 2);
-      const dropdownLeft = buttonCenter - (dropdownWidth / 2);
-      
-      // 화면 경계 체크
-      const viewportWidth = window.innerWidth;
-      let finalLeft = dropdownLeft;
-      
-      if (finalLeft < 5) finalLeft = 5;
-      if (finalLeft + dropdownWidth > viewportWidth - 5) {
-        finalLeft = viewportWidth - dropdownWidth - 5;
+      // 아이콘 스타일 설정
+      const icon = item.querySelector('.material-icons');
+      if (icon) {
+        icon.style.fontSize = '18px';
       }
-      
-      // 위치 적용
-      dropdown.style.top = `${buttonRect.bottom + window.scrollY}px`;
-      dropdown.style.left = `${finalLeft}px`;
-    } else {
-      dropdown.classList.remove('show');
-      dropdown.style.display = 'none';
-    }
+    });
+    
+    // !important 스타일을 위한 스타일 속성 설정
+    dropdown.setAttribute('style', `
+      width: 146px !important; 
+      height: 38px !important; 
+      display: flex !important; 
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      padding: 2px !important;
+      overflow: hidden !important;
+    `);
+    
+    return dropdown;
   }
 
   // 4) 정렬 명령 실행 - window.liteEditorSelection 활용
@@ -148,51 +134,38 @@
     }
   }
 
-  // 5) 이벤트 바인딩
-  function setupAlignEvents(btn, dropdown, contentArea, toolbar) {
-    // 버튼 클릭 시
-    btn.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
+  // 5) 이벤트 설정 - PluginUtil의 setupToolbarButtonEvents 활용
+  function setupAlignPlugin(toolbar, contentArea) {
+    // 버튼 및 드롭다운 생성
+    const { btn, icon } = createAlignButton(contentArea);
+    const dropdown = createAlignDropdown(contentArea, icon);
+    
+    // 선택 영역 저장용 클릭 이벤트 추가
+    btn.addEventListener('click', () => {
+      // 다른 모든 활성화된 모달 닫기
+      util.activeModalManager.closeAll();
       
-      // 선택 영역 저장
       if (window.liteEditorSelection) {
         window.liteEditorSelection.save();
       }
-
-      // 다른 드롭다운 닫기
-      document.querySelectorAll('.lite-editor-dropdown-menu.show')
-        .forEach(d => {
-          if (d !== dropdown) toggleDropdown(false, d);
-        });
-
-      // 이 드롭다운 토글
-      const opening = !dropdown.classList.contains('show');
-      toggleDropdown(opening, dropdown, btn);
-    });
-
-    // 외부 클릭 시 닫기
-    document.addEventListener('click', e => {
-      if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
-        toggleDropdown(false, dropdown);
-      }
-    });
-
-    // 툴바 내 다른 버튼 클릭 시 닫기
-    toolbar.addEventListener('click', e => {
-      const clickBtn = e.target.closest('.lite-editor-button');
-      if (clickBtn && clickBtn !== btn) {
-        toggleDropdown(false, dropdown);
+      
+      // 드롭다운이 열리면 활성 모달로 등록
+      if (!dropdown.classList.contains('show')) {
+        util.activeModalManager.register(dropdown);
       }
     });
     
-    // 문서 클릭 이벤트 위임을 통한 다른 버튼 클릭 감지 (추가)
-    document.addEventListener('mousedown', e => {
-      const clickedElement = e.target.closest('.lite-editor-button');
-      if (clickedElement && clickedElement !== btn && dropdown.classList.contains('show')) {
-        toggleDropdown(false, dropdown);
-      }
+    // PluginUtil의 setupToolbarButtonEvents 함수로 이벤트 설정
+    util.setupToolbarButtonEvents(btn, dropdown, toolbar);
+    
+    // PluginUtil의 setupOutsideClickHandler로 외부 클릭 처리
+    util.setupOutsideClickHandler(dropdown, () => {
+      dropdown.classList.remove('show');
+      // 활성 모달에서 제거
+      util.activeModalManager.unregister(dropdown);
     });
+    
+    return btn;
   }
 
   // 플러그인 등록
@@ -200,10 +173,7 @@
     title: 'Alignment',
     icon: commands[0].icon,
     customRender(toolbar, contentArea) {
-      const { btn, icon } = createAlignButton(contentArea);
-      const dropdown = createAlignDropdown(contentArea, icon);
-      setupAlignEvents(btn, dropdown, contentArea, toolbar);
-      return btn;
+      return setupAlignPlugin(toolbar, contentArea);
     }
   });
 })();
