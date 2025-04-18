@@ -652,7 +652,7 @@
             const line = tableOptions.line || 'solid';
         
             // 테이블 생성
-            const table = util.dom.createElement('table', {}, {
+            const table = util.dom.createElement('table', {
                 width: '100%',
                 borderCollapse: 'collapse'
             });
@@ -709,16 +709,7 @@
             const headerRow = util.dom.createElement('tr');
             
             for (let j = 0; j < cols; j++) {
-                const th = util.dom.createElement('th', {
-                    contentEditable: true
-                }, {
-                    padding: '5px 5px',
-                    height: '32px',
-                    border: borderStyle,
-                    backgroundColor: '#f1f1f1',
-                    fontWeight: 'bold'
-                });
-                
+                const th = this.createCell(true, borderStyle);
                 headerRow.appendChild(th);
             }
             
@@ -729,14 +720,7 @@
                 const row = util.dom.createElement('tr');
                 
                 for (let j = 0; j < cols; j++) {
-                    const cell = util.dom.createElement('td', {
-                        contentEditable: true
-                    }, {
-                        padding: '5px 5px',
-                        height: '32px',
-                        border: borderStyle
-                    });
-                    
+                    const cell = this.createCell(false, borderStyle);
                     row.appendChild(cell);
                 }
                 
@@ -750,18 +734,10 @@
                 
                 for (let j = 0; j < cols; j++) {
                     const isFirstColumn = j === 0;
-                    const cell = util.dom.createElement(
-                        isFirstColumn ? 'th' : 'td', 
-                        { contentEditable: true },
-                        {
-                            padding: '5px 5px',
-                            height: '32px',
-                            border: borderStyle
-                        }
-                    );
+                    const cell = this.createCell(isFirstColumn, borderStyle);
                     
                     if (isFirstColumn) {
-                        cell.style.backgroundColor = '#f1f1f1';
+                        // 배경색 제거, 폰트 굵기만 유지
                         cell.style.fontWeight = 'bold';
                     }
                     
@@ -778,18 +754,10 @@
                 
                 for (let j = 0; j < cols; j++) {
                     const isHeaderCell = i === 0 || j === 0;
-                    const cell = util.dom.createElement(
-                        isHeaderCell ? 'th' : 'td',
-                        { contentEditable: true },
-                        {
-                            padding: '5px 5px',
-                            height: '32px',
-                            border: borderStyle
-                        }
-                    );
+                    const cell = this.createCell(isHeaderCell, borderStyle);
                     
                     if (isHeaderCell) {
-                        cell.style.backgroundColor = '#f1f1f1';
+                        // 배경색 제거, 폰트 굵기만 유지
                         cell.style.fontWeight = 'bold';
                     }
                     
@@ -805,19 +773,32 @@
                 const row = util.dom.createElement('tr');
                 
                 for (let j = 0; j < cols; j++) {
-                    const cell = util.dom.createElement('td', {
-                        contentEditable: true
-                    }, {
-                        padding: '5px 5px',
-                        height: '32px',
-                        border: borderStyle
-                    });
-                    
+                    const cell = this.createCell(false, borderStyle);
                     row.appendChild(cell);
                 }
                 
                 tbody.appendChild(row);
             }
+        },
+        
+        createCell(isHeader, borderStyle, styles = {}) {
+            const tag = isHeader ? 'th' : 'td';
+            const defaultStyles = {
+                padding: '5px 5px',
+                height: '32px',
+                border: borderStyle
+            };
+            
+            if (isHeader) {
+                // 배경색 제거, 폰트 굵기만 유지
+                defaultStyles.fontWeight = 'bold';
+            }
+            
+            const cellStyles = {...defaultStyles, ...styles};
+            
+            return util.dom.createElement(tag, {
+                contentEditable: true
+            }, cellStyles);
         }
     };
     

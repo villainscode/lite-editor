@@ -600,6 +600,15 @@ const PluginUtil = (function() {
         }
     };
 
+    // 레이어 관리 유틸리티
+    const layerManager = {
+        createLayer(options) { /* ... */ },
+        toggleLayer(layer, button) { /* ... */ },
+        showLayer(layer, button) { /* ... */ },
+        hideLayer(layer) { /* ... */ },
+        setupLayerEvents(layer, closeCallback, excludeElements) { /* ... */ }
+    };
+
     // 공개 API
     return {
         dom,
@@ -617,7 +626,8 @@ const PluginUtil = (function() {
         setupToolbarButtonEvents,
         setupToolbarModalEvents,
         activeModalManager,
-        modal
+        modal,
+        layerManager
     };
 })();
 
@@ -661,3 +671,16 @@ function toggleLinkModal(button, contentArea) {
         });
     }, 100);
 }
+
+// plugin-util.js에 추가할 코드 구조
+const ui = {
+    createStyledDropdown(label, options, defaultValue, width) { /* ... */ },
+    createFormGroup(label, input) { /* ... */ },
+    createButton(options) { /* ... */ },
+    createIconButton(icon, title, onClick) { /* ... */ }
+};
+
+const gridComponents = {
+    createGrid(rows, cols, options) { /* ... */ },
+    createSelectableGrid(size, selectionCallback) { /* ... */ }
+};
