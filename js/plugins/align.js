@@ -185,6 +185,14 @@
         toggleDropdown(false, dropdown);
       }
     });
+    
+    // 문서 클릭 이벤트 위임을 통한 다른 버튼 클릭 감지 (추가)
+    document.addEventListener('mousedown', e => {
+      const clickedElement = e.target.closest('.lite-editor-button');
+      if (clickedElement && clickedElement !== btn && dropdown.classList.contains('show')) {
+        toggleDropdown(false, dropdown);
+      }
+    });
   }
 
   // 플러그인 등록

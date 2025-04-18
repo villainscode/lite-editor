@@ -21,6 +21,8 @@ const PluginUtil = (function() {
                     element.className = value;
                 } else if (key === 'textContent') {
                     element.textContent = value;
+                } else if (key === 'innerHTML') {
+                    element.innerHTML = value;
                 } else {
                     element.setAttribute(key, value);
                 }
@@ -260,6 +262,163 @@ const PluginUtil = (function() {
         }
     };
 
+    // 인라인 서식 플러그인 등록 헬퍼
+    const registerInlineFormatPlugin = function(id, title, icon, command) {
+        if (window.LiteEditor) {
+            LiteEditor.registerPlugin(id, {
+                title: title,
+                icon: icon,
+                action: function(contentArea, buttonElement, event) {
+                    if (window.LiteEditorUtils) {
+                        LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, command || id, event);
+                    }
+                }
+            });
+        }
+    };
+
+    // 블록 서식 플러그인 등록 헬퍼
+    const registerBlockFormatPlugin = function(id, title, icon, tag, customAction) {
+        if (window.LiteEditor) {
+            LiteEditor.registerPlugin(id, {
+                title: title,
+                icon: icon,
+                action: function(contentArea, buttonElement, event) {
+                    if (customAction) {
+                        customAction(contentArea, buttonElement, event);
+                    } else {
+                        document.execCommand('formatBlock', false, `<${tag || id}>`);
+                    }
+                }
+            });
+        }
+    };
+
+    // 드롭다운 메뉴 생성 및 관리
+    const createDropdown = function(options = {}) {
+        const {
+            className = 'lite-editor-dropdown-menu',
+            items = [],
+            onSelect = () => {}
+        } = options;
+        
+        const dropdown = dom.createElement('div', { 
+            className: className 
+        });
+        
+        items.forEach(item => {
+            const itemElement = dom.createElement('div', {
+                className: 'lite-editor-dropdown-item',
+                textContent: item.text || '',
+                'data-value': item.value || ''
+            });
+            
+            if (item.icon) {
+                const iconElement = dom.createElement('span', {
+                    className: 'material-icons',
+                    textContent: item.icon
+                });
+                itemElement.insertBefore(iconElement, itemElement.firstChild);
+            }
+            
+            itemElement.addEventListener('click', () => {
+                onSelect(item.value, item);
+                dropdown.classList.remove('show');
+            });
+            
+            dropdown.appendChild(itemElement);
+        });
+        
+        document.body.appendChild(dropdown);
+        
+        return dropdown;
+    };
+
+    // 팝업 레이어 생성 및 관리
+    const createPopupLayer = function(options = {}) {
+        const {
+            className = 'lite-editor-popup-layer',
+            content = '',
+            width = 'auto',
+            onClose = () => {}
+        } = options;
+        
+        const layer = dom.createElement('div', { 
+            className: className 
+        }, {
+            width: typeof width === 'number' ? width + 'px' : width
+        });
+        
+        if (typeof content === 'string') {
+            layer.innerHTML = content;
+        } else if (content instanceof HTMLElement) {
+            layer.appendChild(content);
+        }
+        
+        const closeButton = dom.createElement('button', {
+            className: 'lite-editor-popup-close',
+            textContent: '×'
+        });
+        
+        closeButton.addEventListener('click', () => {
+            layer.classList.remove('show');
+            onClose();
+        });
+        
+        layer.insertBefore(closeButton, layer.firstChild);
+        document.body.appendChild(layer);
+        
+        return layer;
+    };
+
+    // 바깥 영역 클릭 감지
+    const setupOutsideClickHandler = function(element, callback) {
+        const handler = (e) => {
+            if (!element.contains(e.target) && document.body.contains(element)) {
+                callback(e);
+            }
+        };
+        
+        document.addEventListener('click', handler);
+        
+        // 핸들러 제거 함수 반환
+        return () => {
+            document.removeEventListener('click', handler);
+        };
+    };
+
+    // 툴바 버튼 클릭 이벤트 관리
+    const setupToolbarButtonEvents = function(button, dropdown, toolbar) {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isActive = dropdown.classList.contains('show');
+            
+            // 다른 모든 드롭다운 닫기
+            if (toolbar) {
+                const dropdowns = toolbar.querySelectorAll('.lite-editor-dropdown-menu.show');
+                dropdowns.forEach(d => {
+                    if (d !== dropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+            }
+            
+            // 현재 드롭다운 토글
+            dropdown.classList.toggle('show');
+            
+            if (!isActive) {
+                layer.setLayerPosition(dropdown, button);
+            }
+        });
+        
+        // 바깥 클릭 시 닫기
+        setupOutsideClickHandler(dropdown, () => {
+            dropdown.classList.remove('show');
+        });
+    };
+
     // 공개 API
     return {
         dom,
@@ -268,7 +427,13 @@ const PluginUtil = (function() {
         url,
         styles,
         editor,
-        layer
+        layer,
+        registerInlineFormatPlugin,
+        registerBlockFormatPlugin,
+        createDropdown,
+        createPopupLayer,
+        setupOutsideClickHandler,
+        setupToolbarButtonEvents
     };
 })();
 
