@@ -5,15 +5,8 @@
 
 (function() {
   /**
-   * 취소선 플러그인 (format-utils.js의 공통 함수 활용)
-   * 2025-03-30 리팩토링: 중복 코드 제거 및 applyInlineFormat 사용
+   * 취소선 플러그인 (PluginUtil 유틸리티 활용)
+   * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
-  LiteEditor.registerPlugin('strike', {
-    title: 'Strike',
-    icon: 'strikethrough_s',
-    action: function(contentArea, buttonElement, event) {
-      // applyInlineFormat 함수를 활용하여 코드 중복 제거
-      LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, 'strikethrough', event);
-    }
-  });
+  PluginUtil.registerInlineFormatPlugin('strikethrough', 'Strikethrough', 'strikethrough_s', 'strikeThrough');
 })();

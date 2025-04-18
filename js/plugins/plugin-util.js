@@ -76,6 +76,18 @@ const PluginUtil = (function() {
             
             // 블록 요소를 찾지 못한 경우 null 반환
             return null;
+        },
+        
+        /**
+         * 요소가 블록 레벨 요소인지 확인
+         * @param {Element} element - 확인할 요소
+         * @returns {boolean} - 블록 요소 여부
+         */
+        isBlockElement(element) {
+            if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+            
+            const blockTags = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'PRE'];
+            return blockTags.includes(element.nodeName);
         }
     };
 
@@ -102,6 +114,65 @@ const PluginUtil = (function() {
                 const sel = window.getSelection();
                 sel.removeAllRanges();
                 sel.addRange(savedRange);
+            }
+        },
+        
+        /**
+         * 안전하게 Selection 객체 가져오기
+         * @returns {Selection|null} Selection 객체 또는 null
+         */
+        getSafeSelection() {
+            try {
+                return window.getSelection();
+            } catch (e) {
+                console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
+                return null;
+            }
+        },
+        
+        /**
+         * 커서가 블록의 시작 위치에 있는지 확인
+         * @param {Range} range - 선택 범위
+         * @returns {boolean} - 시작 위치 여부
+         */
+        isAtStartOfBlock(range) {
+            if (!range) return false;
+            
+            if (range.startOffset > 0) return false;
+            
+            const node = range.startContainer;
+            if (node.nodeType === Node.TEXT_NODE) {
+                // 텍스트 노드면 이전 형제 노드가 없어야 시작 위치로 판단
+                let prevNode = node.previousSibling;
+                while (prevNode) {
+                    if (prevNode.textContent.trim() !== '') return false;
+                    prevNode = prevNode.previousSibling;
+                }
+                return true;
+            }
+            
+            return range.startOffset === 0;
+        },
+        
+        /**
+         * 커서를 지정된 노드의 위치로 이동
+         * @param {Node} node - 커서를 위치시킬 노드
+         * @param {number} offset - 오프셋 위치
+         */
+        moveCursorTo(node, offset) {
+            try {
+                const sel = this.getSafeSelection();
+                if (!sel) return;
+                
+                const range = document.createRange();
+                
+                range.setStart(node, offset);
+                range.collapse(true);
+                
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {
+                console.warn('커서 이동 중 오류:', e);
             }
         }
     };

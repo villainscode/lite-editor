@@ -1,19 +1,12 @@
 /**
  * LiteEditor Underline Plugin
- * 텍스트 받줄 서식 플러그인
+ * 텍스트 밑줄 서식 플러그인
  */
 
 (function() {
   /**
-   * 받줄 플러그인 (format-utils.js의 공통 함수 활용)
-   * 2025-03-30 리팩토링: 중복 코드 제거 및 applyInlineFormat 사용
+   * 밑줄 플러그인 (PluginUtil 유틸리티 활용)
+   * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
-  LiteEditor.registerPlugin('underline', {
-    title: 'Underline',
-    icon: 'format_underlined',
-    action: function(contentArea, buttonElement, event) {
-      // applyInlineFormat 함수를 활용하여 코드 중복 제거
-      LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, 'underline', event);
-    }
-  });
+  PluginUtil.registerInlineFormatPlugin('underline', 'Underline', 'format_underlined');
 })();
