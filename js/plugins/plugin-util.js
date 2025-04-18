@@ -19,8 +19,6 @@ const PluginUtil = (function() {
             Object.entries(attributes).forEach(([key, value]) => {
                 if (key === 'className') {
                     element.className = value;
-                } else if (key === 'innerHTML') {
-                    element.innerHTML = value;
                 } else if (key === 'textContent') {
                     element.textContent = value;
                 } else {
@@ -49,6 +47,33 @@ const PluginUtil = (function() {
             });
             
             return element;
+        },
+
+        /**
+         * 가장 가까운 블록 요소 찾기
+         * @param {HTMLElement} element - 시작 요소
+         * @param {HTMLElement} [container=null] - 검색 범위를 제한할 컨테이너
+         * @returns {HTMLElement|null} 찾은 블록 요소 또는 null
+         */
+        findClosestBlock(element, container = null) {
+            const blockTags = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'TABLE', 'UL', 'OL', 'LI'];
+            
+            // 이미 블록 요소면 그대로 반환
+            if (blockTags.includes(element.nodeName)) {
+                return element;
+            }
+            
+            // 부모 요소들을 순회하면서 블록 요소 찾기
+            let current = element;
+            while (current && current !== container) {
+                if (blockTags.includes(current.nodeName)) {
+                    return current;
+                }
+                current = current.parentNode;
+            }
+            
+            // 블록 요소를 찾지 못한 경우 null 반환
+            return null;
         }
     };
 
