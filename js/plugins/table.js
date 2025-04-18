@@ -34,6 +34,30 @@
         }
     };
     
+    // 스타일 관리
+    const styleManager = {
+        addTableStyles() {
+            util.styles.loadCssFile(STYLE_ID, CSS_PATH);
+        },
+        
+        addTableHoverStyles() {
+            const styleId = 'tableHoverStyles';
+            if (document.getElementById(styleId)) return;
+            
+            const css = `
+                .grid-layer button {
+                    transition: transform 0.1s ease !important;
+                }
+                .grid-layer button:hover {
+                    transform: scale(0.95) !important;
+                    background-color: rgba(0, 0, 0, 0.05) !important;
+                }
+            `;
+            
+            util.styles.addInlineStyle(styleId, css);
+        }
+    };
+    
     // 그리드 레이어 관리
     const gridLayerManager = {
         toggleGridLayer(buttonElement) {
@@ -636,6 +660,13 @@
             } else if (style === 'complex') {
                 tableClass = 'lite-table-complex';
             }
+            
+            // 라인 스타일에 따른 클래스 추가
+            if (line === 'dotted') {
+                tableClass += ' lite-table-dotted';
+            } else if (line === 'no-border') {
+                tableClass += ' lite-table-no-border';
+            }
         
             // 테이블 생성
             const table = util.dom.createElement('table', {
@@ -648,9 +679,10 @@
             // 선 스타일 적용
             let borderStyle = '1px solid #ccc';
             if (line === 'dotted') {
-                borderStyle = '1px dotted #ccc';
+                borderStyle = '1px dotted #666';
             } else if (line === 'no-border') {
-                borderStyle = 'none';
+                // no-border의 경우 에디터에서는 점선으로 표시
+                borderStyle = '0.5px dashed #f8f8f8';
             }
         
             table.style.border = borderStyle;

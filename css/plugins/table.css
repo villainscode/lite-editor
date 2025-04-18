@@ -165,13 +165,13 @@
 /* 2. Header 타입 - 첫 번째 행에 배경색 적용 */
 .lite-table-header tr:first-child th,
 .lite-table-header tr:first-child td {
-  background-color: #d2d2d2;
+  background-color: #e8e8e8;
 }
 
 /* 3. Column 타입 - 첫 번째 열에 배경색 적용 */
 .lite-table-column tr td:first-child,
 .lite-table-column tr th:first-child {
-  background-color: #d2d2d2;
+  background-color: #e8e8e8;
 }
 
 /* 4. Complex 타입 - 첫 번째 행과 첫 번째 열에 배경색 적용 */
@@ -179,5 +179,27 @@
 .lite-table-complex tr:first-child th,
 .lite-table-complex tr td:first-child,
 .lite-table-complex tr th:first-child {
-  background-color: #d2d2d2;
+  background-color: #e8e8e8;
+}
+
+/* Line 스타일 */
+/* Solid는 기본값이므로 추가 정의 불필요 */
+
+/* Dotted 테두리 스타일 - 더 진하게 처리 */
+.lite-table-dotted,
+.lite-table-dotted td,
+.lite-table-dotted th {
+  border-style: dotted !important;
+  border-width: 1px !important;  /* 선 두께 증가 */
+  border-color: #666 !important; /* 더 진한 색상 적용 */
+}
+
+/* No border 스타일 - 에디터에서만 보이는 흐린 점선 */
+.lite-table-no-border {
+  border: 1px dashed #aaaaaa !important;
+}
+
+.lite-table-no-border td,
+.lite-table-no-border th {
+  border: 0.5px dashed #f8f8f8 !important;
 }
