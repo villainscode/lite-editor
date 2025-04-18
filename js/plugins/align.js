@@ -7,8 +7,113 @@
   // 상수 정의
   const PLUGIN_ID = 'align';
   
-  // 유틸리티 임포트 (dom 유틸리티만 사용)
+  // 유틸리티 임포트
   const { dom } = PluginUtil;
+  
+  /**
+   * 드롭다운 토글 함수 - 플러그인 내부에서만 사용
+   * @param {boolean} isShow - 보여줄지 여부
+   * @param {HTMLElement} dropdown - 드롭다운 요소
+   * @param {HTMLElement} [anchor] - 기준 요소 (표시할 때만 필요)
+   */
+  function toggleDropdown(isShow, dropdown, anchor) {
+    if (isShow) {
+      // 드롭다운 보이기
+      dropdown.classList.add('show');
+      
+      const buttonRect = anchor.getBoundingClientRect();
+      const dropdownWidth = 146;
+      
+      // 중앙 정렬 계산
+      const buttonCenter = buttonRect.left + (buttonRect.width / 2);
+      const dropdownLeft = buttonCenter - (dropdownWidth / 2);
+      
+      // 화면 경계 체크
+      const viewportWidth = window.innerWidth;
+      let finalLeft = dropdownLeft;
+      
+      if (finalLeft < 5) {
+        finalLeft = 5;
+      }
+      
+      if (finalLeft + dropdownWidth > viewportWidth - 5) {
+        finalLeft = viewportWidth - dropdownWidth - 5;
+      }
+      
+      // 스타일 적용
+      dropdown.setAttribute('style', 
+        `top: ${buttonRect.bottom + window.scrollY}px; 
+         left: ${finalLeft}px; 
+         width: ${dropdownWidth}px !important; 
+         height: 38px !important; 
+         display: flex !important; 
+         flex-direction: row !important;
+         justify-content: space-between !important;
+         padding: 2px !important;
+         overflow: hidden !important;`
+      );
+    } else {
+      // 드롭다운 숨기기
+      dropdown.classList.remove('show');
+      dropdown.style.display = 'none';
+    }
+  }
+  
+  /**
+   * 선택된 블록에 정렬 적용 함수
+   * @param {string} command - 실행할 정렬 명령
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   * @param {HTMLElement} iconElement - 업데이트할 아이콘 요소
+   * @param {string} iconName - 설정할 아이콘 이름
+   */
+  function applyAlignmentToBlock(command, contentArea, iconElement, iconName) {
+    // 선택 영역 관리
+    if (window.liteEditorSelection) {
+      window.liteEditorSelection.restore();
+      
+      // 선택 범위 확인 및 제한
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        
+        // 현재 선택된 노드의 공통 부모 요소 찾기
+        let commonAncestor = range.commonAncestorContainer;
+        
+        // 텍스트 노드인 경우 부모 요소로 변경
+        if (commonAncestor.nodeType === 3) {  // 3은 TEXT_NODE
+          commonAncestor = commonAncestor.parentNode;
+        }
+        
+        // 선택 범위가 포함된 가장 가까운 블록 요소 찾기
+        let targetBlock = dom.findClosestBlock(commonAncestor, contentArea);
+        
+        // 블록 요소를 찾았다면 해당 요소만 선택하도록 범위 수정
+        if (targetBlock) {
+          // 기존 선택 지우기
+          sel.removeAllRanges();
+          
+          // 새 범위 생성 (블록 요소만 포함하도록)
+          const newRange = document.createRange();
+          newRange.selectNodeContents(targetBlock);
+          sel.addRange(newRange);
+        }
+      }
+    }
+    
+    // 명령 실행
+    document.execCommand(command, false, null);
+    
+    // 아이콘 변경
+    iconElement.textContent = iconName;
+    
+    // 포커스 유지
+    contentArea.focus();
+    
+    // 변경 효과 확인을 위해 다시 선택 영역 저장
+    if (window.liteEditorSelection) {
+      window.liteEditorSelection.save();
+    }
+  }
   
   // 텍스트 정렬 플러그인 (드롭다운 형태)
   LiteEditor.registerPlugin(PLUGIN_ID, {
@@ -72,56 +177,11 @@
           e.preventDefault();
           e.stopPropagation();
           
-          // 선택 영역 관리 - 원래 방식으로 복원
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.restore();
-            
-            // 선택 범위 확인 및 제한
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              const range = sel.getRangeAt(0);
-              
-              // 1. 현재 선택된 노드의 공통 부모 요소 찾기
-              let commonAncestor = range.commonAncestorContainer;
-              
-              // 텍스트 노드인 경우 부모 요소로 변경
-              if (commonAncestor.nodeType === 3) {  // 3은 TEXT_NODE
-                commonAncestor = commonAncestor.parentNode;
-              }
-              
-              // 2. 선택 범위가 포함된 가장 가까운 블록 요소 찾기
-              let targetBlock = dom.findClosestBlock(commonAncestor, contentArea);
-              
-              // 3. 블록 요소를 찾았다면 해당 요소만 선택하도록 범위 수정
-              if (targetBlock) {
-                // 기존 선택 지우기
-                sel.removeAllRanges();
-                
-                // 새 범위 생성 (블록 요소만 포함하도록)
-                const newRange = document.createRange();
-                newRange.selectNodeContents(targetBlock);
-                sel.addRange(newRange);
-              }
-            }
-          }
-          
-          // 명령 실행
-          document.execCommand(option.command, false, null);
-          
-          // 아이콘 변경
-          alignIcon.textContent = option.icon;
+          // 정렬 적용
+          applyAlignmentToBlock(option.command, contentArea, alignIcon, option.icon);
           
           // 드롭다운 닫기
-          alignDropdown.classList.remove('show');
-          alignDropdown.style.display = 'none';
-          
-          // 포커스 유지
-          contentArea.focus();
-          
-          // 변경 효과 확인을 위해 다시 선택 영역 저장
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.save();
-          }
+          toggleDropdown(false, alignDropdown);
         });
         
         // 드롭다운에 옵션 추가
@@ -131,88 +191,56 @@
       // 드롭다운을 body에 추가
       document.body.appendChild(alignDropdown);
       
-      // 클릭 이벤트 처리
-      alignContainer.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // 현재 선택 영역 저장 - 원래 방식으로 복원
-        if (window.liteEditorSelection) {
-          window.liteEditorSelection.save();
-        }
-        
-        // 다른 모든 드롭다운 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
-          if (menu !== alignDropdown) {
-            menu.classList.remove('show');
-            menu.style.display = 'none';
-          }
-        });
-        
-        // 이 드롭다운 토글
-        const isShowing = alignDropdown.classList.toggle('show');
-        
-        // 드롭다운 위치 조정
-        if (isShowing) {
-          const buttonRect = alignContainer.getBoundingClientRect();
-          const dropdownWidth = 146; // 드롭다운 너비
-          
-          // 버튼 중앙에 드롭다운 배치하기 위한 계산
-          const buttonCenter = buttonRect.left + (buttonRect.width / 2);
-          const dropdownLeft = buttonCenter - (dropdownWidth / 2);
-          
-          // 화면 경계 체크 및 조정
-          const viewportWidth = window.innerWidth;
-          let finalLeft = dropdownLeft;
-          
-          // 왼쪽 경계 체크
-          if (finalLeft < 5) {
-            finalLeft = 5;
-          }
-          
-          // 오른쪽 경계 체크
-          if (finalLeft + dropdownWidth > viewportWidth - 5) {
-            finalLeft = viewportWidth - dropdownWidth - 5;
-          }
-          
-          // 드롭다운 전체 크기 조정 및 강력한 인라인 스타일 적용
-          alignDropdown.setAttribute('style', 
-            `top: ${buttonRect.bottom + window.scrollY}px; 
-             left: ${finalLeft}px; 
-             width: ${dropdownWidth}px !important; 
-             height: 38px !important; 
-             display: flex !important; 
-             flex-direction: row !important;
-             justify-content: space-between !important;
-             padding: 2px !important;
-             overflow: hidden !important;`
-          );
-        } else {
-          alignDropdown.style.display = 'none';
-        }
-      });
-      
-      // body 클릭 시 드롭다운 닫기
-      document.addEventListener('click', (e) => {
-        if (!alignDropdown.contains(e.target) && !alignContainer.contains(e.target)) {
-          alignDropdown.classList.remove('show');
-          alignDropdown.style.display = 'none';
-        }
-      });
-      
-      // 다른 에디터 아이콘 클릭 시 드롭다운 닫기
-      toolbar.addEventListener('click', (e) => {
-        // 클릭된 요소 또는 그 부모가 에디터 버튼인지 확인
-        const clickedButton = e.target.closest('.lite-editor-button');
-        
-        // 클릭된 버튼이 alignContainer가 아닌 다른 버튼인 경우 드롭다운 닫기
-        if (clickedButton && clickedButton !== alignContainer) {
-          alignDropdown.classList.remove('show');
-          alignDropdown.style.display = 'none';
-        }
-      });
+      // 이벤트 핸들러 설정
+      setupEventHandlers(alignContainer, alignDropdown, contentArea, toolbar);
       
       return alignContainer;
     }
   });
+  
+  /**
+   * 이벤트 핸들러 설정 함수
+   * @param {HTMLElement} container - 정렬 버튼 컨테이너
+   * @param {HTMLElement} dropdown - 드롭다운 요소
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   * @param {HTMLElement} toolbar - 툴바 요소
+   */
+  function setupEventHandlers(container, dropdown, contentArea, toolbar) {
+    // 정렬 버튼 클릭 이벤트
+    container.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 현재 선택 영역 저장
+      if (window.liteEditorSelection) {
+        window.liteEditorSelection.save();
+      }
+      
+      // 다른 모든 드롭다운 닫기
+      document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
+        if (menu !== dropdown) {
+          toggleDropdown(false, menu);
+        }
+      });
+      
+      // 이 드롭다운 토글
+      const isShowing = !dropdown.classList.contains('show');
+      toggleDropdown(isShowing, dropdown, container);
+    });
+    
+    // body 클릭 시 드롭다운 닫기
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !container.contains(e.target)) {
+        toggleDropdown(false, dropdown);
+      }
+    });
+    
+    // 다른 에디터 아이콘 클릭 시 드롭다운 닫기
+    toolbar.addEventListener('click', (e) => {
+      const clickedButton = e.target.closest('.lite-editor-button');
+      if (clickedButton && clickedButton !== container) {
+        toggleDropdown(false, dropdown);
+      }
+    });
+  }
 })();
