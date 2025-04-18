@@ -158,3 +158,26 @@
 .options-panel * {
   font-size: 0.8125rem !important;
 }
+
+/* 테이블 타입별 스타일 */
+/* 1. Basic 타입 - 추가 스타일 없음 */
+
+/* 2. Header 타입 - 첫 번째 행에 배경색 적용 */
+.lite-table-header tr:first-child th,
+.lite-table-header tr:first-child td {
+  background-color: #d2d2d2;
+}
+
+/* 3. Column 타입 - 첫 번째 열에 배경색 적용 */
+.lite-table-column tr td:first-child,
+.lite-table-column tr th:first-child {
+  background-color: #d2d2d2;
+}
+
+/* 4. Complex 타입 - 첫 번째 행과 첫 번째 열에 배경색 적용 */
+.lite-table-complex tr:first-child td,
+.lite-table-complex tr:first-child th,
+.lite-table-complex tr td:first-child,
+.lite-table-complex tr th:first-child {
+  background-color: #d2d2d2;
+}

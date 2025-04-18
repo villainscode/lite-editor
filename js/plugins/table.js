@@ -34,30 +34,6 @@
         }
     };
     
-    // 스타일 관리
-    const styleManager = {
-        addTableStyles() {
-            util.styles.loadCssFile(STYLE_ID, CSS_PATH);
-        },
-        
-        addTableHoverStyles() {
-            const styleId = 'tableHoverStyles';
-            if (document.getElementById(styleId)) return;
-            
-            const css = `
-                .grid-layer button {
-                    transition: transform 0.1s ease !important;
-                }
-                .grid-layer button:hover {
-                    transform: scale(0.95) !important;
-                    background-color: rgba(0, 0, 0, 0.05) !important;
-                }
-            `;
-            
-            util.styles.addInlineStyle(styleId, css);
-        }
-    };
-    
     // 그리드 레이어 관리
     const gridLayerManager = {
         toggleGridLayer(buttonElement) {
@@ -651,8 +627,20 @@
             const style = tableOptions.style || 'basic';
             const line = tableOptions.line || 'solid';
         
+            // 스타일에 따른 클래스 설정
+            let tableClass = '';
+            if (style === 'header') {
+                tableClass = 'lite-table-header';
+            } else if (style === 'column') {
+                tableClass = 'lite-table-column';
+            } else if (style === 'complex') {
+                tableClass = 'lite-table-complex';
+            }
+        
             // 테이블 생성
             const table = util.dom.createElement('table', {
+                className: tableClass
+            }, {
                 width: '100%',
                 borderCollapse: 'collapse'
             });
@@ -670,102 +658,45 @@
             // 테이블 바디 생성
             const tbody = util.dom.createElement('tbody');
         
-            // 스타일에 따라 테이블 구성 변경
-            if (style === 'header' && rows > 1) {
-                this.createHeaderTable(tbody, rows, cols, borderStyle);
-            } else if (style === 'column' && cols > 0) {
-                this.createColumnTable(tbody, rows, cols, borderStyle);
-            } else if (style === 'complex' && rows > 1 && cols > 0) {
-                this.createComplexTable(tbody, rows, cols, borderStyle);
-            } else {
-                this.createBasicTable(tbody, rows, cols, borderStyle);
-            }
-            
+            // Basic 스타일은 기본 구성으로 생성
+            this.createBasicTable(tbody, rows, cols, borderStyle);
+        
             table.appendChild(tbody);
-            
+        
             // 현재 선택 위치에 테이블 삽입
             const selection = window.getSelection();
             const range = selection.getRangeAt(0);
             range.deleteContents();
             range.insertNode(table);
-            
+        
             // 테이블 뒤에 줄바꿈 추가
             const br = util.dom.createElement('br');
             table.parentNode.insertBefore(br, table.nextSibling);
-            
+        
             // 커서 위치 이동
             const newRange = document.createRange();
             newRange.setStartAfter(br);
             newRange.collapse(true);
             selection.removeAllRanges();
             selection.addRange(newRange);
-            
+        
             // 에디터 상태 업데이트
             util.editor.dispatchEditorEvent(editor);
         },
         
         createHeaderTable(tbody, rows, cols, borderStyle) {
-            // 헤더 행 추가
-            const headerRow = util.dom.createElement('tr');
-            
-            for (let j = 0; j < cols; j++) {
-                const th = this.createCell(true, borderStyle);
-                headerRow.appendChild(th);
-            }
-            
-            tbody.appendChild(headerRow);
-            
-            // 나머지 행 추가
-            for (let i = 1; i < rows; i++) {
-                const row = util.dom.createElement('tr');
-                
-                for (let j = 0; j < cols; j++) {
-                    const cell = this.createCell(false, borderStyle);
-                    row.appendChild(cell);
-                }
-                
-                tbody.appendChild(row);
-            }
+            // 헤더 테이블은 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
+            this.createBasicTable(tbody, rows, cols, borderStyle);
         },
         
         createColumnTable(tbody, rows, cols, borderStyle) {
-            for (let i = 0; i < rows; i++) {
-                const row = util.dom.createElement('tr');
-                
-                for (let j = 0; j < cols; j++) {
-                    const isFirstColumn = j === 0;
-                    const cell = this.createCell(isFirstColumn, borderStyle);
-                    
-                    if (isFirstColumn) {
-                        // 배경색 제거, 폰트 굵기만 유지
-                        cell.style.fontWeight = 'bold';
-                    }
-                    
-                    row.appendChild(cell);
-                }
-                
-                tbody.appendChild(row);
-            }
+            // 컬럼 테이블도 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
+            this.createBasicTable(tbody, rows, cols, borderStyle);
         },
         
         createComplexTable(tbody, rows, cols, borderStyle) {
-            for (let i = 0; i < rows; i++) {
-                const row = util.dom.createElement('tr');
-                
-                for (let j = 0; j < cols; j++) {
-                    const isHeaderCell = i === 0 || j === 0;
-                    const cell = this.createCell(isHeaderCell, borderStyle);
-                    
-                    if (isHeaderCell) {
-                        // 배경색 제거, 폰트 굵기만 유지
-                        cell.style.fontWeight = 'bold';
-                    }
-                    
-                    row.appendChild(cell);
-                }
-                
-                tbody.appendChild(row);
-            }
+            // 복합 테이블도 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
+            this.createBasicTable(tbody, rows, cols, borderStyle);
         },
         
         createBasicTable(tbody, rows, cols, borderStyle) {
@@ -782,6 +713,7 @@
         },
         
         createCell(isHeader, borderStyle, styles = {}) {
+            // 공통 셀 생성 로직
             const tag = isHeader ? 'th' : 'td';
             const defaultStyles = {
                 padding: '5px 5px',
@@ -794,8 +726,10 @@
                 defaultStyles.fontWeight = 'bold';
             }
             
+            // 추가 스타일 적용
             const cellStyles = {...defaultStyles, ...styles};
             
+            // 셀 생성
             return util.dom.createElement(tag, {
                 contentEditable: true
             }, cellStyles);
