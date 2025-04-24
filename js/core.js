@@ -694,6 +694,28 @@ const LiteEditor = (function() {
         originalElement.value = contentArea.innerHTML;
       }
     });
+    
+    // 링크 클릭 이벤트 핸들러 (추가할 코드)
+    contentArea.addEventListener('mousedown', (e) => {
+      // 클릭된 요소가 링크인지 확인
+      const clickedLink = e.target.closest('a');
+      
+      if (clickedLink) {
+        // 단순 클릭인 경우(선택하려는 것이 아닌 경우)에만 링크 열기
+        // 선택 기능을 방해하지 않기 위해 mousedown에서 처리
+        const href = clickedLink.getAttribute('href');
+        if (href && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+          // 이벤트를 즉시 처리하고 기본 동작 방지
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 약간의 지연을 두고 링크 열기 (선택 작업과 충돌 방지)
+          setTimeout(() => {
+            window.open(href, '_blank');
+          }, 10);
+        }
+      }
+    });
   }
   
   /**

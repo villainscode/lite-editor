@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ──────────────────────────────────────────────────────────────
+# 사용법 (프로젝트 로컬)
+#   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push)
+#   ./gitx commit "[prefix] : Your commit"    # git add → commit
+#   ./gitx push                               # git fetch → push
+#   ./gitx discard                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
+#   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
+# ──────────────────────────────────────────────────────────────
+
+do_commit() {
+  git add .
+  if [[ -z "${1:-}" ]]; then
+    echo "❗️ commit 메시지를 \"[prefix] : message\" 형식으로 입력하세요."
+    exit 1
+  fi
+  git commit -m "$1"
+}
+
+do_push() {
+  git fetch
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  git push origin "$branch"
+}
+
+do_discard() {
+  echo "⚠️  로컬 변경사항을 모두 버립니다. (git reset --hard, git clean -fd)"
+  read -p "계속하시겠습니까? (y/N): " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "취소되었습니다."
+    exit 1
+  fi
+  git reset --hard
+  git clean -fd
+  echo "✅ 로컬 변경사항이 모두 버려졌습니다."
+}
+
+do_merge() {
+  current_branch=$(git rev-parse --abbrev-ref HEAD)
+  if [[ "$current_branch" == "main" ]]; then
+    echo "❗️ 현재 브랜치가 이미 'main'입니다. 병합할 필요가 없습니다."
+    exit 1
+  fi
+
+  echo "ℹ️ 현재 브랜치 '$current_branch'를 'main' 브랜치로 병합합니다."
+  read -p "계속하시겠습니까? (y/N): " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "취소되었습니다."
+    exit 1
+  fi
+
+  echo "🔄 'main' 브랜치로 이동 중..."
+  git checkout main
+  echo "🔄 'main' 브랜치의 최신 변경사항을 가져오는 중..."
+  git pull origin main
+  echo "🔄 '$current_branch' 브랜치를 'main'으로 병합 중..."
+  git merge "$current_branch" --no-ff # --no-ff 옵션으로 merge commit을 남깁니다.
+  echo "✅ '$current_branch' 브랜치가 'main'으로 병합되었습니다."
+  echo "ℹ️ 변경사항을 원격 'main' 브랜치에 푸시하려면 './gitx push'를 실행하세요."
+}
+
+cmd="${1:-}"
+
+case "$cmd" in
+  commit)
+    # commit 메시지가 제공되었는지 확인
+    if [[ -z "${2:-}" ]]; then
+      echo "❗️ commit 메시지를 입력하세요. 사용법: ./gitx commit \"[prefix] : message\""
+      exit 1
+    fi
+    do_commit "$2"
+    ;;
+  push)
+    do_push
+    ;;
+  discard)
+    do_discard
+    ;;
+  merge)
+    do_merge
+    ;;
+  *)
+    if [[ -z "$cmd" ]]; then
+      echo "❗️ 사용법: ./gitx commit/push/discard/merge 또는 ./gitx \"[prefix] : message\""
+      exit 1
+    # commit 메시지 형식인지 확인 (단순화된 체크)
+    elif [[ "$cmd" == *" : "* ]]; then
+        do_commit "$cmd"
+        do_push
+    else
+        echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
+        echo "   ./gitx commit/push/discard/merge 또는 ./gitx \"[prefix] : message\""
+        exit 1
+    fi
+    ;;
+esac

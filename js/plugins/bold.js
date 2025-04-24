@@ -5,15 +5,8 @@
 
 (function() {
   /**
-   * 굵게 플러그인 (format-utils.js의 공통 함수 활용)
-   * 2025-03-30 리팩토링: 중복 코드 제거 및 applyInlineFormat 사용
+   * 굵게 플러그인 (PluginUtil 유틸리티 활용)
+   * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
-  LiteEditor.registerPlugin('bold', {
-    title: 'Bold',
-    icon: 'format_bold',
-    action: function(contentArea, buttonElement, event) {
-      // applyInlineFormat 함수를 활용하여 코드 중복 제거
-      LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, 'bold', event);
-    }
-  });
+  PluginUtil.registerInlineFormatPlugin('bold', 'Bold', 'format_bold');
 })();

@@ -12,12 +12,15 @@
         // 1. 코어 라이브러리
         'js/core.js',
         
-        // 2. 유틸리티 및 기본 기능
+        // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
+        'js/debug-utils.js',
+        'js/plugins/plugin-util.js',
+        // 3. 유틸리티 및 기본 기능
         'js/plugins/history.js',
         'js/plugins/format-utils.js',
         'js/plugins/reset.js',
         
-        // 3. 텍스트 서식 관련 플러그인
+        // 4. 텍스트 서식 관련 플러그인
         'js/plugins/bold.js',
         'js/plugins/italic.js',
         'js/plugins/underline.js',
@@ -25,26 +28,27 @@
         'js/plugins/code.js',
         'js/plugins/blockquote.js',
         'js/plugins/codeBlock.js',
-        // 4. 폰트 및 색상 관련 플러그인
+        
+        // 5. 폰트 및 색상 관련 플러그인
         'js/plugins/fontFamily.js',
         'js/plugins/fontColor.js',
         'js/plugins/highlight.js',
         'js/plugins/heading.js',
         
-        // 5. 구조 및 정렬 관련 플러그인
+        // 6. 구조 및 정렬 관련 플러그인
         'js/plugins/list.js',
         'js/plugins/align.js',
         'js/plugins/formatIndent.js',
         
-        // 6. 삽입 관련 플러그인
+        // 7. 삽입 관련 플러그인
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
         
-        // 7. 레이아웃 관련 플러그인
+        // 8. 레이아웃 관련 플러그인
         'js/plugins/line.js',
         
-        // 8. 기타 플러그인
+        // 9. 기타 플러그인
         'js/modal.js',
         
     ];

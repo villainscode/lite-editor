@@ -448,11 +448,6 @@ mark {
   position: relative;
 }
 
-/* 테이블 확장 스타일 */
-.lite-editor-content tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
 /* ------------------------------------
  * 분할 화면 플러그인 스타일
  * ------------------------------------ */
