@@ -5,9 +5,10 @@ set -euo pipefail
 # 사용법 (프로젝트 로컬)
 #   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push)
 #   ./gitx commit "[prefix] : Your commit"    # git add → commit
-#   ./gitx push                               # git fetch → push
+#   ./gitx push                               # git fetch → push (현재 브랜치)
 #   ./gitx discard                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
 #   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
+#   ./gitx fetch                          # 모든 원격 저장소 fetch (git fetch --all)
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {
@@ -20,7 +21,7 @@ do_commit() {
 }
 
 do_push() {
-  git fetch
+  git fetch # 현재 브랜치 푸시 전에는 해당 원격 브랜치만 fetch 해도 충분할 수 있습니다.
   branch=$(git rev-parse --abbrev-ref HEAD)
   git push origin "$branch"
 }
@@ -54,11 +55,17 @@ do_merge() {
   echo "🔄 'main' 브랜치로 이동 중..."
   git checkout main
   echo "🔄 'main' 브랜치의 최신 변경사항을 가져오는 중..."
-  git pull origin main
+  git pull origin main # main 브랜치 최신화
   echo "🔄 '$current_branch' 브랜치를 'main'으로 병합 중..."
   git merge "$current_branch" --no-ff # --no-ff 옵션으로 merge commit을 남깁니다.
   echo "✅ '$current_branch' 브랜치가 'main'으로 병합되었습니다."
   echo "ℹ️ 변경사항을 원격 'main' 브랜치에 푸시하려면 './gitx push'를 실행하세요."
+}
+
+do_fetch() {
+  echo "🔄 모든 원격 저장소의 변경사항을 가져옵니다 (git fetch --all)..."
+  git fetch --all
+  echo "✅ 모든 원격 저장소 fetch 완료."
 }
 
 cmd="${1:-}"
@@ -81,9 +88,12 @@ case "$cmd" in
   merge)
     do_merge
     ;;
+  fetch)
+    do_fetch
+    ;;
   *)
     if [[ -z "$cmd" ]]; then
-      echo "❗️ 사용법: ./gitx commit/push/discard/merge 또는 ./gitx \"[prefix] : message\""
+      echo "❗️ 사용법: ./gitx commit/push/discard/merge/fetch 또는 ./gitx \"[prefix] : message\""
       exit 1
     # commit 메시지 형식인지 확인 (단순화된 체크)
     elif [[ "$cmd" == *" : "* ]]; then
@@ -91,7 +101,7 @@ case "$cmd" in
         do_push
     else
         echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
-        echo "   ./gitx commit/push/discard/merge 또는 ./gitx \"[prefix] : message\""
+        echo "   ./gitx commit/push/discard/merge/fetch 또는 ./gitx \"[prefix] : message\""
         exit 1
     fi
     ;;
