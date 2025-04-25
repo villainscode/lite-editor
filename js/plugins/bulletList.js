@@ -446,6 +446,14 @@
     const activeLi = findActiveLi(contentArea);
     if (!activeLi) return;
     
+    // 현재 LI가 불릿 리스트(UL)의 일부인지 확인
+    const parentUl = activeLi.closest('ul');
+    if (!parentUl) return;
+    
+    // 현재 선택된 UL이 우리가 생성한 bullet-depth 클래스를 가지고 있는지 확인
+    const hasBulletDepthClass = Array.from(parentUl.classList).some(cls => cls.startsWith('bullet-depth'));
+    if (!hasBulletDepthClass) return;
+    
     // 기본 동작 방지
     event.preventDefault();
     event.stopPropagation();
