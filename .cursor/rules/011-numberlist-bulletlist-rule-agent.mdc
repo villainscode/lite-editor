@@ -14,6 +14,14 @@ depth는 계속 더 깊어질 수 있으므로 css 하드 코딩으로 해결할
 
 depth 는 선택한 커서 위치에서 tab키로 indent 되어야 해 
 
+numbered list의 기능은 bullet list와 동일한데 ol 태그이고 depth에 따라 number가 적용되어야 해 
+•	1 depth: 1, 2, 3… (decimal)
+•	2 depth: a, b, c… (lower-alpha)
+•	3 depth: i, ii, iii… (lower-roman)
+•	4 depth 이후 부터는 다시 1, 2, 3 depth  순으로 반복 
+
+depth 는 선택한 커서 위치에서 tab키로 indent 되어야 해 
+
 rule 지침을 잘 따라서 작성해주고 @plugin-util.js 에 공통 요소들을 적용해서 간결하게 기능 코드를 작성해줘 
 --- 
 # Mixed Ordered and Unordered List Implementation
