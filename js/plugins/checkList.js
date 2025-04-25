@@ -45,26 +45,45 @@
     if (lastItem) maintainFocus(lastItem);
   }
 
+  // 유니크 ID 생성을 위한 카운터
+  let checklistItemCounter = 0;
+  
   /**
    * 단일 체크리스트 아이템 생성
    */
   function createSingleChecklistItem(text) {
+    // 체크박스와 label을 연결할 유니크 ID 생성
+    const itemId = `checklist-item-${Date.now()}-${checklistItemCounter++}`;
+    
     const container = PluginUtil.dom.createElement('div', {
       className: `flex items-center gap-2 my-1 checklist-item ${getMarginClass(0)}`
     });
     
     const checkbox = PluginUtil.dom.createElement('input', {
       type: 'checkbox',
-      className: 'form-checkbox h-4 w-4 text-primary peer transition'
+      id: itemId,
+      className: 'form-checkbox h-4 w-4 text-primary transition'
     });
     
     // 빈 텍스트일 경우 &nbsp; 추가 (커서 위치 보이게)
     const labelContent = text.trim() ? text : NBSP_CHAR;
     
     const label = PluginUtil.dom.createElement('label', {
-      className: 'text-gray-800 peer-checked:line-through peer-checked:text-gray-400',
+      className: 'text-gray-800',
       textContent: labelContent,
-      style: getLabelGapStyle()
+      style: getLabelGapStyle(),
+      htmlFor: itemId
+    });
+    
+    // 체크박스 상태 변경 이벤트 처리
+    checkbox.addEventListener('change', function() {
+      if (this.checked) {
+        label.style.textDecoration = 'line-through';
+        label.style.color = '#666';
+      } else {
+        label.style.textDecoration = 'none';
+        label.style.color = '';
+      }
     });
     
     container.appendChild(checkbox);
@@ -274,6 +293,14 @@
   }
   
   /**
+   * 체크박스 이벤트 처리를 적용
+   */
+  function initCheckboxHandlers() {
+    // 기존 체크리스트 아이템에 이벤트 처리 적용
+    applyCheckboxEventHandlers();
+  }
+  
+  /**
    * 체크박스와 label 사이의 간격 설정 함수
    * @param {number} gap - 픽셀 단위의 간격
    */
@@ -295,6 +322,56 @@
     checklistItems.forEach(label => {
       // 새 간격 스타일 적용
       label.style.marginLeft = `${labelGap}px`;
+    });
+  }
+  
+  /**
+   * 기존 체크리스트 아이템에 체크박스 이벤트 처리를 적용
+   */
+  function applyCheckboxEventHandlers() {
+    const checklistItems = document.querySelectorAll('.checklist-item');
+    
+    checklistItems.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      const label = item.querySelector('label');
+      
+      if (checkbox && label) {
+        // 이미 ID가 있는지 확인
+        if (!checkbox.id) {
+          const itemId = `checklist-item-${Date.now()}-${checklistItemCounter++}`;
+          checkbox.id = itemId;
+          label.htmlFor = itemId;
+        }
+        
+        // 기존 이벤트 리스너 제거 (중복 방지)
+        const oldListener = checkbox._changeListener;
+        if (oldListener) {
+          checkbox.removeEventListener('change', oldListener);
+        }
+        
+        // 새 이벤트 리스너 추가
+        const changeListener = function() {
+          if (this.checked) {
+            label.style.textDecoration = 'line-through';
+            label.style.color = '#666';
+          } else {
+            label.style.textDecoration = 'none';
+            label.style.color = '';
+          }
+        };
+        
+        checkbox.addEventListener('change', changeListener);
+        checkbox._changeListener = changeListener;
+        
+        // 현재 상태에 따라 스타일 적용
+        if (checkbox.checked) {
+          label.style.textDecoration = 'line-through';
+          label.style.color = '#666';
+        } else {
+          label.style.textDecoration = 'none';
+          label.style.color = '';
+        }
+      }
     });
   }
   
@@ -331,10 +408,14 @@
       }
       createChecklistItems(contentArea);
       if (window.liteEditorSelection) window.liteEditorSelection.save();
+      
+      // 체크박스 이벤트 처리 초기화
+      setTimeout(initCheckboxHandlers, 0);
     },
     // 설정 함수 노출
     setIndentSize: setIndentSize,
-    setLabelGap: setLabelGap
+    setLabelGap: setLabelGap,
+    initCheckboxHandlers: initCheckboxHandlers
   });
   
   // 전역 키보드 이벤트 리스너 등록 (캡처링 단계에서 처리)
