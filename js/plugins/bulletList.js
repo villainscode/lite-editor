@@ -55,6 +55,7 @@
     // 새 UL 요소 생성
     const ul = document.createElement('ul');
     ul.className = 'bullet-depth-1'; // 기본 깊이 클래스
+    ul.setAttribute('data-lite-editor-bullet', 'true'); // 고유 식별자 추가
     
     // 선택 영역의 텍스트 줄을 LI로 변환
     const tempDiv = document.createElement('div');
@@ -228,6 +229,9 @@
    */
   function applyStyleToSingleUl(ul) {
     if (!ul || ul.nodeName !== 'UL') return;
+    
+    // 고유 식별자 추가
+    ul.setAttribute('data-lite-editor-bullet', 'true');
     
     const depth = getUlDepth(ul);
     applyStyleByDepth(ul, depth);
@@ -419,12 +423,12 @@
     styleEl.id = 'lite-editor-bullet-list-styles';
     styleEl.textContent = `
       /* 불릿 리스트 깊이별 스타일 - 더 구체적인 선택자 사용 */
-      [contenteditable="true"] ul.bullet-depth-1 { list-style-type: disc !important; }
-      [contenteditable="true"] ul.bullet-depth-2 { list-style-type: circle !important; }
-      [contenteditable="true"] ul.bullet-depth-3 { list-style-type: square !important; }
+      [contenteditable="true"] ul[data-lite-editor-bullet].bullet-depth-1 { list-style-type: disc !important; }
+      [contenteditable="true"] ul[data-lite-editor-bullet].bullet-depth-2 { list-style-type: circle !important; }
+      [contenteditable="true"] ul[data-lite-editor-bullet].bullet-depth-3 { list-style-type: square !important; }
       
-      /* 패딩 값도 일관되게 설정 */
-      [contenteditable="true"] ul { padding-left: 1.5em !important; }
+      /* 패딩 값도 일관되게 설정 - 우리 플러그인 UL만 적용 */
+      [contenteditable="true"] ul[data-lite-editor-bullet] { padding-left: 1.5em !important; }
     `;
     
     // 문서에 추가
@@ -450,13 +454,15 @@
     const parentUl = activeLi.closest('ul');
     if (!parentUl) return;
     
-    // 현재 선택된 UL이 우리가 생성한 bullet-depth 클래스를 가지고 있는지 확인
-    const hasBulletDepthClass = Array.from(parentUl.classList).some(cls => cls.startsWith('bullet-depth'));
-    if (!hasBulletDepthClass) return;
+    // 우리 플러그인에서 생성한 UL인지 확인 (고유 식별자 확인)
+    if (!parentUl.hasAttribute('data-lite-editor-bullet')) return;
     
     // 기본 동작 방지
     event.preventDefault();
     event.stopPropagation();
+    
+    // 이벤트 전파 완전 차단
+    event.stopImmediatePropagation();
     
     // Shift 키 여부에 따라 들여쓰기 또는 내어쓰기 실행
     if (event.shiftKey) {
