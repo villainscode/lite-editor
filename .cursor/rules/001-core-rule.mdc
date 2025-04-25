@@ -16,6 +16,7 @@
 	•	문제를 복잡한 방식의 코드로 해결하려고 하지 말고 최대한 단순한 접근을 먼저 고려합니다. 
 	•	정답이 없을 가능성이 있다고 판단되면 솔직하게 말하며, 모르는 것은 추측하지 않고 모른다고 답변합니다.
 	•	코드 수정 요청 시, 불필요하게 전체 코드를 반복하지 않고 변경된 부분만 제공합니다.
+	•	코드를 작성할 때 공통 기능은 *-util 등의 파일을 먼저 검토하여 공통적으로 적용할 수 있는지를 항상 확인하고 작성합니다.
 
 ## 2. 일반적인 컴포넌트 작성 가이드라인
 - 재사용성 및 모듈화를 우선 고려합니다.
@@ -68,3 +69,82 @@
 - eidtor에서 사용되는 css 소스는 css 하위에 존재합니다.
 - docs 하위에 일별 작업 내역, 개발 계획과 기능 및 테스트 로그들을 .md 파일로 작성합니다.
 - 데모 페이지는 index.html 파일에 존재합니다.
+
+/**
+ * LiteEditor Bullet List Plugin - 극도로 단순화
+ */
+(function() {
+  // 플러그인 등록
+  PluginUtil.registerPlugin('unorderedList', {
+    title: 'Bullet List',
+    icon: 'format_list_bulleted',
+    action: function(contentArea, buttonElement, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      contentArea.focus();
+      
+      // 브라우저 기본 기능 사용하여 불릿 목록 삽입
+      document.execCommand('insertUnorderedList', false, null);
+      
+      // 스타일시트 추가 (한 번만)
+      if (!document.getElementById('lite-editor-bullet-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'lite-editor-bullet-styles';
+        styleEl.textContent = `
+          /* 편집기 내 모든 UL에 적용 */
+          .lite-editor-content ul { 
+            list-style-type: disc !important; 
+            padding-left: 1.5em !important;
+          }
+          .lite-editor-content ul ul { 
+            list-style-type: circle !important; 
+          }
+          .lite-editor-content ul ul ul { 
+            list-style-type: square !important; 
+          }
+          .lite-editor-content ul ul ul ul { 
+            list-style-type: disc !important; 
+          }
+          .lite-editor-content ul ul ul ul ul { 
+            list-style-type: circle !important; 
+          }
+          .lite-editor-content ul ul ul ul ul ul { 
+            list-style-type: square !important; 
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+      
+      // 탭 키 처리 (한 번만 설정)
+      if (!contentArea._tabKeyHandlerSet) {
+        contentArea.addEventListener('keydown', function(e) {
+          if (e.key === 'Tab') {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            
+            const node = selection.anchorNode;
+            const li = node.nodeType === 3 ? 
+                      node.parentNode.closest('li') : 
+                      node.closest('li');
+            
+            if (li) {
+              e.preventDefault();
+              
+              if (e.shiftKey) {
+                // 내어쓰기
+                document.execCommand('outdent', false, null);
+              } else {
+                // 들여쓰기
+                document.execCommand('indent', false, null);
+              }
+            }
+          }
+        });
+        contentArea._tabKeyHandlerSet = true;
+      }
+    }
+  });
+})();

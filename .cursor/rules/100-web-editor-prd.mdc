@@ -98,7 +98,9 @@ alwaysApply: true
     *   취소선 서식 적용/제거
 *   **`js/plugins/heading.js`**:
     *   제목(H1-H6) 서식 적용/제거, 설정 레이어 연동
-*   **`js/plugins/list.js`**:
+*   **`js/plugins/checkList.js`**:
+*   **`js/plugins/bulletkList.js`**:
+*   **`js/plugins/numberedList.js`**:
     *   순서 없는/있는 목록 생성 및 관리 
 *   **`js/plugins/blockquote.js`**:
     *   인용구 서식 적용/제거 

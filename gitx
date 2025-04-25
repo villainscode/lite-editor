@@ -8,6 +8,7 @@ set -euo pipefail
 #   ./gitx push                               # git fetch → push
 #   ./gitx discard                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
 #   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
+#   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all)
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {

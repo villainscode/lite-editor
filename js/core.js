@@ -370,9 +370,6 @@ const LiteEditor = (function() {
                 tableHtml += '</table>';
                 document.execCommand('insertHTML', false, tableHtml);
               }
-            } else if (pluginName === 'checkList') {
-              // 체크리스트 추가
-              document.execCommand('insertHTML', false, '<ul style="list-style-type: none;"><li><input type="checkbox"> Check list item</li></ul>');
             } else if (pluginName === 'reset') {
               document.execCommand('removeFormat', false, null);
             } else {
