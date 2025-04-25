@@ -14,85 +14,158 @@
         event.stopPropagation();
       }
       
-      // 1. 실행 전 선택 영역 정보 저장 - PluginUtil.selection 활용
-      const savedRange = PluginUtil.selection.saveSelection();
-      
-      // 실행 전 존재하는 UL 요소들 스냅샷 저장
-      const ulsBefore = Array.from(contentArea.querySelectorAll('ul'));
-      
       // 에디터 영역에 포커스
       contentArea.focus();
       
-      // 2. 불릿 목록 생성/삭제 명령 실행
-      document.execCommand('insertUnorderedList', false, null);
+      // 현재 선택 영역 가져오기
+      const selection = PluginUtil.selection.getSafeSelection();
+      if (!selection || !selection.rangeCount) return;
       
-      // 3. 명령 실행 후 선택된 영역의 UL 찾기 - PluginUtil.events 활용
-      PluginUtil.events.debounce(() => {
-        const targetUl = findTargetUl(contentArea, savedRange, ulsBefore);
-        
-        if (targetUl) {
-          console.log('✅ 타겟 UL 찾음:', targetUl);
-          // 찾은 UL에 깊이별 스타일 적용
-          applyBulletStyles(targetUl);
-        } else {
-          console.warn('❌ 타겟 UL을 찾을 수 없음');
-        }
-      }, 10)();
+      const range = selection.getRangeAt(0);
+      
+      // 선택 영역이 이미 리스트 내부인지 확인
+      const container = range.commonAncestorContainer;
+      const listItem = container.nodeType === Node.TEXT_NODE ? 
+                      container.parentNode.closest('li') : 
+                      container.closest('li');
+      
+      if (listItem && listItem.parentNode.nodeName === 'UL') {
+        // 리스트 제거 (토글)
+        unwrapBulletList(listItem.closest('ul'), range);
+      } else {
+        // 새 리스트 생성
+        createBulletList(contentArea, range);
+      }
     }
   });
   
   /**
-   * 선택한 영역에 해당하는 UL 요소를 찾는 함수
+   * 새로운 불릿 리스트 생성 (직접 DOM 조작)
    */
-  function findTargetUl(contentArea, savedRange, ulsBefore) {
-    // 1. 새로 생성된 UL 찾기 (가장 정확한 방법)
-    const ulsAfter = Array.from(contentArea.querySelectorAll('ul'));
-    const newUls = ulsAfter.filter(ul => !ulsBefore.includes(ul));
-    
-    if (newUls.length > 0) {
-      console.log('🔍 새로 생성된 UL 발견');
-      return newUls[0];
+  function createBulletList(contentArea, range) {
+    if (!range) {
+      const selection = PluginUtil.selection.getSafeSelection();
+      if (!selection || !selection.rangeCount) return;
+      range = selection.getRangeAt(0);
     }
     
-    // 2. 선택 영역 주변에서 UL 찾기 (새 UL이 없는 경우)
-    if (savedRange) {
-      const container = savedRange.commonAncestorContainer;
-      
-      // 컨테이너가 직접 UL인 경우
-      if (container.nodeName === 'UL') {
-        return container;
-      }
-      
-      // 부모 중 UL 찾기
-      let parent = container;
-      while (parent && parent !== contentArea) {
-        if (parent.nodeName === 'UL') {
-          return parent;
-        }
-        if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'UL') {
-          return parent.parentNode;
-        }
-        parent = parent.parentNode;
-      }
+    // 선택 영역의 콘텐츠 추출
+    const fragment = range.extractContents();
+    
+    // 새 UL 요소 생성
+    const ul = document.createElement('ul');
+    ul.className = 'bullet-depth-1'; // 기본 깊이 클래스
+    
+    // 선택 영역의 텍스트 줄을 LI로 변환
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment);
+    
+    // 줄바꿈으로 분리하여 각 줄을 LI로 변환
+    let content = tempDiv.innerHTML;
+    
+    // div, p 태그를 줄바꿈으로 처리
+    content = content.replace(/<\/(div|p)>/gi, '<br>');
+    content = content.replace(/<(div|p)[^>]*>/gi, '');
+    
+    // 줄바꿈으로 분리
+    const lines = content.split(/<br\s*\/?>/i);
+    
+    // 빈 줄 제거 및 각 줄을 LI로 변환
+    const nonEmptyLines = lines.filter(line => line.trim());
+    
+    if (nonEmptyLines.length === 0) {
+      // 선택된 텍스트가 없는 경우 빈 리스트 아이템 생성
+      const li = document.createElement('li');
+      li.innerHTML = '&nbsp;'; // 빈 리스트 아이템에 공백 추가
+      ul.appendChild(li);
+    } else {
+      nonEmptyLines.forEach(line => {
+        const li = document.createElement('li');
+        li.innerHTML = line.trim() || '&nbsp;';
+        ul.appendChild(li);
+      });
     }
     
-    // 3. 현재 선택 영역으로 확인 - PluginUtil.selection 활용
+    // 생성된 UL을 선택 위치에 삽입
+    range.insertNode(ul);
+    
+    // 스타일 적용
+    applyStyleToSingleUl(ul);
+    
+    // 커서 위치 조정 - 마지막 LI의 끝으로 이동
+    const lastLi = ul.lastElementChild;
+    if (lastLi) {
+      PluginUtil.selection.moveCursorToEnd(lastLi);
+    }
+    
+    return ul;
+  }
+  
+  /**
+   * 불릿 리스트 제거 (토글)
+   */
+  function unwrapBulletList(ul, range) {
+    if (!ul || ul.nodeName !== 'UL') return;
+    
+    // 리스트 아이템들을 일반 텍스트로 변환
+    const fragment = document.createDocumentFragment();
+    const items = Array.from(ul.children);
+    
+    items.forEach(item => {
+      if (item.nodeName === 'LI') {
+        // LI 콘텐츠를 일반 텍스트로 변환
+        const p = document.createElement('p');
+        p.innerHTML = item.innerHTML;
+        fragment.appendChild(p);
+      }
+    });
+    
+    // 리스트 대체
+    ul.parentNode.insertBefore(fragment, ul);
+    ul.parentNode.removeChild(ul);
+    
+    // 커서 위치 조정
+    if (range) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+  
+  /**
+   * 선택된 요소의 깊이를 기반으로 적절한 UL 요소를 찾는 함수
+   */
+  function findUlBySelection(contentArea) {
     const selection = PluginUtil.selection.getSafeSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const container = range.commonAncestorContainer;
-      
-      if (container.nodeName === 'UL') {
-        return container;
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    
+    // 컨테이너가 직접 UL인 경우
+    if (container.nodeName === 'UL') {
+      return container;
+    }
+    
+    // 부모 중 UL 찾기
+    let parent = container;
+    while (parent && parent !== contentArea) {
+      if (parent.nodeName === 'UL') {
+        return parent;
       }
-      
-      const closestLi = container.nodeType === Node.TEXT_NODE ? 
-                        container.parentNode.closest('li') : 
-                        container.closest('li');
-      
-      if (closestLi) {
-        return closestLi.closest('ul');
+      if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'UL') {
+        return parent.parentNode;
       }
+      parent = parent.parentNode;
+    }
+    
+    // 선택된 LI의 부모 UL 찾기
+    const closestLi = container.nodeType === Node.TEXT_NODE ? 
+                      container.parentNode.closest('li') : 
+                      container.closest('li');
+    
+    if (closestLi) {
+      return closestLi.closest('ul');
     }
     
     return null;
@@ -123,7 +196,7 @@
   }
   
   /**
-   * 불릿 리스트에 깊이별 스타일 적용
+   * 불릿 리스트에 깊이별 스타일 적용 - 직접 적용 방식
    */
   function applyBulletStyles(targetUl) {
     if (!targetUl || targetUl.nodeName !== 'UL') return;
@@ -134,14 +207,11 @@
       // 스타일 우선 적용 (CSS 클래스 활용)
       ensureBulletListStyles();
       
-      // 대상 UL의 깊이 계산 및 스타일 적용
-      const depth = getUlDepth(targetUl);
-      applyStyleByDepth(targetUl, depth);
+      // 타겟 UL에 스타일 적용
+      applyStyleToSingleUl(targetUl);
       
-      // 하위 UL 요소들 찾기 (표준 중첩 구조: li > ul)
+      // 하위 UL에도 스타일 적용
       const childUls = targetUl.querySelectorAll('li > ul');
-      
-      // 각 하위 UL에 깊이 계산 및 스타일 적용
       childUls.forEach(childUl => {
         const childDepth = getUlDepth(childUl);
         applyStyleByDepth(childUl, childDepth);
@@ -154,10 +224,41 @@
   }
   
   /**
+   * 단일 UL에만 스타일 적용
+   */
+  function applyStyleToSingleUl(ul) {
+    if (!ul || ul.nodeName !== 'UL') return;
+    
+    const depth = getUlDepth(ul);
+    applyStyleByDepth(ul, depth);
+  }
+  
+  /**
+   * 요소가 선택 영역 내에 있는지 확인
+   */
+  function isElementInRange(element, range) {
+    if (!element || !range) return false;
+    
+    try {
+      const nodeRange = document.createRange();
+      nodeRange.selectNode(element);
+      
+      return range.intersectsNode(element);
+    } catch (e) {
+      console.error('요소 선택 영역 확인 오류:', e);
+      return false;
+    }
+  }
+  
+  /**
    * 특정 UL 요소에 깊이에 따른 스타일 적용
    */
   function applyStyleByDepth(ul, depth) {
     if (!ul || ul.nodeName !== 'UL') return;
+    
+    // 이전 스타일 먼저 제거 (다른 UL에 영향 없도록)
+    ul.style.removeProperty('list-style-type');
+    ul.style.removeProperty('padding-left');
     
     // 깊이별 스타일 결정 (1→disc, 2→circle, 3→square, 4→disc...)
     const bulletStyles = ['disc', 'circle', 'square'];
@@ -168,11 +269,13 @@
     ul.classList.add(`bullet-depth-${styleIndex + 1}`);
     
     // 직접 스타일도 적용 (일부 환경에서 클래스가 작동하지 않을 경우 대비)
+    // 특이성을 높이기 위해 클래스 선택자 사용
     ul.style.setProperty('list-style-type', bulletStyles[styleIndex], 'important');
     ul.style.setProperty('padding-left', '1.5em', 'important');
     
     // 데이터 속성으로 깊이 정보 저장 (디버깅용)
     ul.setAttribute('data-depth', depth);
+    ul.setAttribute('data-bullet-style', bulletStyles[styleIndex]);
   }
   
   /**
@@ -305,16 +408,27 @@
   }
   
   /**
-   * 필요한 스타일 추가 (PluginUtil.styles 활용)
+   * 불릿 리스트 스타일 적용을 위한 CSS 추가
    */
   function ensureBulletListStyles() {
-    PluginUtil.styles.addInlineStyle('bullet-list-styles', `
-      .bullet-depth-1 { list-style-type: disc !important; }
-      .bullet-depth-2 { list-style-type: circle !important; }
-      .bullet-depth-3 { list-style-type: square !important; }
+    // 이미 스타일이 추가되어 있는지 확인
+    if (document.getElementById('lite-editor-bullet-list-styles')) return;
+    
+    // 스타일 요소 생성
+    const styleEl = document.createElement('style');
+    styleEl.id = 'lite-editor-bullet-list-styles';
+    styleEl.textContent = `
+      /* 불릿 리스트 깊이별 스타일 - 더 구체적인 선택자 사용 */
+      [contenteditable="true"] ul.bullet-depth-1 { list-style-type: disc !important; }
+      [contenteditable="true"] ul.bullet-depth-2 { list-style-type: circle !important; }
+      [contenteditable="true"] ul.bullet-depth-3 { list-style-type: square !important; }
+      
+      /* 패딩 값도 일관되게 설정 */
       [contenteditable="true"] ul { padding-left: 1.5em !important; }
-      [contenteditable="true"] li > ul { margin-top: 0 !important; }
-    `);
+    `;
+    
+    // 문서에 추가
+    document.head.appendChild(styleEl);
   }
   
   /**
