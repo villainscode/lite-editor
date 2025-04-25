@@ -1,41 +1,70 @@
 /**
  * LiteEditor Check List Plugin
+ * 체크리스트 기능 구현 플러그인
  */
 (function() {
-  // 체크리스트 항목들을 생성하고 삽입
+  // 들여쓰기 너비 값 (기본값: 6px)
+  let indentSize = 6;
+  
+  // 체크박스와 label 사이의 간격 (기본값: 0.5px)
+  let labelGap = 0.5;
+  
+  // 들여쓰기 레벨에 따른 마진 클래스 생성 함수
+  function getMarginClass(level) {
+    const marginSize = level * indentSize;
+    return `ml-${marginSize}`;
+  }
+  
+  // label 간격 스타일 문자열 생성 함수
+  function getLabelGapStyle() {
+    return `margin-left: ${labelGap}px;`;
+  }
+  
+  const NBSP_CHAR = '\u00A0'; // &nbsp; 유니코드
+
+  /**
+   * 체크리스트 항목들을 생성하고 삽입
+   */
   function createChecklistItems(contentArea) {
     const selection = PluginUtil.selection.getSafeSelection();
     if (!selection || !selection.rangeCount) return;
+    
     const range = selection.getRangeAt(0);
     const text = range.toString();
     if (!text.trim()) return;
 
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     range.deleteContents();
+    
     const fragment = document.createDocumentFragment();
     lines.forEach(line => fragment.appendChild(createSingleChecklistItem(line)));
     range.insertNode(fragment);
 
-    const lastLabel = fragment.lastChild?.querySelector('label');
-    if (lastLabel) PluginUtil.selection.moveCursorTo(lastLabel, 0);
+    // 마지막 체크리스트 항목에 포커스 설정
+    const lastItem = fragment.lastChild;
+    if (lastItem) maintainFocus(lastItem);
   }
 
-  // 단일 체크리스트 아이템 생성 유틸
+  /**
+   * 단일 체크리스트 아이템 생성
+   */
   function createSingleChecklistItem(text) {
     const container = PluginUtil.dom.createElement('div', {
-      className: 'flex items-center gap-2 my-1 checklist-item ml-0'
+      className: `flex items-center gap-2 my-1 checklist-item ${getMarginClass(0)}`
     });
+    
     const checkbox = PluginUtil.dom.createElement('input', {
       type: 'checkbox',
       className: 'form-checkbox h-4 w-4 text-primary peer transition'
     });
     
     // 빈 텍스트일 경우 &nbsp; 추가 (커서 위치 보이게)
-    const labelContent = text.trim() ? text : '\u00A0'; // &nbsp; 유니코드
+    const labelContent = text.trim() ? text : NBSP_CHAR;
     
     const label = PluginUtil.dom.createElement('label', {
-      className: 'ml-1 text-gray-800 peer-checked:line-through peer-checked:text-gray-400',
-      textContent: labelContent
+      className: 'text-gray-800 peer-checked:line-through peer-checked:text-gray-400',
+      textContent: labelContent,
+      style: getLabelGapStyle()
     });
     
     container.appendChild(checkbox);
@@ -60,28 +89,48 @@
 
   /**
    * 포커스 유지 로직
+   * @param {HTMLElement} element - 포커스를 유지할 체크리스트 아이템
+   * @param {number} [position] - 커서 위치 (undefined면 텍스트 끝으로 설정)
    */
-  function maintainFocus(element) {
+  function maintainFocus(element, position) {
     if (!element) return;
     
     try {
-      // label 요소 찾기
-      const label = element.querySelector('label');
-      if (label) {
-        // 텍스트 노드 찾기
+      // 지연시키기 - DOM 업데이트 후 커서 설정
+      setTimeout(() => {
+        const label = element.querySelector('label');
+        if (!label) return;
+        
+        // 텍스트 노드에 커서 위치
         const textNode = label.firstChild;
-        if (textNode) {
-          // 텍스트 노드의 중간에 커서 위치 (더 자연스러운 위치)
-          PluginUtil.selection.moveCursorTo(textNode, 0);
-          console.log('커서 위치 설정됨:', textNode, '위치:', 0);
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          // position이 지정되지 않으면 텍스트 끝으로 설정
+          const textLength = textNode.length || 0;
+          const offset = position !== undefined ? 
+                        Math.min(position, textLength) : 
+                        textLength;
+          
+          PluginUtil.selection.moveCursorTo(textNode, offset);
         } else {
           PluginUtil.selection.moveCursorTo(label, 0);
-          console.log('텍스트 노드 없음, label에 커서 위치');
         }
-      }
+      }, 0);
     } catch (e) {
       console.warn('포커스 유지 중 오류:', e);
     }
+  }
+
+  /**
+   * 체크리스트 항목이 비어있는지 확인
+   */
+  function isEmptyChecklistItem(item) {
+    if (!item) return true;
+    
+    const label = item.querySelector('label');
+    if (!label) return true;
+    
+    const content = label.textContent || '';
+    return !content.trim() || content === NBSP_CHAR;
   }
 
   /**
@@ -90,26 +139,20 @@
   function handleEnterKey(item) {
     if (!item) return;
     
-    // 현재 항목이 비어있는지 확인 (label 내용 체크)
-    const label = item.querySelector('label');
-    const isEmpty = !label || !label.textContent.trim() || label.textContent === '\u00A0';
-    
-    console.log('Enter 키 처리 - 현재 항목 비어있음:', isEmpty);
+    // 현재 항목이 비어있는지 확인
+    const isEmpty = isEmptyChecklistItem(item);
     
     if (isEmpty) {
       // 빈 체크리스트 항목이면 일반 텍스트 블록으로 전환
-      console.log('빈 체크리스트 항목 → 일반 텍스트 블록으로 전환');
       const textDiv = PluginUtil.dom.createElement('div', { 
         className: '',
         innerHTML: '<br>' // 빈 줄 표시를 위한 br 태그
       });
       
-      // 현재 항목 대체
       item.replaceWith(textDiv);
       PluginUtil.selection.moveCursorTo(textDiv, 0);
     } else {
       // 내용이 있으면 새 체크리스트 아이템 생성
-      console.log('내용 있는 체크리스트 항목 → 새 체크리스트 생성');
       const newItem = createSingleChecklistItem('');
       item.after(newItem);
       maintainFocus(newItem);
@@ -117,22 +160,76 @@
   }
 
   /**
-   * Tab 키 처리 - 들여쓰기
+   * Tab 키 처리 - 들여쓰기/내어쓰기
    */
   function handleTabKey(item, isShift) {
     if (!item) return;
     
-    console.log('Tab 키 처리 - ' + (isShift ? '내어쓰기' : '들여쓰기'));
-    const mlClasses = ['ml-0','ml-4','ml-8','ml-12','ml-16','ml-20','ml-24','ml-28','ml-32'];
-    const curr = mlClasses.find(c => item.classList.contains(c)) || 'ml-0';
-    const i = mlClasses.indexOf(curr);
+    // 현재 커서 위치와 텍스트 노드 저장
+    const selection = window.getSelection();
+    let cursorPosition = 0;
+    let textNode = null;
     
-    if (isShift) {
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const node = range.startContainer;
+      
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNode = node;
+        cursorPosition = range.startOffset;
+      }
+    }
+    
+    // 현재 들여쓰기 레벨 찾기
+    let currentLevel = 0;
+    
+    // ml-* 클래스에서 현재 들여쓰기 레벨 추출
+    const mlClass = Array.from(item.classList).find(cls => cls.startsWith('ml-'));
+    if (mlClass) {
+      const marginSize = parseInt(mlClass.replace('ml-', ''), 10);
+      currentLevel = marginSize / indentSize;
+    }
+    
+    // 들여쓰기/내어쓰기 적용
+    let didChange = false;
+    
+    if (isShift && currentLevel > 0) {
       // 내어쓰기
-      if (i > 0) item.classList.replace(curr, mlClasses[i - 1]);
-    } else {
-      // 들여쓰기
-      if (i < mlClasses.length - 1) item.classList.replace(curr, mlClasses[i + 1]);
+      const newLevel = currentLevel - 1;
+      const oldClass = getMarginClass(currentLevel);
+      const newClass = getMarginClass(newLevel);
+      item.classList.replace(oldClass, newClass);
+      didChange = true;
+    } else if (!isShift) {
+      // 들여쓰기 - 설정된 indentSize 값을 사용
+      const newLevel = currentLevel + 1;
+      const oldClass = getMarginClass(currentLevel);
+      const newClass = getMarginClass(newLevel);
+      item.classList.replace(oldClass, newClass);
+      didChange = true;
+    }
+    
+    // 변경이 있었고 텍스트 노드가 있는 경우에만 커서 복원
+    if (didChange) {
+      if (textNode) {
+        // 직접 텍스트 노드에 커서 위치 설정
+        setTimeout(() => {
+          try {
+            const range = document.createRange();
+            range.setStart(textNode, cursorPosition);
+            range.collapse(true);
+            
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch (e) {
+            // 실패하면 maintainFocus 사용
+            maintainFocus(item, cursorPosition);
+          }
+        }, 0);
+      } else {
+        // 텍스트 노드가 없으면 maintainFocus 사용
+        maintainFocus(item, cursorPosition);
+      }
     }
   }
 
@@ -143,21 +240,13 @@
     // Enter 또는 Tab 키가 아니면 무시
     if (event.key !== 'Enter' && event.key !== 'Tab') return;
     
-    console.log('체크리스트 키 이벤트 감지:', event.key);
-    
     // 에디터 영역 찾기
     const contentArea = event.target.closest('[contenteditable="true"]');
-    if (!contentArea) {
-      console.log('contenteditable 영역 없음');
-      return;
-    }
+    if (!contentArea) return;
     
     // 현재 선택된 체크리스트 아이템 찾기
     const activeItem = findActiveChecklistItem();
-    if (!activeItem) {
-      console.log('체크리스트 아이템 없음');
-      return;
-    }
+    if (!activeItem) return;
     
     // 기본 동작 방지
     event.preventDefault();
@@ -171,6 +260,64 @@
     }
   }, 100); // 100ms 쓰로틀링 적용
 
+  /**
+   * 들여쓰기 너비 설정 함수
+   * @param {number} size - 픽셀 단위의 들여쓰기 너비
+   */
+  function setIndentSize(size) {
+    if (typeof size === 'number' && size > 0) {
+      indentSize = size;
+      
+      // 기존 체크리스트 아이템의 들여쓰기 업데이트
+      updateExistingIndents();
+    }
+  }
+  
+  /**
+   * 체크박스와 label 사이의 간격 설정 함수
+   * @param {number} gap - 픽셀 단위의 간격
+   */
+  function setLabelGap(gap) {
+    if (typeof gap === 'number' && gap >= 0) {
+      labelGap = gap;
+      
+      // 기존 체크리스트 아이템의 label 간격 업데이트
+      updateExistingLabelGaps();
+    }
+  }
+  
+  /**
+   * 기존 체크리스트 아이템의 label 간격 업데이트
+   */
+  function updateExistingLabelGaps() {
+    const checklistItems = document.querySelectorAll('.checklist-item label');
+    
+    checklistItems.forEach(label => {
+      // 새 간격 스타일 적용
+      label.style.marginLeft = `${labelGap}px`;
+    });
+  }
+  
+  /**
+   * 기존 체크리스트 아이템의 들여쓰기 업데이트
+   */
+  function updateExistingIndents() {
+    const checklistItems = document.querySelectorAll('.checklist-item');
+    
+    checklistItems.forEach(item => {
+      // 현재 들여쓰기 레벨 찾기
+      const mlClass = Array.from(item.classList).find(cls => cls.startsWith('ml-'));
+      if (mlClass) {
+        const marginSize = parseInt(mlClass.replace('ml-', ''), 10);
+        const currentLevel = Math.round(marginSize / (indentSize || 4)); // 이전 indentSize로 나누기
+        
+        // 새 들여쓰기 클래스 적용
+        item.classList.remove(mlClass);
+        item.classList.add(getMarginClass(currentLevel));
+      }
+    });
+  }
+  
   // 플러그인 등록
   PluginUtil.registerPlugin('checkList', {
     title: 'Check List',
@@ -185,13 +332,11 @@
       createChecklistItems(contentArea);
       if (window.liteEditorSelection) window.liteEditorSelection.save();
     },
-    onInit: function(contentArea) {
-      console.log('체크리스트 플러그인 초기화');
-      // 전역 이벤트 리스너는 onInit에서 등록하지 않음 (이미 아래에서 등록됨)
-    }
+    // 설정 함수 노출
+    setIndentSize: setIndentSize,
+    setLabelGap: setLabelGap
   });
   
   // 전역 키보드 이벤트 리스너 등록 (캡처링 단계에서 처리)
   document.addEventListener('keydown', handleChecklistKeys, true);
-  console.log('체크리스트 키보드 이벤트 리스너 등록 완료');
 })();
