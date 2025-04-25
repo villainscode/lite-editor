@@ -15,85 +15,143 @@
         event.stopPropagation();
       }
       
-      // 1. 실행 전 선택 영역 정보 저장 - PluginUtil.selection 활용
-      const savedRange = PluginUtil.selection.saveSelection();
-      
-      // 실행 전 존재하는 OL 요소들 스냅샷 저장
-      const olsBefore = Array.from(contentArea.querySelectorAll('ol'));
+      // 선택 영역 정보 저장
+      const selection = PluginUtil.selection.getSafeSelection();
+      if (!selection || !selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
       
       // 에디터 영역에 포커스
       contentArea.focus();
       
-      // 2. 순서 있는 목록 생성/삭제 명령 실행
-      document.execCommand('insertOrderedList', false, null);
+      // 현재 선택된 영역이 이미 OL인지 확인
+      const existingOl = findOlBySelection(contentArea);
       
-      // 3. 명령 실행 후 선택된 영역의 OL 찾기 - PluginUtil.events 활용
-      PluginUtil.events.debounce(() => {
-        const targetOl = findTargetOl(contentArea, savedRange, olsBefore);
-        
-        if (targetOl) {
-          console.log('✅ 타겟 OL 찾음:', targetOl);
-          // 찾은 OL에 깊이별 스타일 적용
-          applyNumberedStyles(targetOl);
-        } else {
-          console.warn('❌ 타겟 OL을 찾을 수 없음');
-        }
-      }, 10)();
+      if (existingOl) {
+        // 이미 OL이면 일반 텍스트로 변환 (토글)
+        unwrapNumberedList(existingOl, range);
+      } else {
+        // OL이 아니면 새로 생성
+        createNumberedList(contentArea, range);
+      }
     }
   });
   
   /**
-   * 선택한 영역에 해당하는 OL 요소를 찾는 함수
+   * 새로운 순서있는 리스트 생성 (직접 DOM 조작)
    */
-  function findTargetOl(contentArea, savedRange, olsBefore) {
-    // 1. 새로 생성된 OL 찾기 (가장 정확한 방법)
-    const olsAfter = Array.from(contentArea.querySelectorAll('ol'));
-    const newOls = olsAfter.filter(ol => !olsBefore.includes(ol));
-    
-    if (newOls.length > 0) {
-      console.log('🔍 새로 생성된 OL 발견');
-      return newOls[0];
+  function createNumberedList(contentArea, range) {
+    if (!range) {
+      const selection = PluginUtil.selection.getSafeSelection();
+      if (!selection || !selection.rangeCount) return;
+      range = selection.getRangeAt(0);
     }
     
-    // 2. 선택 영역 주변에서 OL 찾기 (새 OL이 없는 경우)
-    if (savedRange) {
-      const container = savedRange.commonAncestorContainer;
-      
-      // 컨테이너가 직접 OL인 경우
-      if (container.nodeName === 'OL') {
-        return container;
-      }
-      
-      // 부모 중 OL 찾기
-      let parent = container;
-      while (parent && parent !== contentArea) {
-        if (parent.nodeName === 'OL') {
-          return parent;
-        }
-        if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'OL') {
-          return parent.parentNode;
-        }
-        parent = parent.parentNode;
-      }
+    // 선택 영역의 콘텐츠 추출
+    const fragment = range.extractContents();
+    
+    // 새 OL 요소 생성
+    const ol = document.createElement('ol');
+    ol.className = 'number-depth-1'; // 기본 깊이 클래스
+    ol.setAttribute('data-lite-editor-numbered', 'true'); // 고유 식별자 추가
+    
+    // 선택 영역의 텍스트 줄을 LI로 변환
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment);
+    
+    // 텍스트 줄 분리
+    const content = tempDiv.innerHTML;
+    const lines = content.split(/<br\s*\/?>/i);
+    
+    // 비어있지 않은 줄만 처리
+    const nonEmptyLines = lines.filter(line => line.trim() !== '');
+    
+    // 줄이 없으면 빈 줄 추가
+    if (nonEmptyLines.length === 0) {
+      nonEmptyLines.push('&nbsp;');
     }
     
-    // 3. 현재 선택 영역으로 확인 - PluginUtil.selection 활용
+    // 각 줄을 LI로 변환
+    nonEmptyLines.forEach(line => {
+      const li = document.createElement('li');
+      li.innerHTML = line.trim() || '&nbsp;';
+      ol.appendChild(li);
+    });
+    
+    // 생성된 OL을 선택 영역에 삽입
+    range.insertNode(ol);
+    
+    // 리스트 스타일 적용
+    applyNumberedStyles(ol);
+    
+    // 첫 번째 LI에 커서 위치
+    if (ol.firstChild) {
+      maintainFocus(ol.firstChild);
+    }
+  }
+  
+  /**
+   * 순서있는 리스트 토글 (일반 텍스트로 변환)
+   */
+  function unwrapNumberedList(ol, range) {
+    if (!ol || ol.nodeName !== 'OL') return;
+    
+    // 리스트 아이템 가져오기
+    const items = Array.from(ol.children);
+    const fragment = document.createDocumentFragment();
+    
+    // 각 LI를 일반 텍스트(p)로 변환
+    items.forEach(item => {
+      if (item.nodeName === 'LI') {
+        const p = document.createElement('p');
+        p.innerHTML = item.innerHTML;
+        fragment.appendChild(p);
+      }
+    });
+    
+    // 원래 OL 위치에 삽입
+    ol.parentNode.insertBefore(fragment, ol);
+    ol.parentNode.removeChild(ol);
+    
+    // 첫 번째 단락에 커서 위치
+    if (fragment.firstChild) {
+      PluginUtil.selection.moveCursorToEnd(fragment.firstChild);
+    }
+  }
+  
+  /**
+   * 선택된 요소의 깊이를 기반으로 적절한 OL 요소를 찾는 함수
+   */
+  function findOlBySelection(contentArea) {
     const selection = PluginUtil.selection.getSafeSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const container = range.commonAncestorContainer;
-      
-      if (container.nodeName === 'OL') {
-        return container;
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    
+    // 컨테이너가 직접 OL인 경우
+    if (container.nodeName === 'OL') {
+      return container;
+    }
+    
+    // 부모 중 OL 찾기
+    let parent = container;
+    while (parent && parent !== contentArea) {
+      if (parent.nodeName === 'OL') {
+        return parent;
       }
-      
-      const closestLi = container.nodeType === Node.TEXT_NODE ? 
-                        container.parentNode.closest('li') : 
-                        container.closest('li');
-      
-      if (closestLi) {
-        return closestLi.closest('ol');
+      if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'OL') {
+        return parent.parentNode;
       }
+      parent = parent.parentNode;
+    }
+    
+    // 선택된 LI의 부모 OL 찾기
+    const closestLi = container.nodeType === Node.TEXT_NODE ? 
+                      container.parentNode.closest('li') : 
+                      container.closest('li');
+    
+    if (closestLi) {
+      return closestLi.closest('ol');
     }
     
     return null;
@@ -135,6 +193,9 @@
       // 스타일 우선 적용 (CSS 클래스 활용)
       ensureNumberedListStyles();
       
+      // 고유 식별자 추가
+      targetOl.setAttribute('data-lite-editor-numbered', 'true');
+      
       // 대상 OL의 깊이 계산 및 스타일 적용
       const depth = getOlDepth(targetOl);
       applyStyleByDepth(targetOl, depth);
@@ -144,6 +205,8 @@
       
       // 각 하위 OL에 깊이 계산 및 스타일 적용
       childOls.forEach(childOl => {
+        // 고유 식별자 추가
+        childOl.setAttribute('data-lite-editor-numbered', 'true');
         const childDepth = getOlDepth(childOl);
         applyStyleByDepth(childOl, childDepth);
       });
@@ -159,6 +222,9 @@
    */
   function applyStyleByDepth(ol, depth) {
     if (!ol || ol.nodeName !== 'OL') return;
+    
+    // 고유 식별자 추가
+    ol.setAttribute('data-lite-editor-numbered', 'true');
     
     // 깊이별 스타일 결정 (1→decimal, 2→lower-alpha, 3→lower-roman, 4→decimal...)
     const numberStyles = ['decimal', 'lower-alpha', 'lower-roman'];
@@ -290,16 +356,28 @@
   }
   
   /**
-   * 필요한 스타일 추가 (PluginUtil.styles 활용)
+   * 순서있는 리스트 스타일 적용을 위한 CSS 추가
    */
   function ensureNumberedListStyles() {
-    PluginUtil.styles.addInlineStyle('numbered-list-styles', `
-      .number-depth-1 { list-style-type: decimal !important; }
-      .number-depth-2 { list-style-type: lower-alpha !important; }
-      .number-depth-3 { list-style-type: lower-roman !important; }
-      [contenteditable="true"] ol { padding-left: 1.5em !important; }
-      [contenteditable="true"] li > ol { margin-top: 0 !important; }
-    `);
+    // 이미 스타일이 추가되어 있는지 확인
+    if (document.getElementById('lite-editor-numbered-list-styles')) return;
+    
+    // 스타일 요소 생성
+    const styleEl = document.createElement('style');
+    styleEl.id = 'lite-editor-numbered-list-styles';
+    styleEl.textContent = `
+      /* 순서있는 리스트 깊이별 스타일 - 더 구체적인 선택자 사용 */
+      [contenteditable="true"] ol[data-lite-editor-numbered].number-depth-1 { list-style-type: decimal !important; }
+      [contenteditable="true"] ol[data-lite-editor-numbered].number-depth-2 { list-style-type: lower-alpha !important; }
+      [contenteditable="true"] ol[data-lite-editor-numbered].number-depth-3 { list-style-type: lower-roman !important; }
+      
+      /* 패딩 값도 일관되게 설정 - 우리 플러그인 OL만 적용 */
+      [contenteditable="true"] ol[data-lite-editor-numbered] { padding-left: 1.5em !important; }
+      [contenteditable="true"] li > ol[data-lite-editor-numbered] { margin-top: 0 !important; }
+    `;
+    
+    // 문서에 추가
+    document.head.appendChild(styleEl);
   }
   
   /**
@@ -333,13 +411,19 @@
     const activeLi = findActiveLi(contentArea);
     if (!activeLi) return;
     
-    // OL 항목일 경우에만 처리
-    const parentList = activeLi.parentNode;
-    if (parentList.nodeName !== 'OL') return;
+    // 현재 LI가 순서있는 리스트(OL)의 일부인지 확인
+    const parentOl = activeLi.closest('ol');
+    if (!parentOl) return;
+    
+    // 우리 플러그인에서 생성한 OL인지 확인 (고유 식별자 확인)
+    if (!parentOl.hasAttribute('data-lite-editor-numbered')) return;
     
     // 기본 동작 방지
     event.preventDefault();
     event.stopPropagation();
+    
+    // 이벤트 전파 완전 차단
+    event.stopImmediatePropagation();
     
     // Shift 키 여부에 따라 들여쓰기 또는 내어쓰기 실행
     if (event.shiftKey) {
