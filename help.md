@@ -12,3 +12,6 @@
 
 <!-- 현재 브랜치를 main 브랜치로 병합-->
 ./gitx merge
+
+<!-- 새 브랜치 생성 및 체크아웃 -->
+./gitx checkout [branch명]                
