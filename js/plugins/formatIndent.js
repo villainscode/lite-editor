@@ -4,6 +4,13 @@
  */
 
 (function() {
+  function normalizeIndent(contentArea) {
+    // 모든 blockquote 들여쓰기 강제
+    contentArea.querySelectorAll('blockquote').forEach(bq => {
+      bq.style.marginLeft   = '1.5em';
+      bq.style.marginRight  = '0';
+    });
+  }
   // 들여쓰기 플러그인
   LiteEditor.registerPlugin('formatIndent', {
     title: 'Indentation',
@@ -47,6 +54,9 @@
         // 포커스 유지
         contentArea.focus();
         
+        // 들여쓰기 간격 일관성 유지
+        normalizeIndent(contentArea);
+        
         // 변경 효과 확인을 위해 다시 선택 영역 저장
         if (window.liteEditorSelection) {
           window.liteEditorSelection.save();
@@ -68,6 +78,9 @@
         
         // 포커스 유지
         contentArea.focus();
+        
+        // 들여쓰기 간격 일관성 유지
+        normalizeIndent(contentArea);
         
         // 변경 효과 확인을 위해 다시 선택 영역 저장
         if (window.liteEditorSelection) {
