@@ -13,5 +13,8 @@
 <!-- 현재 브랜치를 main 브랜치로 병합-->
 ./gitx merge
 
+<!-- 모든 원격 저장소 fetch (git fetch --all) -->
+./gitx fetch
+
 <!-- 새 브랜치 생성 및 체크아웃 -->
 ./gitx checkout [branch명]                
