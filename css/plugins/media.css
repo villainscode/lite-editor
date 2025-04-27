@@ -3,24 +3,25 @@
  * 동영상 삽입 관련 스타일 정의
  */
 
-/* 동영상 삽입 모달 스타일 */
+/* 모달 기본 스타일 */
 .lite-editor-media-popup {
   position: absolute;
-  z-index: 1000;
-  background: white;
-  border: 1px solid #ccc;
+  width: 300px;
+  background-color: white;
   border-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   padding: 12px;
+  z-index: 1000;
+  font-size: smaller;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 320px;
 }
 
 /* 모달 헤더 스타일 */
 .lite-editor-media-header {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -28,29 +29,47 @@
 
 .lite-editor-media-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
 }
 
-/* 입력 그룹 스타일 */
-.lite-editor-media-input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* 입력 요소 스타일 */
+.input-container {
+  margin-bottom: 10px;
+}
+
+.input-container label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 4px;
 }
 
 .lite-editor-media-input {
-  padding: 6px 8px;
+  width: 90%;
+  padding: 4px 6px;
+  font-size: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
-  width: 100%;
-  flex: 1;
+  outline: none;
 }
 
-/* 삽입 버튼 스타일 */
-.lite-editor-media-insert {
+.lite-editor-media-input:focus {
+  outline: none;
+  border-color: #4285f4;
+}
+
+/* 버튼 컨테이너 */
+.button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* 버튼 스타일 */
+.button-container button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,16 +79,18 @@
   border: none;
   background-color: transparent;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
-.lite-editor-media-insert:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+.button-container button[data-action="close"] {
+  margin-right: 8px;
 }
 
-.lite-editor-media-insert .material-icons {
+.button-container .material-icons {
   font-size: 18px;
   color: #5f6368;
+}
+.lite-editor-media-insert {
+  padding-left: 5px;
 }
 
 .lite-editor-media-insert:hover .material-icons {

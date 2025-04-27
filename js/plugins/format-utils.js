@@ -165,7 +165,12 @@
       const range = sel.getRangeAt(0);
       const container = document.createElement('div');
       container.appendChild(range.cloneContents());
-      return container.innerHTML;
+      
+      // 여러 줄 선택 시 첫 줄 앞의 불필요한 공백 제거
+      let html = container.innerHTML;
+      // 첫 번째 텍스트 노드의 시작 부분 공백 제거
+      html = html.replace(/^\s+/, '');
+      return html;
     }
     
     // 8. 안정적인 실행을 위한 적절한 지연 시간 설정
@@ -224,8 +229,25 @@
                 // code 태그 내부가 아니라면 선택 영역을 code 태그로 감싸기
                 const selectedHtml = getSelectedHtml();
                 
-                // HTML 구조를 보존하면서 code 태그 적용
-                document.execCommand('insertHTML', false, '<code>' + selectedHtml + '</code>');
+                // 선택 영역 제거 후 새 내용 삽입 (공백 문제 방지)
+                const sel = getSafeSelection();
+                if (sel && sel.rangeCount > 0) {
+                  const range = sel.getRangeAt(0);
+                  range.deleteContents();
+                  
+                  // HTML 구조를 보존하면서 code 태그 적용
+                  const codeElement = document.createElement('code');
+                  // 선택된 HTML을 직접 삽입하여 브라우저의 파싱 과정 최소화
+                  codeElement.innerHTML = selectedHtml;
+                  
+                  range.insertNode(codeElement);
+                  
+                  // 새 선택 영역 설정
+                  const newRange = document.createRange();
+                  newRange.selectNodeContents(codeElement);
+                  sel.removeAllRanges();
+                  sel.addRange(newRange);
+                }
               }
               
               // 14. 선택 영역 유지를 위한 추가 작업
