@@ -181,12 +181,14 @@ const LiteEditor = (function() {
    * @param {Object} config - 에디터 설정
    */
   function initToolbar(toolbar, contentArea, config) {
-    const { plugins: enabledPlugins, dividers } = config;
+    // 사용자가 지정한 플러그인 목록 또는 기본 플러그인 목록 사용
+    const enabledPlugins = config.plugins || PLUGIN_ORDER;
+    const { dividers } = config;
     let pluginCount = 0;
     
-    // 플러그인 렌더링 함수
-    function renderPlugin(pluginName) {
-      // enabledPlugins에 없으면 스킵
+    // PLUGIN_ORDER에 정의된 순서대로 플러그인 렌더링
+    PLUGIN_ORDER.forEach(pluginName => {
+      // enabledPlugins에 없으면 스킵 (사용자가 지정한 플러그인만 표시)
       if (!enabledPlugins.includes(pluginName)) {
         return;
       }
@@ -481,10 +483,7 @@ const LiteEditor = (function() {
       
       // 플러그인 카운트 증가
       pluginCount++;
-    }
-    
-    // 순서에 따라 플러그인 렌더링 - PLUGIN_ORDER 상수 사용
-    PLUGIN_ORDER.forEach(renderPlugin);
+    });
   }
   
   /**
