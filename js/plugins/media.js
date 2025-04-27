@@ -16,17 +16,11 @@
   let savedRange = null;          // 임시로 저장된 선택 영역
   let activeModal = null;         // 현재 활성화된 동영상 입력 모달
   let modalCleanupFn = null;      // 모달 이벤트 정리 함수
+  let documentClickListenerAdded = false; // 문서 레벨 클릭 이벤트 리스너 추가 여부 플래그
+  let isClosingModal = false;     // 모달 닫기 진행 중 플래그
 
-  /**
-   * 디버깅 로그 출력
-   */
-  function logDebug(action, data) {
-    console.log(
-      `%c[MEDIA MODAL] ${action}`,
-      'color:#e91e63;font-weight:bold;',
-      data
-    );
-  }
+  // CSS 파일 로드
+  util.styles.loadCssFile(`${PLUGIN_ID}-css`, CSS_PATH);
 
   /**
    * YouTube URL에서 video ID 추출
@@ -76,16 +70,35 @@
   }
 
   /**
+   * YouTube iframe 요소 생성
+   * @param {string} videoId - YouTube 비디오 ID
+   * @returns {HTMLIFrameElement} - 생성된 iframe 요소
+   */
+  function createYouTubeIframe(videoId) {
+    return util.dom.createElement('iframe', {
+      width: '100%',
+      height: '100%',
+      src: `https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin || '*')}`,
+      title: 'YouTube video player',
+      frameBorder: '0',
+      allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      allowFullscreen: true,
+      loading: 'lazy',
+      referrerPolicy: 'strict-origin-when-cross-origin'
+    });
+  }
+
+  /**
    * 동영상 삽입 모달을 생성하고 표시
    * @param {HTMLElement} buttonElement - 동영상 버튼 요소
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    */
   function showMediaModal(buttonElement, contentArea) {
-    logDebug('SHOWING MODAL', { 
+    DebugUtils.debugLog(MODULE_NAME, 'SHOWING MODAL', { 
       buttonElement: !!buttonElement,
       contentArea: !!contentArea,
       activeModalBefore: !!activeModal
-    });
+    }, '#e91e63');
     
     // 선택 영역 저장
     saveSelection();
@@ -161,7 +174,7 @@
         }
       }, { capture: true });
       documentClickListenerAdded = true;
-      logDebug('DOCUMENT CLICK LISTENER ADDED');
+      DebugUtils.debugLog(MODULE_NAME, 'DOCUMENT CLICK LISTENER ADDED', null, '#e91e63');
     }
     
     // 클릭 이벤트가 모달 내부에서 발생하는 경우 버블링 방지
@@ -185,7 +198,7 @@
     
     setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
     
-    logDebug('MODAL SHOWN', { activeModal: !!activeModal });
+    DebugUtils.debugLog(MODULE_NAME, 'MODAL SHOWN', { activeModal: !!activeModal }, '#e91e63');
     
     return activeModal;
   }
@@ -194,11 +207,16 @@
    * 활성화된 모달을 닫고 정리
    */
   function closeMediaModal() {
-    logDebug('CLOSING MODAL', { 
+    // 이미 닫는 중이면 중복 실행 방지
+    if (isClosingModal) return;
+    
+    isClosingModal = true;
+    
+    DebugUtils.debugLog(MODULE_NAME, 'CLOSING MODAL', { 
       activeModal: !!activeModal,
       hasParent: activeModal && !!activeModal.parentNode,
       modalCleanupFn: !!modalCleanupFn
-    });
+    }, '#e91e63');
     
     // 모달 이벤트 정리
     if (modalCleanupFn) {
@@ -213,8 +231,13 @@
       activeModal.parentNode.removeChild(activeModal);
       activeModal = null;
       
-      logDebug('MODAL CLOSED', { activeModal: null });
+      DebugUtils.debugLog(MODULE_NAME, 'MODAL CLOSED', { activeModal: null }, '#e91e63');
     }
+    
+    // 플래그 초기화 (약간의 지연 후)
+    setTimeout(() => {
+      isClosingModal = false;
+    }, 100);
   }
   
   /**
@@ -236,7 +259,7 @@
       // 선택 영역 복원
       restoreSelection();
       
-      logDebug('VIDEO INSERTION START', { videoId, contentArea: !!contentArea });
+      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, contentArea: !!contentArea }, '#e91e63');
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -249,17 +272,8 @@
         }
       }
       
-      // iframe 요소 직접 생성
-      const iframe = document.createElement('iframe');
-      iframe.width = '100%';
-      iframe.height = '100%';
-      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin || '*')}`;
-      iframe.title = 'YouTube video player';
-      iframe.frameBorder = '0';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
-      iframe.loading = 'lazy';
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      // iframe 요소 생성
+      const iframe = createYouTubeIframe(videoId);
       
       // 래퍼 생성 및 기본 크기 설정
       const wrapper = document.createElement('div');
@@ -298,10 +312,10 @@
       sel.removeAllRanges();
       sel.addRange(range);
       
-      logDebug('VIDEO INSERTED', { videoId, wrapper: !!wrapper });
+      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTED', { videoId, wrapper: !!wrapper }, '#e91e63');
     } catch (error) {
       console.error('동영상 삽입 중 오류 발생:', error);
-      logDebug('VIDEO INSERTION ERROR', { error: error.message });
+      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION ERROR', { error: error.message }, '#e91e63');
     }
   }
   
@@ -309,17 +323,36 @@
    * 동영상 삽입 기능
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    * @param {HTMLElement} buttonElement - 버튼 요소
+   * @param {Event} event - 클릭 이벤트 객체
    */
-  function insertMedia(contentArea, buttonElement) {
-    logDebug('INSERT MEDIA CALLED', { activeModal: !!activeModal });
+  function insertMedia(contentArea, buttonElement, event) {
+    // 이벤트 전파 중지 (중요: 다른 핸들러 호출 방지)
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     
-    // 이미 모달이 열려 있는 경우 닫기
+    DebugUtils.debugLog(MODULE_NAME, '미디어 버튼 클릭', { 
+      activeModal: !!activeModal, 
+      buttonElement: !!buttonElement,
+      isClosingModal: isClosingModal
+    }, '#e91e63');
+    
+    // 모달 닫기 진행 중이면 무시
+    if (isClosingModal) {
+      DebugUtils.debugLog(MODULE_NAME, '모달 닫기 진행 중 - 무시', null, '#e91e63');
+      return;
+    }
+    
+    // 모달이 열려있는 경우 닫기 (토글 동작)
     if (activeModal && activeModal.parentNode) {
+      DebugUtils.debugLog(MODULE_NAME, '모달 닫기 (토글 동작)', null, '#e91e63');
       closeMediaModal();
       return;
     }
     
-    // 모달이 열려있지 않은 경우 새로 보여주기
+    // 모달이 닫혀있는 경우 열기 (토글 동작)
+    DebugUtils.debugLog(MODULE_NAME, '모달 열기 (토글 동작)', null, '#e91e63');
     showMediaModal(buttonElement, contentArea);
   }
   
@@ -329,11 +362,8 @@
   if (typeof LiteEditor !== 'undefined') {
     LiteEditor.registerPlugin(PLUGIN_ID, {
       icon: 'live_tv',
-      title: 'Insert Movie',
+      title: 'Insert Media',
       action: insertMedia
     });
   }
-  
-  // 문서 레벨 클릭 이벤트 리스너 추가 여부 플래그
-  let documentClickListenerAdded = false;
 })();
