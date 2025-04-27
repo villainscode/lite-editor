@@ -41,11 +41,101 @@
   }
   
   /**
+   * 더블클릭 선택 정규화 함수
+   * 브라우저의 더블클릭 선택 범위를 정확한 단어 경계로 조정
+   */
+  function normalizeDoubleClickSelection(contentArea) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const text = range.toString();
+    
+    // 디버깅: 원본 선택 영역 정보
+    DebugUtils.debugLog(MODULE_NAME, '원본 선택 영역', {
+      text: text,
+      length: text.length,
+      startContainer: range.startContainer.nodeType,
+      endContainer: range.endContainer.nodeType,
+      startOffset: range.startOffset,
+      endOffset: range.endOffset
+    }, '#FF9800');
+    
+    // 선택된 텍스트에서 줄바꿈과 후발 공백 제거
+    const cleanText = text.split('\n')[0].trim();
+    
+    // 줄바꿈이나 후발 공백이 있는지 확인
+    const hasExtraWhitespace = text.length > cleanText.length;
+    
+    // 더블클릭 선택이거나 공백이 포함된 경우 처리
+    if ((text.length < 50 || hasExtraWhitespace) && range.startContainer.nodeType === 3) {
+      DebugUtils.debugLog(MODULE_NAME, '선택 영역 조정 필요', {
+        originalText: text,
+        cleanText: cleanText,
+        hasExtraWhitespace: hasExtraWhitespace
+      }, '#E91E63');
+      
+      // 텍스트 노드의 전체 내용
+      const fullText = range.startContainer.textContent;
+      
+      // 정확한 위치 찾기 - 시작 위치에서부터 검색
+      let startPos = -1;
+      let searchStart = Math.max(0, range.startOffset - cleanText.length);
+      
+      // 정확한 위치를 찾기 위해 여러 방법 시도
+      while (startPos === -1 && searchStart <= range.startOffset) {
+        startPos = fullText.indexOf(cleanText, searchStart);
+        searchStart++;
+      }
+      
+      // 여전히 찾지 못한 경우 전체 텍스트에서 검색
+      if (startPos === -1) {
+        startPos = fullText.indexOf(cleanText);
+      }
+      
+      // 여전히 찾지 못한 경우 원래 시작점 사용
+      if (startPos === -1) {
+        startPos = range.startOffset;
+      }
+      
+      // 정확한 끝 위치 계산
+      const endPos = startPos + cleanText.length;
+      
+      // 새 범위 생성
+      const newRange = document.createRange();
+      newRange.setStart(range.startContainer, startPos);
+      newRange.setEnd(range.startContainer, endPos);
+      
+      // 선택 영역 업데이트
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+      
+      // 디버깅: 조정된 선택 영역 정보
+      DebugUtils.debugLog(MODULE_NAME, '선택 영역 정규화됨', {
+        originalText: text,
+        cleanText: cleanText,
+        originalRange: `${range.startOffset}-${range.endOffset}`,
+        normalizedRange: `${startPos}-${endPos}`
+      }, '#4CAF50');
+      
+      return newRange;
+    }
+    
+    // 일반 선택이거나 조정할 필요 없는 경우 원래 범위 반환
+    return range;
+  }
+  
+  /**
    * 정렬 적용 함수
    */
   function applyAlignment(alignType, contentArea) {
     // 디버깅: 정렬 적용 시작 로그
     DebugUtils.debugLog(MODULE_NAME, `정렬 적용: ${alignType}`, null, '#FF9800');
+    
+    // 선택 영역 정규화 (더블클릭 처리)
+    normalizeDoubleClickSelection(contentArea);
+    
+    // 선택 영역 정보 출력
     DebugUtils.getEditorSelectionInfo(contentArea);
     
     // 선택 영역 저장

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ContentEditable Selection Debug</title>
+  <style>
+    #lite-editor {
+      width: 100%;
+      min-height: 200px;
+      padding: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      line-height: 1.5;
+      font-size: 16px;
+      white-space: pre-wrap; /* 줄바꿈 보존 */
+    }
+  </style>
+</head>
+<body>
+
+  <h2>ContentEditable Selection Debugger</h2>
+  <p>텍스트를 입력 후 드래그/더블클릭/Shift+화살표 키로 선택해 보세요.</p>
+  <div id="lite-editor" contenteditable="true" role="textbox">
+    이 영역은 ContentEditable로 설정되어 있습니다.
+    여러 줄을 입력하고, 드래그하거나 더블클릭해서 선택한 뒤,
+    콘솔에서 selection start/end 인덱스를 확인하세요.
+  </div>
+
+  <script>
+    const editor = document.getElementById('lite-editor');
+
+    /**
+     * 문자열 콘텐츠를 기준으로 selectionStart, selectionEnd 계산
+     */
+    function getSelectionOffsets(container) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return null;
+      const range = sel.getRangeAt(0);
+
+      // container 내 전체 텍스트 노드를 순회하며 오프셋 누적
+      let charIndex = 0, startOffset = -1, endOffset = -1;
+      const treeWalker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
+
+      while (treeWalker.nextNode()) {
+        const node = treeWalker.currentNode;
+        if (node === range.startContainer) {
+          startOffset = charIndex + range.startOffset;
+        }
+        if (node === range.endContainer) {
+          endOffset = charIndex + range.endOffset;
+          break;
+        }
+        charIndex += node.textContent.length;
+      }
+      // 선택이 커서(비선택)인 경우
+      if (startOffset >= 0 && endOffset < 0) {
+        endOffset = startOffset;
+      }
+      return startOffset >= 0 ? { start: startOffset, end: endOffset } : null;
+    }
+
+    /**
+     * 로그 출력 유틸
+     */
+    function logSelection() {
+      const offsets = getSelectionOffsets(editor);
+      if (offsets) {
+        console.log(
+          `📌 selectionStart: ${offsets.start}, selectionEnd: ${offsets.end}`
+        );
+      }
+    }
+
+    // 이벤트 리스너: 드래그 후, 더블클릭, 키보드 선택, 범위 변경
+    editor.addEventListener('mouseup', () => setTimeout(logSelection, 0));
+    editor.addEventListener('keyup', e => {
+      const keys = [
+        'ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+        'Home','End','PageUp','PageDown','a'
+      ];
+      if (keys.includes(e.key) || (e.key === 'a' && e.ctrlKey)) {
+        setTimeout(logSelection, 0);
+      }
+    });
+    editor.addEventListener('dblclick', () => setTimeout(logSelection, 0));
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === editor) {
+        setTimeout(logSelection, 0);
+      }
+    });
+  </script>
+
+</body>
+</html>
