@@ -43,11 +43,15 @@
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
+        'js/plugins/movie.js',
+        'js/plugins/line.js',
         
         // 8. 체크리스트 플러그인
         'js/plugins/checkList.js',
         'js/plugins/bulletList.js',
         'js/plugins/numberedList.js',
+
+
         // 9. 기타 플러그인
         'js/modal.js',
         
