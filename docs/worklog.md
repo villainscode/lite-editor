@@ -26,6 +26,7 @@
 5. 테이블 컬럼 사이즈 고정과 변경 (https://codepen.io/validide/pen/aOKLNo) 
 6. 동영상 첨부 기능 추가 
 7. 링크 형태로 플로팅 레이어가 뜨도록 변경 필요 (완료)
+8. rich 화면 모드와 html 소스 보기 모드 탭을 구현해야 함
 
 ### 유의사항 
 1. index.html에 class="lite-editor-content" 추가할 경우 에디터 아이콘 깨짐 
