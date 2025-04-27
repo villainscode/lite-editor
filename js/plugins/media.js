@@ -238,57 +238,35 @@
       
       logDebug('VIDEO INSERTION START', { videoId, contentArea: !!contentArea });
       
-      // 보안 관리자를 활용한 안전한 YouTube 임베드 생성
-      let youtubeEmbedHTML = '';
-      
-      // LiteEditorSecurity 모듈이 있는지 확인
+      // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
-        // 1. 도메인 허용 여부 확인
         const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
         
-        if (LiteEditorSecurity.isDomainAllowed(youtubeUrl)) {
-          // 2. 보안 관리자를 통한 안전한 임베드 코드 생성
-          youtubeEmbedHTML = `
-            <div id="youtube-player-${videoId}" style="width:100%;height:100%;">
-              ${LiteEditorSecurity.createSafeYouTubeEmbed(videoId, {
-                params: 'enablejsapi=0&rel=0&modestbranding=1&origin=' + encodeURIComponent(window.location.origin || '*')
-              })}
-            </div>
-          `;
-        } else {
+        // 도메인 허용 여부 확인
+        if (!LiteEditorSecurity.isDomainAllowed(youtubeUrl)) {
           console.warn(`보안 정책: YouTube 도메인이 허용 목록에 없습니다.`);
           return;
         }
-      } else {
-        // 보안 관리자가 없는 경우 기본 방식 사용
-        youtubeEmbedHTML = `
-          <div id="youtube-player-${videoId}" style="width:100%;height:100%;">
-            <iframe 
-              width="100%" 
-              height="100%" 
-              src="https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1" 
-              title="YouTube video player" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen
-              loading="lazy"
-              referrerpolicy="strict-origin-when-cross-origin"
-            ></iframe>
-          </div>
-        `;
       }
       
-      // 3. 직접 iframe 생성 대신 div 요소 생성
-      const videoContainer = document.createElement('div');
-      videoContainer.className = 'video-container';
-      videoContainer.innerHTML = youtubeEmbedHTML;
+      // iframe 요소 직접 생성
+      const iframe = document.createElement('iframe');
+      iframe.width = '100%';
+      iframe.height = '100%';
+      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin || '*')}`;
+      iframe.title = 'YouTube video player';
+      iframe.frameBorder = '0';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.loading = 'lazy';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       
-      // 3. 래퍼 생성 및 기본 크기 설정
+      // 래퍼 생성 및 기본 크기 설정
       const wrapper = document.createElement('div');
       wrapper.className = 'video-wrapper';
       wrapper.style.width = '480px';
       wrapper.style.height = '270px';
-      wrapper.appendChild(videoContainer);
+      wrapper.appendChild(iframe);
       
       // 에디터에 삽입
       // 커서 위치에 삽입하기 위해 Range API 사용
@@ -327,9 +305,6 @@
     }
   }
   
-  // 문서 레벨 클릭 이벤트 리스너 추가 여부 플래그
-  let documentClickListenerAdded = false;
-  
   /**
    * 동영상 삽입 기능
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
@@ -358,4 +333,7 @@
       action: insertMedia
     });
   }
+  
+  // 문서 레벨 클릭 이벤트 리스너 추가 여부 플래그
+  let documentClickListenerAdded = false;
 })();
