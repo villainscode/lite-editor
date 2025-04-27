@@ -42,14 +42,6 @@
   width: 100%;
 }
 
-.input-container label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 4px;
-}
-
 .lite-editor-media-input {
   width: 90%;
   padding: 6px 8px;
@@ -86,16 +78,12 @@
   cursor: pointer;
 }
 
-.button-container button[data-action="close"] {
-  margin-right: 8px;
-}
-
 .button-container .material-icons {
   font-size: 18px;
   color: #5f6368;
 }
 .lite-editor-media-insert {
-  padding-left: 5px;
+  padding-left: 10px;
 }
 
 .lite-editor-media-insert:hover .material-icons {

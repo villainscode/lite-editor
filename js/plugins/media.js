@@ -92,11 +92,6 @@
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    */
   function showMediaModal(buttonElement, contentArea) {
-    DebugUtils.debugLog(MODULE_NAME, 'SHOWING MODAL', { 
-      buttonElement: !!buttonElement,
-      contentArea: !!contentArea,
-      activeModalBefore: !!activeModal
-    }, '#e91e63');
     
     // 선택 영역 저장
     saveSelection();
@@ -137,7 +132,11 @@
     // URL 처리 함수 정의
     const processVideoUrl = (url) => {
       if (!isValidYouTubeUrl(url)) {
-        alert('유효한 YouTube URL을 입력해주세요.');
+        if (typeof LiteEditorModal !== 'undefined') {
+          LiteEditorModal.alert('Please enter a valid URL.<BR>Example: https://www.youtube.com/watch?v=...');
+        } else {
+          alert('Please enter a valid URL.<BR>Example: https://www.youtube.com/watch?v=...');
+        }
         return;
       }
       
@@ -168,7 +167,6 @@
     if (!documentClickListenerAdded) {
       document.addEventListener('click', function(e) {
         if (activeModal && !activeModal.contains(e.target) && e.target !== buttonElement) {
-          // 버튼 자체가 아니고 모달 외부 클릭 시 닫기
           if (!e.target.closest('.lite-editor-media-popup')) {
             clearSelection();
             closeMediaModal();
@@ -176,7 +174,6 @@
         }
       }, { capture: true });
       documentClickListenerAdded = true;
-      DebugUtils.debugLog(MODULE_NAME, 'DOCUMENT CLICK LISTENER ADDED', null, '#e91e63');
     }
     
     // 클릭 이벤트가 모달 내부에서 발생하는 경우 버블링 방지
@@ -197,48 +194,17 @@
       };
     }
     
-    // 포커스 문제 해결을 위한 여러 방법 시도
-    // 1. 즉시 포커스 시도
+    // 포커스 설정 - 즉시 시도
     urlInput.focus();
     
-    // 2. 지연 후 포커스 시도 (지연 시간 증가)
+    // 지연 후 포커스 시도 (link.js와 동일한 방식)
     setTimeout(() => {
-      // 현재 활성화된 요소에서 포커스 제거
       if (document.activeElement) {
         document.activeElement.blur();
       }
-      
-      // 입력 필드에 포커스 설정
-      try {
-        urlInput.focus();
-        urlInput.click();
-        DebugUtils.debugLog(MODULE_NAME, 'FOCUS ATTEMPT 1', { 
-          activeElement: document.activeElement?.tagName,
-          activeElementClass: document.activeElement?.className,
-          hasFocus: urlInput === document.activeElement
-        }, '#e91e63');
-      } catch (e) {
-        console.error('Focus error:', e);
-      }
+      urlInput.focus();
+      urlInput.select();
     }, 50);
-    
-    // 3. 추가 지연 후 다시 시도
-    setTimeout(() => {
-      try {
-        urlInput.focus();
-        // 포커스 효과를 더 강하게 하기 위해 선택
-        urlInput.select();
-        DebugUtils.debugLog(MODULE_NAME, 'FOCUS ATTEMPT 2', { 
-          activeElement: document.activeElement?.tagName,
-          activeElementClass: document.activeElement?.className,
-          hasFocus: urlInput === document.activeElement
-        }, '#e91e63');
-      } catch (e) {
-        console.error('Focus retry error:', e);
-      }
-    }, 100);
-    
-    DebugUtils.debugLog(MODULE_NAME, 'MODAL SHOWN', { activeModal: !!activeModal }, '#e91e63');
     
     return activeModal;
   }
@@ -252,12 +218,6 @@
     
     isClosingModal = true;
     
-    DebugUtils.debugLog(MODULE_NAME, 'CLOSING MODAL', { 
-      activeModal: !!activeModal,
-      hasParent: activeModal && !!activeModal.parentNode,
-      modalCleanupFn: !!modalCleanupFn
-    }, '#e91e63');
-    
     // 모달 이벤트 정리
     if (modalCleanupFn) {
       modalCleanupFn();
@@ -270,8 +230,6 @@
       
       activeModal.parentNode.removeChild(activeModal);
       activeModal = null;
-      
-      DebugUtils.debugLog(MODULE_NAME, 'MODAL CLOSED', { activeModal: null }, '#e91e63');
     }
     
     // 플래그 초기화 (약간의 지연 후)
@@ -304,11 +262,8 @@
       contentArea.focus();
       
       // 선택 영역 복원 후 삽입 진행
-      if (restoreSelection()) {
-        DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, selectionRestored: true }, '#e91e63');
-      } else {
-        DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, selectionRestored: false }, '#e91e63');
-      }
+      // 선택 영역 복원
+      restoreSelection();
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -360,10 +315,8 @@
       // 선택 영역 초기화
       clearSelection();
       
-      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTED', { videoId }, '#e91e63');
     } catch (error) {
       console.error('동영상 삽입 중 오류 발생:', error);
-      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION ERROR', { error: error.message }, '#e91e63');
     } finally {
       // 언제나 선택 영역 초기화
       clearSelection();
@@ -383,27 +336,18 @@
       event.stopPropagation();
     }
     
-    DebugUtils.debugLog(MODULE_NAME, '미디어 버튼 클릭', { 
-      activeModal: !!activeModal, 
-      buttonElement: !!buttonElement,
-      isClosingModal: isClosingModal
-    }, '#e91e63');
-    
     // 모달 닫기 진행 중이면 무시
     if (isClosingModal) {
-      DebugUtils.debugLog(MODULE_NAME, '모달 닫기 진행 중 - 무시', null, '#e91e63');
       return;
     }
     
     // 모달이 열려있는 경우 닫기 (토글 동작)
     if (activeModal && activeModal.parentNode) {
-      DebugUtils.debugLog(MODULE_NAME, '모달 닫기 (토글 동작)', null, '#e91e63');
       closeMediaModal();
       return;
     }
     
     // 모달이 닫혀있는 경우 열기 (토글 동작)
-    DebugUtils.debugLog(MODULE_NAME, '모달 열기 (토글 동작)', null, '#e91e63');
     showMediaModal(buttonElement, contentArea);
   }
   
