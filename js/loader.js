@@ -12,6 +12,9 @@
         // 1. 코어 라이브러리
         'js/core.js',
         
+        // 1.5 보안 관리자 (코어 이후 바로 로드)
+        'js/security-manager.js',
+        
         // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
         'js/debug-utils.js',
         'js/plugins/plugin-util.js',
@@ -43,7 +46,7 @@
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
-        'js/plugins/movie.js',
+        'js/plugins/media.js',
         'js/plugins/line.js',
         
         // 8. 체크리스트 플러그인

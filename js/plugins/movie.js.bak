@@ -1,0 +1,517 @@
+/**
+ * LiteEditor Media Plugin
+ * 동영상 삽입 관련 플러그인
+ */
+
+(function() {
+  // 상수 정의
+  const PLUGIN_ID = 'media';
+  const MODULE_NAME = 'MEDIA';
+  
+  // 유틸리티 참조
+  const util = window.PluginUtil;
+  const security = window.LiteEditorSecurity;
+  
+  // 전역 상태 변수
+  let activeModal = null;         // 현재 활성화된 동영상 입력 모달
+  let savedRange = null;          // 임시 저장된 선택 영역
+  
+  /**
+   * 디버깅 로그 출력
+   * @param {string} action - 로그 액션
+   * @param {Object} data - 로그 데이터
+   */
+  function debugLog(action, data) {
+    if (window.DebugUtils) {
+      window.DebugUtils.debugLog(MODULE_NAME, action, data);
+    }
+  }
+
+  /**
+   * YouTube URL에서 video ID 추출
+   * @param {string} url - YouTube URL
+   * @returns {string|null} - 추출된 video ID 또는 null
+   */
+  function parseYouTubeID(url) {
+    if (!url) return null;
+    
+    // 다양한 YouTube URL 형식 지원
+    const patterns = [
+      // youtu.be/xxxx 형식
+      /youtu\.be\/([A-Za-z0-9_-]{11})/, 
+      // youtube.com/watch?v=xxxx 형식
+      /youtube\.com\/watch\?(?:.*&)?v=([A-Za-z0-9_-]{11})(?:&.*)?/,
+      // youtube.com/embed/xxxx 형식
+      /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    
+    return null;
+  }
+
+  /**
+   * URL 유효성 검사
+   * @param {string} url - 검사할 URL
+   * @returns {boolean} - 유효성 여부
+   */
+  function isValidMediaUrl(url) {
+    if (!url) return false;
+    
+    // 1. 기본 URL 형식 검사 (유틸리티 사용)
+    if (util.url && util.url.isValidUrl && !util.url.isValidUrl(url)) {
+      return false;
+    }
+    
+    // 2. 보안 관리자를 통한 도메인 허용 여부 검사
+    if (security && security.isDomainAllowed && !security.isDomainAllowed(url)) {
+      debugLog('DOMAIN_NOT_ALLOWED', { url });
+      return false;
+    }
+    
+    // 3. YouTube ID 추출 가능 여부 검사
+    return parseYouTubeID(url) !== null;
+  }
+
+  /**
+   * 선택 영역 관리 함수
+   */
+  const selectionManager = {
+    /**
+     * 현재 선택 영역 저장
+     */
+    save() {
+      savedRange = util.selection.saveSelection();
+      debugLog('SELECTION_SAVED', { hasRange: !!savedRange });
+    },
+    
+    /**
+     * 저장된 선택 영역 복원
+     * @returns {boolean} 복원 성공 여부
+     */
+    restore() {
+      if (!savedRange) {
+        debugLog('SELECTION_RESTORE_FAILED', { reason: 'No saved range' });
+        return false;
+      }
+      
+      util.selection.restoreSelection(savedRange);
+      debugLog('SELECTION_RESTORED');
+      return true;
+    },
+    
+    /**
+     * 선택 영역 초기화
+     */
+    clear() {
+      savedRange = null;
+      debugLog('SELECTION_CLEARED');
+    }
+  };
+  
+  /**
+   * 동영상 삽입 모달 관리
+   */
+  const modalManager = {
+    /**
+     * 모달 생성 및 표시
+     * @param {HTMLElement} buttonElement - 동영상 버튼 요소
+     * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+     * @returns {HTMLElement} 생성된 모달 요소
+     */
+    show(buttonElement, contentArea) {
+      debugLog('SHOWING_MODAL', { 
+        buttonElement: !!buttonElement,
+        contentArea: !!contentArea,
+        activeModalBefore: !!activeModal
+      });
+      
+      // 선택 영역 저장
+      selectionManager.save();
+      
+      // 기존 모달 닫기
+      this.close();
+      
+      // 다른 활성화된 모달 모두 닫기
+      util.activeModalManager.closeAll();
+      
+      // 모달 생성
+      activeModal = document.createElement('div');
+      activeModal.className = 'lite-editor-media-popup';
+      activeModal.innerHTML = `
+        <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">YouTube 동영상 URL을 입력하세요</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" placeholder="https://www.youtube.com/watch?v=..." class="lite-editor-media-input">
+          <button type="submit" class="lite-editor-media-insert" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;" title="Insert">
+            <span class="material-icons" style="font-size: 18px; color: #5f6368;">add_circle</span>
+          </button>
+        </div>
+      `;
+      
+      // 모달 위치 설정 및 등록
+      document.body.appendChild(activeModal);
+      util.layer.setLayerPosition(activeModal, buttonElement);
+      
+      // 모달 관리자에 등록
+      activeModal.closeCallback = () => this.close();
+      util.activeModalManager.register(activeModal);
+      
+      // 이벤트 설정
+      this._setupEvents(activeModal, buttonElement, contentArea);
+      
+      // 포커스 설정
+      const urlInput = activeModal.querySelector('input');
+      setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
+      
+      debugLog('MODAL_SHOWN');
+      return activeModal;
+    },
+    
+    /**
+     * 모달 이벤트 설정
+     * @private
+     */
+    _setupEvents(modal, buttonElement, contentArea) {
+      const urlInput = modal.querySelector('input');
+      const insertButton = modal.querySelector('.lite-editor-media-insert');
+      
+      // URL 처리 함수
+      const processUrl = (url) => {
+        url = url.trim();
+        
+        if (!url) {
+          this.close();
+          return;
+        }
+        
+        if (!isValidMediaUrl(url)) {
+          if (typeof LiteEditorModal !== 'undefined') {
+            LiteEditorModal.alert('올바른 YouTube URL을 입력해주세요.<BR>예: https://www.youtube.com/watch?v=82UUYNEu2iM');
+          } else {
+            alert('올바른 YouTube URL을 입력해주세요.\n예: https://www.youtube.com/watch?v=82UUYNEu2iM');
+          }
+          return;
+        }
+        
+        contentArea.focus();
+        setTimeout(() => insertYouTubeVideo(url, contentArea), 0);
+      };
+      
+      // 삽입 버튼 클릭 이벤트
+      insertButton.addEventListener('click', () => processUrl(urlInput.value));
+      
+      // Enter 키 이벤트
+      urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          processUrl(urlInput.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          this.close();
+        }
+      });
+      
+      // 모달 내부 클릭 버블링 방지
+      modal.addEventListener('click', (e) => e.stopPropagation());
+      
+      // 외부 클릭 시 모달 닫기 (유틸리티 활용)
+      util.setupOutsideClickHandler(modal, () => this.close(), [buttonElement]);
+    },
+    
+    /**
+     * 모달 닫기
+     */
+    close() {
+      if (!activeModal) return;
+      
+      debugLog('CLOSING_MODAL');
+      
+      // 모달 관리자에서 제거
+      util.activeModalManager.unregister(activeModal);
+      
+      // DOM에서 제거
+      if (activeModal.parentNode) {
+        activeModal.parentNode.removeChild(activeModal);
+      }
+      
+      activeModal = null;
+      debugLog('MODAL_CLOSED');
+    },
+    
+    /**
+     * 모달 상태 확인
+     * @returns {boolean} 모달 활성화 여부
+     */
+    isActive() {
+  
+  // 2. 보안 관리자를 통한 도메인 허용 여부 검사
+  if (security && security.isDomainAllowed && !security.isDomainAllowed(url)) {
+    debugLog('DOMAIN_NOT_ALLOWED', { url });
+    return false;
+  }
+  
+  // 3. YouTube ID 추출 가능 여부 검사
+  return parseYouTubeID(url) !== null;
+}
+
+/**
+ * 선택 영역 관리 함수
+ */
+const selectionManager = {
+  /**
+   * 현재 선택 영역 저장
+   */
+  save() {
+    savedRange = util.selection.saveSelection();
+    debugLog('SELECTION_SAVED', { hasRange: !!savedRange });
+  },
+  
+  /**
+   * 저장된 선택 영역 복원
+   * @returns {boolean} 복원 성공 여부
+   */
+  restore() {
+    if (!savedRange) {
+      debugLog('SELECTION_RESTORE_FAILED', { reason: 'No saved range' });
+      return false;
+    }
+    
+    util.selection.restoreSelection(savedRange);
+    debugLog('SELECTION_RESTORED');
+    return true;
+  },
+  
+  /**
+   * 선택 영역 초기화
+   */
+  clear() {
+    savedRange = null;
+    debugLog('SELECTION_CLEARED');
+  }
+};
+
+/**
+ * 동영상 삽입 모달 관리
+ */
+const modalManager = {
+  /**
+   * 모달 생성 및 표시
+   * @param {HTMLElement} buttonElement - 동영상 버튼 요소
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   * @returns {HTMLElement} 생성된 모달 요소
+   */
+  show(buttonElement, contentArea) {
+    debugLog('SHOWING_MODAL', { 
+      buttonElement: !!buttonElement,
+      contentArea: !!contentArea,
+      activeModalBefore: !!activeModal
+    });
+    
+    // 선택 영역 저장
+    selectionManager.save();
+    
+    // 기존 모달 닫기
+    this.close();
+    
+    // 다른 활성화된 모달 모두 닫기
+    util.activeModalManager.closeAll();
+    
+    // 모달 생성
+    activeModal = document.createElement('div');
+    activeModal.className = 'lite-editor-media-popup';
+    activeModal.innerHTML = `
+      <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">YouTube 동영상 URL을 입력하세요</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="text" placeholder="https://www.youtube.com/watch?v=..." class="lite-editor-media-input">
+        <button type="submit" class="lite-editor-media-insert" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;" title="Insert">
+          <span class="material-icons" style="font-size: 18px; color: #5f6368;">add_circle</span>
+        </button>
+      </div>
+    `;
+    
+    // 모달 위치 설정 및 등록
+    document.body.appendChild(activeModal);
+    util.layer.setLayerPosition(activeModal, buttonElement);
+    
+    // 모달 관리자에 등록
+    activeModal.closeCallback = () => this.close();
+    util.activeModalManager.register(activeModal);
+    
+    // 이벤트 설정
+    this._setupEvents(activeModal, buttonElement, contentArea);
+    
+    // 포커스 설정
+    const urlInput = activeModal.querySelector('input');
+    setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
+    
+    debugLog('MODAL_SHOWN');
+    return activeModal;
+  },
+  
+  /**
+   * 모달 이벤트 설정
+   * @private
+   */
+  _setupEvents(modal, buttonElement, contentArea) {
+    const urlInput = modal.querySelector('input');
+    const insertButton = modal.querySelector('.lite-editor-media-insert');
+    
+    // URL 처리 함수
+    const processUrl = (url) => {
+      url = url.trim();
+      
+      if (!url) {
+        this.close();
+        return;
+      }
+      
+      if (!isValidMediaUrl(url)) {
+        if (typeof LiteEditorModal !== 'undefined') {
+          LiteEditorModal.alert('올바른 YouTube URL을 입력해주세요.<BR>예: https://www.youtube.com/watch?v=82UUYNEu2iM');
+        } else {
+          alert('올바른 YouTube URL을 입력해주세요.\n예: https://www.youtube.com/watch?v=82UUYNEu2iM');
+        }
+        return;
+      }
+      
+      contentArea.focus();
+      setTimeout(() => mediaManager.insertYouTubeVideo(url, contentArea), 0);
+    };
+    
+    // 삽입 버튼 클릭 이벤트
+    insertButton.addEventListener('click', () => processUrl(urlInput.value));
+    
+    // Enter 키 이벤트
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        processUrl(urlInput.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.close();
+      }
+    });
+    
+    // 모달 내부 클릭 버블링 방지
+    modal.addEventListener('click', (e) => e.stopPropagation());
+    
+    // 외부 클릭 시 모달 닫기 (유틸리티 활용)
+    util.setupOutsideClickHandler(modal, () => this.close(), [buttonElement]);
+  },
+  
+  /**
+   * 모달 닫기
+   */
+  close() {
+    if (!activeModal) return;
+    
+    debugLog('CLOSING_MODAL');
+    
+    // 모달 관리자에서 제거
+    util.activeModalManager.unregister(activeModal);
+    
+    // DOM에서 제거
+    if (activeModal.parentNode) {
+      activeModal.parentNode.removeChild(activeModal);
+    }
+    
+    activeModal = null;
+    debugLog('MODAL_CLOSED');
+  },
+  
+  /**
+   * 모달 상태 확인
+   * @returns {boolean} 모달 활성화 여부
+   */
+  isActive() {
+    return !!activeModal && !!activeModal.parentNode;
+  }
+};
+
+/**
+ * 동영상 관리 객체
+ */
+const mediaManager = {
+  /**
+   * YouTube 동영상 삽입
+   * @param {string} url - YouTube URL
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   */
+  insertYouTubeVideo(url, contentArea) {
+    url = url.trim();
+    if (!url) return;
+    
+    const videoId = parseYouTubeID(url);
+    if (!videoId) {
+      this._showError('유효한 YouTube URL이 아닙니다.');
+      return;
+    }
+    
+    try {
+      // 모달 닫기
+      modalManager.close();
+      
+      debugLog('VIDEO_INSERTION_START', { videoId, contentArea: !!contentArea });
+      
+      // 삽입 위치 준비
+      const range = this._prepareInsertionPoint(contentArea);
+      if (!range) {
+        debugLog('NO_SELECTION_RANGE');
+        return;
+      }
+      
+      // 안전한 YouTube 임베드 코드 생성
+      const embedHtml = this._createYouTubeEmbed(videoId);
+      if (!embedHtml) {
+        return; // 임베드 생성 실패 시 종료
+      }
+      
+      // 임베드 삽입
+      const wrapper = this._createVideoWrapper(embedHtml);
+      this._insertNodeAtRange(wrapper, range);
+      
+      debugLog('VIDEO_INSERTED', { videoId, wrapper: !!wrapper });
+    } catch (error) {
+      console.error('동영상 삽입 중 오류 발생:', error);
+      debugLog('VIDEO_INSERTION_ERROR', { error: error.message });
+    }
+  },
+  
+  /**
+   * 오류 메시지 표시
+   * @private
+   * @param {string} message - 오류 메시지
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   * @param {HTMLElement} buttonElement - 버튼 요소
+   */
+  function insertMedia(contentArea, buttonElement) {
+    debugLog('INSERT MEDIA CALLED', { activeModal: !!activeModal });
+    
+    // 이미 모달이 열려 있는 경우 닫기
+    if (modalManager.isActive()) {
+      modalManager.close();
+      return;
+    }
+    
+    // 모달이 열려있지 않은 경우 새로 보여주기
+    modalManager.show(buttonElement, contentArea);
+  }
+  
+  /**
+   * 플러그인 등록
+   */
+  if (typeof LiteEditor !== 'undefined') {
+    LiteEditor.registerPlugin(PLUGIN_ID, {
+      icon: 'live_tv',
+      title: 'Insert Movie',
+      action: insertMedia
+    });
+  }
+})();

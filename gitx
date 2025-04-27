@@ -10,6 +10,7 @@ set -euo pipefail
 #   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
 #   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all)
 #   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃
+#   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {
@@ -80,6 +81,42 @@ do_checkout() {
   echo "✅ 현재 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 }
 
+do_merge_from() {
+  if [[ -z "${2:-}" ]]; then
+    echo "❗️ 병합할 소스 브랜치 이름을 입력하세요. 사용법: ./gitx merge-from <source-branch>"
+    exit 1
+  fi
+  
+  source_branch=$2
+  current_branch=$(git rev-parse --abbrev-ref HEAD)
+  
+  # 소스 브랜치 존재 여부 확인
+  if ! git rev-parse --verify "$source_branch" &> /dev/null; then
+    echo "❗️ 브랜치 '$source_branch'가 존재하지 않습니다."
+    exit 1
+  fi
+  
+  echo "ℹ️ 소스 브랜치 '$source_branch'를 현재 브랜치 '$current_branch'에 병합합니다."
+  read -p "계속하시겠습니까? (y/N): " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "취소되었습니다."
+    exit 1
+  fi
+  
+  echo "🔄 소스 브랜치 '$source_branch'의 최신 변경사항을 가져오는 중..."
+  git fetch origin "$source_branch"
+  
+  echo "🔄 '$source_branch' 브랜치를 '$current_branch'에 병합 중..."
+  git merge "$source_branch"
+  
+  echo "✅ '$source_branch' 브랜치가 '$current_branch'에 병합되었습니다."
+  
+  echo "🔄 변경사항을 원격 '$current_branch' 브랜치에 푸시 중..."
+  git push origin "$current_branch"
+  
+  echo "✅ 병합 및 푸시가 완료되었습니다."
+}
+
 cmd="${1:-}"
 
 case "$cmd" in
@@ -99,6 +136,9 @@ case "$cmd" in
   merge)
     do_merge
     ;;
+  merge-from)
+    do_merge_from "$@"
+    ;;
   fetch)
     do_fetch
     ;;
@@ -107,7 +147,7 @@ case "$cmd" in
     ;;
   *)
     if [[ -z "$cmd" ]]; then
-      echo "❗️ 사용법: ./gitx commit/push/discard/merge/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+      echo "❗️ 사용법: ./gitx commit/push/discard/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
       exit 1
     elif [[ "$cmd" == *" : "* ]]; then
         # 전체 워크플로우: commit + push
@@ -115,7 +155,7 @@ case "$cmd" in
         do_push
     else
         echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
-        echo "   ./gitx commit/push/discard/merge/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+        echo "   ./gitx commit/push/discard/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
         exit 1
     fi
     ;;

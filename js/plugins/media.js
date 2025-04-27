@@ -7,7 +7,7 @@
   // 상수 정의
   const PLUGIN_ID = 'media';
   const MODULE_NAME = 'MEDIA'; // 디버깅 로그용 모듈명
-  const STYLE_ID = 'mediaStyles';
+  const CSS_PATH = 'css/plugins/media.css';
   
   // PluginUtil 참조
   const util = window.PluginUtil;
@@ -17,77 +17,10 @@
   let activeModal = null;         // 현재 활성화된 동영상 입력 모달
   let modalCleanupFn = null;      // 모달 이벤트 정리 함수
 
-  // 스타일 요소 생성 및 추가
-  util.styles.addInlineStyle(STYLE_ID, `
-    .lite-editor-media-popup {
-      position: absolute;
-      z-index: 1000;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 300px;
-    }
-    .lite-editor-media-input {
-      padding: 6px 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      width: 100%;
-    }
-    .lite-editor-media-buttons {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-    .lite-editor-media-button {
-      padding: 4px 12px;
-      background: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .lite-editor-media-button:hover {
-      background: #1976D2;
-    }
-    .lite-editor-media-button.cancel {
-      background: #f5f5f5;
-      color: #333;
-    }
-    .lite-editor-media-button.cancel:hover {
-      background: #e0e0e0;
-    }
-    .video-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 480px;
-      margin: 10px 0;
-    }
-    .video-wrapper iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-    .video-wrapper::before {
-      content: "";
-      display: block;
-      padding-top: 56.25%; /* 16:9 비율 */
-    }
-  `);
-
   /**
    * 디버깅 로그 출력
    */
-  function debugLog(action, data) {
+  function logDebug(action, data) {
     console.log(
       `%c[MEDIA MODAL] ${action}`,
       'color:#e91e63;font-weight:bold;',
@@ -138,6 +71,8 @@
    */
   function clearSelection() {
     savedRange = null;
+    const sel = util.selection.getSafeSelection();
+    if (sel) sel.removeAllRanges();
   }
 
   /**
@@ -146,7 +81,7 @@
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    */
   function showMediaModal(buttonElement, contentArea) {
-    debugLog('SHOWING MODAL', { 
+    logDebug('SHOWING MODAL', { 
       buttonElement: !!buttonElement,
       contentArea: !!contentArea,
       activeModalBefore: !!activeModal
@@ -161,17 +96,25 @@
     // 다른 활성화된 모달 모두 닫기
     util.activeModalManager.closeAll();
     
-    // 모달 생성
-    activeModal = document.createElement('div');
-    activeModal.className = 'lite-editor-media-popup';
-    activeModal.innerHTML = `
-      <div style="margin-bottom: 8px;">YouTube 동영상 URL을 입력하세요</div>
-      <input type="text" placeholder="https://www.youtube.com/watch?v=..." class="lite-editor-media-input">
-      <div class="lite-editor-media-buttons">
-        <button class="lite-editor-media-button cancel">Cancel</button>
-        <button class="lite-editor-media-button insert">OK</button>
+    // 모달 생성 - PluginUtil 활용
+    activeModal = util.dom.createElement('div', {
+      className: 'lite-editor-media-popup'
+    });
+    
+    // 모달 내용 구성
+    const modalContent = `
+      <div class="lite-editor-media-header">
+        <span class="lite-editor-media-title">YouTube 동영상 URL을 입력하세요</span>
+      </div>
+      <div class="lite-editor-media-input-group">
+        <input type="text" placeholder="https://www.youtube.com/watch?v=..." class="lite-editor-media-input">
+        <button type="submit" class="lite-editor-media-insert" title="Insert">
+          <span class="material-icons">add_circle</span>
+        </button>
       </div>
     `;
+    
+    activeModal.innerHTML = modalContent;
     
     // 모달 위치 설정 및 등록
     document.body.appendChild(activeModal);
@@ -182,10 +125,15 @@
     
     // 이벤트 설정
     const urlInput = activeModal.querySelector('input');
-    const insertButton = activeModal.querySelector('.insert');
-    const cancelButton = activeModal.querySelector('.cancel');
+    const insertButton = activeModal.querySelector('.lite-editor-media-insert');
     
     const processUrl = (url) => {
+      if (!url.trim()) {
+        // URL이 비어있으면 모달을 닫음
+        closeMediaModal();
+        return;
+      }
+      
       if (!isValidYouTubeUrl(url)) {
         if (typeof LiteEditorModal !== 'undefined') {
           LiteEditorModal.alert('올바른 YouTube URL을 입력해주세요.<BR>예: https://www.youtube.com/watch?v=82UUYNEu2iM');
@@ -199,8 +147,27 @@
       setTimeout(() => insertYouTubeVideo(url, contentArea), 0);
     };
     
+    // 삽입 버튼 클릭 이벤트
     insertButton.addEventListener('click', () => processUrl(urlInput.value.trim()));
-    cancelButton.addEventListener('click', () => closeMediaModal());
+    
+    // 아이콘 다시 클릭 이벤트는 여기서 추가하지 않음
+    // 이미 insertMedia 함수에서 처리하고 있음
+    
+    // 모달 외부 클릭 시 모달 닫기 (이벤트 리스너 중복 등록 방지)
+    if (!documentClickListenerAdded) {
+      document.addEventListener('click', (e) => {
+        if (activeModal && !activeModal.contains(e.target) && e.target !== buttonElement) {
+          closeMediaModal();
+        }
+      }, { capture: true });
+      documentClickListenerAdded = true;
+      logDebug('DOCUMENT CLICK LISTENER ADDED');
+    }
+    
+    // 클릭 이벤트가 모달 내부에서 발생하는 경우 버블링 방지
+    activeModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
     
     urlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -218,7 +185,7 @@
     
     setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
     
-    debugLog('MODAL SHOWN', { activeModal: !!activeModal });
+    logDebug('MODAL SHOWN', { activeModal: !!activeModal });
     
     return activeModal;
   }
@@ -227,7 +194,7 @@
    * 활성화된 모달을 닫고 정리
    */
   function closeMediaModal() {
-    debugLog('CLOSING MODAL', { 
+    logDebug('CLOSING MODAL', { 
       activeModal: !!activeModal,
       hasParent: activeModal && !!activeModal.parentNode,
       modalCleanupFn: !!modalCleanupFn
@@ -246,7 +213,7 @@
       activeModal.parentNode.removeChild(activeModal);
       activeModal = null;
       
-      debugLog('MODAL CLOSED', { activeModal: null });
+      logDebug('MODAL CLOSED', { activeModal: null });
     }
   }
   
@@ -269,20 +236,59 @@
       // 선택 영역 복원
       restoreSelection();
       
-      debugLog('VIDEO INSERTION START', { videoId, contentArea: !!contentArea });
+      logDebug('VIDEO INSERTION START', { videoId, contentArea: !!contentArea });
       
-      // iframe 생성
-      const iframe = document.createElement('iframe');
-      iframe.src = `https://www.youtube.com/embed/${videoId}`;
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
+      // 보안 관리자를 활용한 안전한 YouTube 임베드 생성
+      let youtubeEmbedHTML = '';
       
-      // 래퍼 생성 및 기본 크기 설정
+      // LiteEditorSecurity 모듈이 있는지 확인
+      if (typeof LiteEditorSecurity !== 'undefined') {
+        // 1. 도메인 허용 여부 확인
+        const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        
+        if (LiteEditorSecurity.isDomainAllowed(youtubeUrl)) {
+          // 2. 보안 관리자를 통한 안전한 임베드 코드 생성
+          youtubeEmbedHTML = `
+            <div id="youtube-player-${videoId}" style="width:100%;height:100%;">
+              ${LiteEditorSecurity.createSafeYouTubeEmbed(videoId, {
+                params: 'enablejsapi=0&rel=0&modestbranding=1&origin=' + encodeURIComponent(window.location.origin || '*')
+              })}
+            </div>
+          `;
+        } else {
+          console.warn(`보안 정책: YouTube 도메인이 허용 목록에 없습니다.`);
+          return;
+        }
+      } else {
+        // 보안 관리자가 없는 경우 기본 방식 사용
+        youtubeEmbedHTML = `
+          <div id="youtube-player-${videoId}" style="width:100%;height:100%;">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              src="https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1" 
+              title="YouTube video player" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen
+              loading="lazy"
+              referrerpolicy="strict-origin-when-cross-origin"
+            ></iframe>
+          </div>
+        `;
+      }
+      
+      // 3. 직접 iframe 생성 대신 div 요소 생성
+      const videoContainer = document.createElement('div');
+      videoContainer.className = 'video-container';
+      videoContainer.innerHTML = youtubeEmbedHTML;
+      
+      // 3. 래퍼 생성 및 기본 크기 설정
       const wrapper = document.createElement('div');
       wrapper.className = 'video-wrapper';
       wrapper.style.width = '480px';
       wrapper.style.height = '270px';
-      wrapper.appendChild(iframe);
+      wrapper.appendChild(videoContainer);
       
       // 에디터에 삽입
       // 커서 위치에 삽입하기 위해 Range API 사용
@@ -314,12 +320,15 @@
       sel.removeAllRanges();
       sel.addRange(range);
       
-      debugLog('VIDEO INSERTED', { videoId, wrapper: !!wrapper });
+      logDebug('VIDEO INSERTED', { videoId, wrapper: !!wrapper });
     } catch (error) {
       console.error('동영상 삽입 중 오류 발생:', error);
-      debugLog('VIDEO INSERTION ERROR', { error: error.message });
+      logDebug('VIDEO INSERTION ERROR', { error: error.message });
     }
   }
+  
+  // 문서 레벨 클릭 이벤트 리스너 추가 여부 플래그
+  let documentClickListenerAdded = false;
   
   /**
    * 동영상 삽입 기능
@@ -327,6 +336,15 @@
    * @param {HTMLElement} buttonElement - 버튼 요소
    */
   function insertMedia(contentArea, buttonElement) {
+    logDebug('INSERT MEDIA CALLED', { activeModal: !!activeModal });
+    
+    // 이미 모달이 열려 있는 경우 닫기
+    if (activeModal && activeModal.parentNode) {
+      closeMediaModal();
+      return;
+    }
+    
+    // 모달이 열려있지 않은 경우 새로 보여주기
     showMediaModal(buttonElement, contentArea);
   }
   

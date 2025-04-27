@@ -18,3 +18,6 @@
 
 <!-- 새 브랜치 생성 및 체크아웃 -->
 ./gitx checkout [branch명]                
+
+<!-- feature/2025-04-26 브랜치를 현재 브랜치에 병합하고 푸시 ./gitx merge-from feature/2025-04-26 -->
+./gitx merge-from  [branch명]
