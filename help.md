@@ -8,7 +8,7 @@
 ./gitx push
 
 <!-- 로컬 변경사항 버리기 (reset --hard, clean -fd) -->
-./gitx discard
+./gitx reset
 
 <!-- 현재 브랜치를 main 브랜치로 병합-->
 ./gitx merge

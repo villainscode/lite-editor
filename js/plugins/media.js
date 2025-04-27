@@ -46,18 +46,25 @@
    * 선택 영역 저장
    */
   function saveSelection() {
-    if (window.liteEditorSelection) {
-      savedRange = window.liteEditorSelection.save();
-    }
+    savedRange = util.selection.saveSelection();
   }
   
   /**
    * 저장된 선택 영역 복원
    */
   function restoreSelection() {
-    if (window.liteEditorSelection && savedRange) {
-      window.liteEditorSelection.restore(savedRange);
+    if (savedRange) {
+      util.selection.restoreSelection(savedRange);
+      return true;
     }
+    return false;
+  }
+  
+  /**
+   * 선택 영역 초기화
+   */
+  function clearSelection() {
+    savedRange = null;
   }
 
   /**
@@ -100,25 +107,20 @@
     // 다른 활성화된 모달 모두 닫기
     util.activeModalManager.closeAll();
     
-    // 모달 생성 - PluginUtil 활용
-    activeModal = util.dom.createElement('div', {
-      className: 'lite-editor-media-popup'
-    });
-    
-    // 모달 내용 구성
-    const modalContent = `
+    // 모달 생성 - link.js와 유사한 방식으로 HTML 문자열 사용
+    activeModal = document.createElement('div');
+    activeModal.className = 'lite-editor-media-popup';
+    activeModal.innerHTML = `
       <div class="lite-editor-media-header">
         <span class="lite-editor-media-title">Enter the video URL to insert</span>
       </div>
       <div class="lite-editor-media-input-group">
-        <input type="text" placeholder="https://www.youtube.com/watch?v=..." class="lite-editor-media-input">
+        <input type="text" class="lite-editor-media-input" placeholder="https://www.youtube.com/watch?v=...">
         <button type="submit" class="lite-editor-media-insert" title="Insert">
           <span class="material-icons">add_circle</span>
         </button>
       </div>
     `;
-    
-    activeModal.innerHTML = modalContent;
     
     // 모달 위치 설정 및 등록
     document.body.appendChild(activeModal);
@@ -128,19 +130,29 @@
     util.activeModalManager.register(activeModal);
     
     // 이벤트 설정
-    const urlInput = activeModal.querySelector('input');
-    const insertButton = activeModal.querySelector('button');
+    // 요소 참조 가져오기 (querySelector 사용)
+    const urlInput = activeModal.querySelector('.lite-editor-media-input');
+    const insertButton = activeModal.querySelector('.lite-editor-media-insert');
+    
+    // URL 처리 함수 정의
+    const processVideoUrl = (url) => {
+      if (!isValidYouTubeUrl(url)) {
+        alert('유효한 YouTube URL을 입력해주세요.');
+        return;
+      }
+      
+      contentArea.focus();
+      setTimeout(() => insertYouTubeVideo(url, contentArea), 0);
+    };
     
     // 삽입 버튼 클릭 이벤트
-    insertButton.addEventListener('click', function() {
-      insertYouTubeVideo(urlInput.value, contentArea);
-    });
+    insertButton.addEventListener('click', () => processVideoUrl(urlInput.value.trim()));
     
     // 엔터키 이벤트
-    urlInput.addEventListener('keypress', function(e) {
+    urlInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        insertYouTubeVideo(urlInput.value, contentArea);
+        processVideoUrl(urlInput.value.trim());
       }
     });
     
@@ -158,6 +170,7 @@
         if (activeModal && !activeModal.contains(e.target) && e.target !== buttonElement) {
           // 버튼 자체가 아니고 모달 외부 클릭 시 닫기
           if (!e.target.closest('.lite-editor-media-popup')) {
+            clearSelection();
             closeMediaModal();
           }
         }
@@ -171,32 +184,59 @@
       e.stopPropagation();
     });
     
-    // 모달 정리 함수 설정
-    modalCleanupFn = function() {
-      if (insertButton) {
-        insertButton.removeEventListener('click', function() {
-          insertYouTubeVideo(urlInput.value, contentArea);
-        });
+    // 모달 정리 함수 설정 - link.js와 동일한 방식으로 간소화
+    if (util.modal && util.modal.setupModalCloseEvents) {
+      modalCleanupFn = util.modal.setupModalCloseEvents(activeModal, () => {
+        clearSelection();
+        closeMediaModal();
+      });
+    } else {
+      // 대체 정리 함수 (효율성을 위해 이벤트 리스너 제거 생략)
+      modalCleanupFn = function() {
+        // 이벤트 리스너는 모달이 제거될 때 자동으로 정리됨
+      };
+    }
+    
+    // 포커스 문제 해결을 위한 여러 방법 시도
+    // 1. 즉시 포커스 시도
+    urlInput.focus();
+    
+    // 2. 지연 후 포커스 시도 (지연 시간 증가)
+    setTimeout(() => {
+      // 현재 활성화된 요소에서 포커스 제거
+      if (document.activeElement) {
+        document.activeElement.blur();
       }
       
-      if (urlInput) {
-        urlInput.removeEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            insertYouTubeVideo(urlInput.value, contentArea);
-          }
-        });
-        
-        urlInput.removeEventListener('keydown', function(e) {
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            closeMediaModal();
-          }
-        });
+      // 입력 필드에 포커스 설정
+      try {
+        urlInput.focus();
+        urlInput.click();
+        DebugUtils.debugLog(MODULE_NAME, 'FOCUS ATTEMPT 1', { 
+          activeElement: document.activeElement?.tagName,
+          activeElementClass: document.activeElement?.className,
+          hasFocus: urlInput === document.activeElement
+        }, '#e91e63');
+      } catch (e) {
+        console.error('Focus error:', e);
       }
-    };
+    }, 50);
     
-    setTimeout(() => urlInput.focus({ preventScroll: true }), 0);
+    // 3. 추가 지연 후 다시 시도
+    setTimeout(() => {
+      try {
+        urlInput.focus();
+        // 포커스 효과를 더 강하게 하기 위해 선택
+        urlInput.select();
+        DebugUtils.debugLog(MODULE_NAME, 'FOCUS ATTEMPT 2', { 
+          activeElement: document.activeElement?.tagName,
+          activeElementClass: document.activeElement?.className,
+          hasFocus: urlInput === document.activeElement
+        }, '#e91e63');
+      } catch (e) {
+        console.error('Focus retry error:', e);
+      }
+    }, 100);
     
     DebugUtils.debugLog(MODULE_NAME, 'MODAL SHOWN', { activeModal: !!activeModal }, '#e91e63');
     
@@ -253,16 +293,22 @@
         return;
       }
       
+      
       // YouTube ID 추출
       const videoId = parseYouTubeID(url);
       
       // 모달 닫기
       closeMediaModal();
       
-      // 선택 영역 복원
-      restoreSelection();
+      // 컨텐트 영역에 포커스 주고 선택 영역 복원
+      contentArea.focus();
       
-      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, contentArea: !!contentArea }, '#e91e63');
+      // 선택 영역 복원 후 삽입 진행
+      if (restoreSelection()) {
+        DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, selectionRestored: true }, '#e91e63');
+      } else {
+        DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION START', { videoId, selectionRestored: false }, '#e91e63');
+      }
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -283,7 +329,6 @@
       wrapper.className = 'video-wrapper';
       wrapper.style.width = '480px';
       wrapper.style.height = '270px';
-      wrapper.style.margin = '10px auto';
       wrapper.appendChild(iframe);
       
       // 에디터에 삽입
@@ -307,10 +352,21 @@
         contentArea.appendChild(wrapper);
       }
       
-      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTED', { videoId, wrapper: !!wrapper }, '#e91e63');
+      // 에디터 이벤트 발생 (수정사항 적용)
+      if (util.editor && util.editor.dispatchEditorEvent) {
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+      
+      // 선택 영역 초기화
+      clearSelection();
+      
+      DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTED', { videoId }, '#e91e63');
     } catch (error) {
       console.error('동영상 삽입 중 오류 발생:', error);
       DebugUtils.debugLog(MODULE_NAME, 'VIDEO INSERTION ERROR', { error: error.message }, '#e91e63');
+    } finally {
+      // 언제나 선택 영역 초기화
+      clearSelection();
     }
   }
   

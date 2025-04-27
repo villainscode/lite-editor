@@ -102,9 +102,9 @@
         const processUrl = (url) => {
             if (!isValidUrl(url)) {
                 if (typeof LiteEditorModal !== 'undefined') {
-                    LiteEditorModal.alert('올바른 URL을 입력해주세요.<BR>예: https://example.com');
+                    LiteEditorModal.alert('Please enter a valid URL.<BR>Example: https://example.com');
                 } else {
-                    alert('올바른 URL을 입력해주세요.\n예: https://example.com');
+                    alert('Please enter a valid URL.<BR>Example: https://example.com');
                 }
                 return;
             }
@@ -228,7 +228,7 @@
             // 버튼 생성 (PluginUtil 활용)
             const button = util.dom.createElement('button', {
                 className: 'lite-editor-button lite-editor-link-button',
-                title: 'Insert link'
+                title: 'Insert Link'
             });
             
             // 아이콘 추가

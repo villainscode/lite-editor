@@ -6,7 +6,7 @@ set -euo pipefail
 #   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push)
 #   ./gitx commit "[prefix] : Your commit"    # git add → commit
 #   ./gitx push                               # git fetch → push
-#   ./gitx discard                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
+#   ./gitx reset                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
 #   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
 #   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all)
 #   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃
@@ -28,7 +28,7 @@ do_push() {
   git push origin "$branch"
 }
 
-do_discard() {
+do_reset() {
   echo "⚠️  로컬 변경사항을 모두 버립니다. (git reset --hard, git clean -fd)"
   read -p "계속하시겠습니까? (y/N): " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
@@ -130,8 +130,8 @@ case "$cmd" in
   push)
     do_push
     ;;
-  discard)
-    do_discard
+  reset)
+    do_reset
     ;;
   merge)
     do_merge
@@ -147,7 +147,7 @@ case "$cmd" in
     ;;
   *)
     if [[ -z "$cmd" ]]; then
-      echo "❗️ 사용법: ./gitx commit/push/discard/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+      echo "❗️ 사용법: ./gitx commit/push/reset/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
       exit 1
     elif [[ "$cmd" == *" : "* ]]; then
         # 전체 워크플로우: commit + push
@@ -155,7 +155,7 @@ case "$cmd" in
         do_push
     else
         echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
-        echo "   ./gitx commit/push/discard/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+        echo "   ./gitx commit/push/reset/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
         exit 1
     fi
     ;;
