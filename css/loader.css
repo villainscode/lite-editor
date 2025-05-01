@@ -12,8 +12,8 @@
 /* 3. 플러그인 스타일 */
 @import url('plugins/plugins.css');
 @import url('plugins/media.css');
-
 /* 4. 추가 스타일 및 테마 (필요시 추가) */
 @import url('plugins/modal.css');
+
 /* @import url('themes/dark.css'); */
 /* @import url('themes/light.css'); */ 

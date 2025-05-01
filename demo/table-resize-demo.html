@@ -2,11 +2,12 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>컬럼 리사이즈 기능</title>
+  <title>테이블 전체 리사이즈 가능</title>
   <style>
     table {
       border-collapse: collapse;
-      width: 100%;
+      table-layout: auto;
+      width: 800px; /* 초기 px 기반 너비 */
     }
     th, td {
       border: 1px solid #ccc;
@@ -25,6 +26,7 @@
   </style>
 </head>
 <body>
+  <h2>테이블 및 컬럼 리사이즈</h2>
   <table id="resizable">
     <thead>
       <tr>
@@ -62,30 +64,36 @@
   <script>
     (function() {
       const table = document.getElementById('resizable');
-      const cols = table.querySelectorAll('th');
-      const tableHeight = table.offsetHeight;
+      const headers = table.querySelectorAll('th');
 
-      cols.forEach(function(col) {
+      headers.forEach(function(th) {
         const resizer = document.createElement('div');
         resizer.classList.add('resizer');
-        col.appendChild(resizer);
+        th.appendChild(resizer);
         resizer.addEventListener('mousedown', initResize);
       });
 
-      let startX, startWidth, currentCol;
+      let startX, startWidth, startTableWidth, currentTh;
 
       function initResize(e) {
-        currentCol = e.target.parentElement;
+        currentTh = e.target.parentElement;
         startX = e.clientX;
-        startWidth = currentCol.offsetWidth;
+        startWidth = currentTh.offsetWidth;
+        startTableWidth = table.offsetWidth;
+
         document.addEventListener('mousemove', resizeColumn);
         document.addEventListener('mouseup', stopResize);
       }
 
       function resizeColumn(e) {
-        const newWidth = startWidth + (e.clientX - startX);
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
+
         if (newWidth > 30) {
-          currentCol.style.width = newWidth + 'px';
+          currentTh.style.width = newWidth + 'px';
+
+          // 테이블 전체 너비도 같이 조절
+          table.style.width = (startTableWidth + deltaX) + 'px';
         }
       }
 
