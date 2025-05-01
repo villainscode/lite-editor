@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>컬럼 리사이즈 기능</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      position: relative;
+    }
+    .resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 5px;
+      height: 100%;
+      cursor: col-resize;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <table id="resizable">
+    <thead>
+      <tr>
+        <th>번호</th>
+        <th>이름</th>
+        <th>닉네임</th>
+        <th>성</th>
+        <th>사용자명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>마크</td>
+        <td>듀드 마이스터</td>
+        <td>오토</td>
+        <td>@mdo</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>제이콥</td>
+        <td>바니 폰 매터혼</td>
+        <td>손튼</td>
+        <td>@fat</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td colspan="2">래리 더 버드</td>
+        <td>왓</td>
+        <td>@twitter</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    (function() {
+      const table = document.getElementById('resizable');
+      const cols = table.querySelectorAll('th');
+      const tableHeight = table.offsetHeight;
+
+      cols.forEach(function(col) {
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        col.appendChild(resizer);
+        resizer.addEventListener('mousedown', initResize);
+      });
+
+      let startX, startWidth, currentCol;
+
+      function initResize(e) {
+        currentCol = e.target.parentElement;
+        startX = e.clientX;
+        startWidth = currentCol.offsetWidth;
+        document.addEventListener('mousemove', resizeColumn);
+        document.addEventListener('mouseup', stopResize);
+      }
+
+      function resizeColumn(e) {
+        const newWidth = startWidth + (e.clientX - startX);
+        if (newWidth > 30) {
+          currentCol.style.width = newWidth + 'px';
+        }
+      }
+
+      function stopResize() {
+        document.removeEventListener('mousemove', resizeColumn);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    })();
+  </script>
+</body>
+</html>
