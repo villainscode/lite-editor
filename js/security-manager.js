@@ -1,6 +1,6 @@
 /**
  * LiteEditor Security Manager
- * 보안 관련 기능을 관리하는 모듈
+ * 동영상 보안 관련 기능을 관리하는 모듈
  */
 
 const LiteEditorSecurity = (function() {
