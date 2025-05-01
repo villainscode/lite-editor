@@ -326,7 +326,7 @@
 
     // 11. 플러그인 등록
     LiteEditor.registerPlugin(PLUGIN_ID, {
-        title: 'Image upload',
+        title: 'Insert Image',
         icon: 'photo_camera',
         customRender: (toolbar, contentArea) => {
             // 스타일시트 로드 (한 번만)
@@ -341,7 +341,7 @@
             // 버튼 생성
             const button = document.createElement('button');
             button.className = 'lite-editor-button lite-editor-image-upload-button';
-            button.title = 'Image upload';
+            button.title = 'Insert Image';
             
             // 아이콘 추가
             const icon = document.createElement('i');

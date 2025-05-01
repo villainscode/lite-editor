@@ -600,6 +600,15 @@ const PluginUtil = (function() {
         }
     };
 
+    // FIX core.js에 있는 registerPlugin 함수를 따로 분리하여 util을 호출하는 구조로 변경해야 함 
+    const registerPlugin = function(id, plugin) {
+        if (window.LiteEditor) {
+          LiteEditor.registerPlugin(id, plugin);
+        } else {
+          console.warn(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`);
+        }
+      };
+
     // 레이어 관리 유틸리티
     const layerManager = {
         createLayer(options) { /* ... */ },
@@ -618,6 +627,7 @@ const PluginUtil = (function() {
         styles,
         editor,
         layer,
+        registerPlugin,
         registerInlineFormatPlugin,
         registerBlockFormatPlugin,
         createDropdown,

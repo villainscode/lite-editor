@@ -52,3 +52,6 @@ tmp/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Private individual user cursor rules
+.cursor/rules/_*.mdc

@@ -15,8 +15,8 @@ const LiteEditor = (function() {
     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
     'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
-    'link', 'imageUpload', 'table', 'line',                   // 오브젝트 삽입 
-    'blockquote', 'code', 'codeBlock',                        // 인용 및 코드 
+    'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
+    'line', 'blockquote', 'code', 'codeBlock',                // 인용 및 코드 
     'unorderedList', 'orderedList', 'checkList',              // 목록 
     'align', 'formatIndent',                                  // 정렬과 인덴트 
   ];
@@ -181,16 +181,13 @@ const LiteEditor = (function() {
    * @param {Object} config - 에디터 설정
    */
   function initToolbar(toolbar, contentArea, config) {
-    const { plugins: enabledPlugins, dividers } = config;
+    // 사용자가 지정한 플러그인 목록 또는 기본 플러그인 목록 사용
+    const enabledPlugins = config.plugins || PLUGIN_ORDER;
+    const { dividers } = config;
     let pluginCount = 0;
     
-    // 플러그인 렌더링 함수
-    function renderPlugin(pluginName) {
-      // enabledPlugins에 없으면 스킵
-      if (!enabledPlugins.includes(pluginName)) {
-        return;
-      }
-      
+    // 사용자가 지정한 순서대로 플러그인 렌더링
+    enabledPlugins.forEach(pluginName => {
       // 구분선 추가 로직
       if (dividers && dividers.includes(pluginCount)) {
         const divider = document.createElement('div');
@@ -370,13 +367,10 @@ const LiteEditor = (function() {
                 tableHtml += '</table>';
                 document.execCommand('insertHTML', false, tableHtml);
               }
-            } else if (pluginName === 'checkList') {
-              // 체크리스트 추가
-              document.execCommand('insertHTML', false, '<ul style="list-style-type: none;"><li><input type="checkbox"> Check list item</li></ul>');
             } else if (pluginName === 'reset') {
               document.execCommand('removeFormat', false, null);
             } else {
-              // 기본 기능이 없는 경우 아직 구현되지 않았음을 알림
+              // 기본 기능이 없는 경우, 아직 구현되지 않았음을 알림
               console.log(`플러그인 ${pluginName}은 아직 구현되지 않았습니다.`);
             }
           }
@@ -484,10 +478,7 @@ const LiteEditor = (function() {
       
       // 플러그인 카운트 증가
       pluginCount++;
-    }
-    
-    // 순서에 따라 플러그인 렌더링 - PLUGIN_ORDER 상수 사용
-    PLUGIN_ORDER.forEach(renderPlugin);
+    });
   }
   
   /**

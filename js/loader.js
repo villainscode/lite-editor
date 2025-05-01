@@ -12,6 +12,9 @@
         // 1. 코어 라이브러리
         'js/core.js',
         
+        // 1.5 보안 관리자 (코어 이후 바로 로드)
+        'js/security-manager.js',
+        
         // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
         'js/debug-utils.js',
         'js/plugins/plugin-util.js',
@@ -36,7 +39,6 @@
         'js/plugins/heading.js',
         
         // 6. 구조 및 정렬 관련 플러그인
-        'js/plugins/list.js',
         'js/plugins/align.js',
         'js/plugins/formatIndent.js',
         
@@ -44,10 +46,15 @@
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
-        
-        // 8. 레이아웃 관련 플러그인
+        'js/plugins/media.js',
         'js/plugins/line.js',
         
+        // 8. 체크리스트 플러그인
+        'js/plugins/checkList.js',
+        'js/plugins/bulletList.js',
+        'js/plugins/numberedList.js',
+
+
         // 9. 기타 플러그인
         'js/modal.js',
         

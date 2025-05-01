@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Easy Video Embed Editor</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+    }
+    /* 편집 영역 */
+    #editor {
+      width: 100%;
+      min-height: 300px;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin-top: 1rem;
+      white-space: pre-wrap;
+    }
+    /* 비디오 래퍼: resize 가능 */
+    .video-wrapper {
+      display: inline-block;
+      position: relative;
+      border: 1px solid #666;
+      resize: both;
+      overflow: auto;
+      margin: 0.5rem 0;
+    }
+    /* iframe은 래퍼 폭에 맞춰 가변 */
+    .video-wrapper iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* 입력창 및 버튼 */
+    #url-input {
+      width: 80%;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    #embed-btn {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>ContentEditable Video Embed</h2>
+  <p>유튜브 URL을 입력하고 <strong>Embed</strong> 버튼을 누르면, 에디터에 비디오가 삽입됩니다.</p>
+
+  <!-- URL 입력 및 임베드 버튼 -->
+  <input id="url-input" type="text" placeholder="https://www.youtube.com/watch?v=VIDEO_ID" />
+  <button id="embed-btn">Embed</button>
+
+  <!-- 에디터 영역 -->
+  <div id="editor" contenteditable="true">
+    여기에 동영상이 삽입됩니다.
+  </div>
+
+  <script>
+    const input = document.getElementById('url-input');
+    const btn   = document.getElementById('embed-btn');
+    const editor = document.getElementById('editor');
+
+    // YouTube URL에서 video ID 추출
+    function parseYouTubeID(url) {
+      const reg = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/))([A-Za-z0-9_-]{11})/;
+      const m = url.match(reg);
+      return m ? m[1] : null;
+    }
+
+    btn.addEventListener('click', () => {
+      const url = input.value.trim();
+      const id = parseYouTubeID(url);
+      if (!id) {
+        alert('유효한 YouTube URL을 입력하세요.');
+        return;
+      }
+
+      // iframe 생성
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube.com/embed/${id}`;
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+
+      // 래퍼 생성 및 기본 크기 설정
+      const wrapper = document.createElement('div');
+      wrapper.className = 'video-wrapper';
+      wrapper.style.width  = '480px';
+      wrapper.style.height = '270px';
+      wrapper.appendChild(iframe);
+
+      // 에디터에 삽입
+      // 커서 위치에 삽입하기 위해 Range API 사용
+      const sel = window.getSelection();
+      let range;
+      if (sel.rangeCount > 0) {
+        range = sel.getRangeAt(0);
+      } else {
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+      }
+      range.insertNode(wrapper);
+
+      // 삽입 후 커서 이동
+      range.setStartAfter(wrapper);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      // 입력창 초기화
+      input.value = '';
+      input.focus();
+    });
+  </script>
+</body>
+</html>

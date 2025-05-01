@@ -1,0 +1,35 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Checklist Functionality Implementation Requirements
+
+This rule documents the requirements for implementing a checklist feature in the editor.
+
+## Core Functionality
+
+1. **Checkbox Creation**:
+   - When a text block is selected in the editor and the checklist button is clicked:
+     - Create a `div` container
+     - Inside the div, create a checkbox `input` tag with classes: `form-checkbox h-5 w-5 text-primary peer transition`
+     - Convert the selected text into a `label` tag with classes: `ml-3 text-gray-800 peer-checked:line-through peer-checked:text-gray-400`
+     - Combine both as child elements of the div
+
+2. **Keyboard Navigation**:
+   - When pressing `Enter` within a checkbox block:
+     - Create a new checkbox element with an empty label below the current one
+   - When pressing `Tab`:
+     - Indent the current checkbox item
+   - When pressing `Shift+Tab`:
+     - Outdent the current checkbox item
+
+3. **Exit Behavior**:
+   - When pressing `Enter` on the last checkbox element in a list:
+     - Exit the checkbox block structure
+     - Create a new regular text line
+
+4. **Checkbox State Styling**:
+   - When checkbox is checked (`checked=true`):
+     - Apply strikethrough to the label text
+     - Change font color to gray (using the `peer-checked:` classes)

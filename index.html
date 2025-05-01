@@ -287,6 +287,17 @@
         </div>
     </div>
 
+    <!-- 
+    // 모든 플러그인 사용
+    const editorFull = LiteEditor.init('#editor-full');
+
+    // 일부 플러그인만 사용
+    const editorSimple = LiteEditor.init('#editor-simple', {
+      plugins: ['bold', 'italic', 'underline', 'align', 'reset'],
+      dividers: [3] // 구분선 위치
+    });
+    
+    -->
     <!-- 통합 스크립트 로더 -->
     <script src="js/loader.js"></script>
     
@@ -294,7 +305,20 @@
         // 모든 스크립트 로드 완료 후 에디터 초기화
         document.addEventListener('lite-editor-loaded', function() {
             // 기본 에디터 초기화
-            const editor1 = LiteEditor.init('#lite-editor');
+            const editor1 = LiteEditor.init('#lite-editor', {
+                // 사용할 플러그인 목록 지정
+                plugins: [
+                    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+                    'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
+                    'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
+                    'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
+                    'line','blockquote', 'code', 'codeBlock',                        // 인용 및 코드 
+                    'unorderedList', 'orderedList', 'checkList',              // 목록 
+                    'align', 'formatIndent'                                   // 정렬과 인덴트
+                ],
+                // 구분선 위치 정의
+                dividers: [4, 8, 12, 16, 20, 23]
+            });
             
             // 디버그 정보 표시
             console.log('LiteEditor 초기화 완료');

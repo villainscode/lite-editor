@@ -8,5 +8,5 @@
    * 취소선 플러그인 (PluginUtil 유틸리티 활용)
    * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
-  PluginUtil.registerInlineFormatPlugin('strikethrough', 'Strikethrough', 'strikethrough_s', 'strikeThrough');
+  PluginUtil.registerInlineFormatPlugin('strike', 'Strikethrough', 'strikethrough_s', 'strikeThrough');
 })();

@@ -174,7 +174,7 @@
         // 아이콘 추가
         const lineIcon = util.dom.createElement('i', {
             className: 'material-icons',
-            textContent: 'drag_handle'
+            textContent: 'horizontal_rule'
         });
         lineButton.appendChild(lineIcon);
         
@@ -191,9 +191,8 @@
     // 플러그인 등록
     LiteEditor.registerPlugin('line', {
         title: 'Insert Line',
-        icon: 'drag_handle', 
+        icon: 'horizontal_rule', 
         customRender: renderLineButton
     });
 })();
-
 
