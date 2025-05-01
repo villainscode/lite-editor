@@ -12,22 +12,24 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Ensure nothing spills outside the editor */
 }
 
 /* 툴바 기본 구조 */
 .lite-editor-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Changed from wrap to nowrap to prevent wrapping */
   min-height: 36px;
   padding: 4px 6px;
   border-bottom: 1px solid #eee;
   background-color: #f8f9fa;
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* Hide overflowing content instead of scrolling */
   width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap; /* Prevent items from wrapping */
 }
 
 /* 툴바 구분선 */
@@ -36,6 +38,7 @@
   height: 24px;
   margin: 0 4px;
   background-color: #e0e0e0;
+  flex-shrink: 0; /* Prevent dividers from shrinking */
 }
 
 /* 컨텐츠 영역 기본 구조 */
@@ -46,9 +49,11 @@
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-  overflow: auto;
+  overflow: auto; /* Enable scrolling in all directions */
   flex: 1;
   width: 100%;
+  box-sizing: border-box;
+  max-height: 100%; /* Respect the container's height */
 }
 
 /* 플레이스홀더 */

@@ -6,9 +6,6 @@
   // 들여쓰기 너비 값 (기본값: 6px)
   let indentSize = 6;
   
-  // 체크박스와 label 사이의 간격 (기본값: 0.5px)
-  let labelGap = 0.5;
-  
   // 들여쓰기 레벨에 따른 마진 클래스 생성 함수
   function getMarginClass(level) {
     const marginSize = level * indentSize;
@@ -17,7 +14,7 @@
   
   // label 간격 스타일 문자열 생성 함수
   function getLabelGapStyle() {
-    return `margin-left: ${labelGap}px;`;
+    return `margin-left: -3px;`;
   }
   
   const NBSP_CHAR = '\u00A0'; // &nbsp; 유니코드
@@ -62,18 +59,23 @@
     const checkbox = PluginUtil.dom.createElement('input', {
       type: 'checkbox',
       id: itemId,
-      className: 'form-checkbox h-4 w-4 text-primary transition'
+      className: 'form-checkbox h-4 w-4 text-primary transition',
+      style: 'margin-top: 2px;'
     });
-    
-    // 빈 텍스트일 경우 &nbsp; 추가 (커서 위치 보이게)
-    const labelContent = text.trim() ? text : NBSP_CHAR;
     
     const label = PluginUtil.dom.createElement('label', {
       className: 'text-gray-800',
-      textContent: labelContent,
       style: getLabelGapStyle(),
       htmlFor: itemId
     });
+    
+    // 빈 텍스트일 경우 브라우저가 표시할 수 있는 빈 컨텐츠로 설정
+    if (text.trim()) {
+      label.textContent = text;
+    } else {
+      // 빈 라벨에는 <br> 태그 사용 (textContent 대신 innerHTML)
+      label.innerHTML = '<br>';
+    }
     
     // 체크박스 상태 변경 이벤트 처리
     checkbox.addEventListener('change', function() {
@@ -148,8 +150,13 @@
     const label = item.querySelector('label');
     if (!label) return true;
     
+    // 내용이 없거나, <br> 태그만 있는 경우 빈 것으로 간주
     const content = label.textContent || '';
-    return !content.trim() || content === NBSP_CHAR;
+    if (content.trim()) return false;
+    
+    // innerHTML도 확인 - <br> 태그만 있는 경우도 빈 것으로 간주
+    const html = label.innerHTML.trim();
+    return !html || html === '<br>' || html === '<br/>' || html === NBSP_CHAR;
   }
 
   /**

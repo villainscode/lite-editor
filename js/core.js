@@ -25,7 +25,21 @@ const LiteEditor = (function() {
   const defaultConfig = {
     plugins: PLUGIN_ORDER,  // 플러그인 순서 상수 참조
     placeholder: '내용을 입력하세요...',
-    dividers: [4, 8, 12, 16, 19] // 구분선 위치 정의
+    dividers: [4, 8, 12, 16, 19], // 구분선 위치 정의
+    dimensions: {
+      editor: {
+        width: '100%',
+        height: 'auto'
+      },
+      toolbar: {
+        width: '100%',
+        height: 'auto'
+      },
+      content: {
+        width: '100%',
+        minHeight: '120px'
+      }
+    }
   };
   
   /**
@@ -130,6 +144,55 @@ const LiteEditor = (function() {
         
         // 원본 요소를 에디터 컨테이너로 교체
         originalParent.replaceChild(editorContainer, originalElement);
+      }
+    }
+    
+    // 에디터 크기 설정 (사용자 정의 dimensions 적용)
+    if (config.dimensions) {
+      // 에디터 컨테이너 크기 적용
+      if (config.dimensions.editor) {
+        if (config.dimensions.editor.width) {
+          editorContainer.style.width = config.dimensions.editor.width;
+        }
+        if (config.dimensions.editor.height) {
+          editorContainer.style.height = config.dimensions.editor.height;
+        }
+        if (config.dimensions.editor.maxWidth) {
+          editorContainer.style.maxWidth = config.dimensions.editor.maxWidth;
+        }
+      }
+      
+      // 툴바 크기 적용
+      if (config.dimensions.toolbar) {
+        if (config.dimensions.toolbar.width) {
+          toolbar.style.width = config.dimensions.toolbar.width;
+        }
+        if (config.dimensions.toolbar.height) {
+          toolbar.style.height = config.dimensions.toolbar.height;
+          toolbar.style.minHeight = config.dimensions.toolbar.height;
+          toolbar.style.maxHeight = config.dimensions.toolbar.height;
+          toolbar.style.overflow = 'hidden'; // 툴바 내용이 넘칠 경우 숨김 처리
+        }
+      }
+      
+      // 콘텐츠 영역 크기 적용
+      if (config.dimensions.content) {
+        if (config.dimensions.content.width) {
+          contentArea.style.width = config.dimensions.content.width;
+        }
+        if (config.dimensions.content.height) {
+          contentArea.style.height = config.dimensions.content.height;
+          contentArea.style.maxHeight = config.dimensions.content.height;
+          contentArea.style.overflowY = 'auto'; // 내용이 넘칠 경우 스크롤 표시
+        }
+        if (config.dimensions.content.minHeight) {
+          contentArea.style.minHeight = config.dimensions.content.minHeight;
+        }
+      }
+      
+      // 자동 높이 계산이 아닌 경우 컨테이너 내부 요소 조정
+      if (config.dimensions.editor.height && config.dimensions.editor.height !== 'auto') {
+        editorContainer.style.overflow = 'hidden'; // 컨테이너 넘침 방지
       }
     }
     
