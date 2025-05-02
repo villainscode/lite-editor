@@ -11,6 +11,7 @@ set -euo pipefail
 #   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all)
 #   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃
 #   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시
+#   ./gitx abort                              # 현재 진행 중인 병합 취소 (git merge --abort)
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {
@@ -117,6 +118,16 @@ do_merge_from() {
   echo "✅ 병합 및 푸시가 완료되었습니다."
 }
 
+do_abort() {
+  echo "ℹ️ 현재 진행 중인 병합을 취소합니다."
+  if git merge --abort; then
+    echo "✅ 병합이 취소되었습니다."
+  else
+    echo "❗️ 현재 진행 중인 병합이 없습니다."
+    exit 1
+  fi
+}
+
 cmd="${1:-}"
 
 case "$cmd" in
@@ -145,9 +156,12 @@ case "$cmd" in
   checkout)
     do_checkout "$@"
     ;;
+  abort)
+    do_abort
+    ;;
   *)
     if [[ -z "$cmd" ]]; then
-      echo "❗️ 사용법: ./gitx commit/push/reset/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+      echo "❗️ 사용법: ./gitx commit/push/reset/merge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
       exit 1
     elif [[ "$cmd" == *" : "* ]]; then
         # 전체 워크플로우: commit + push
@@ -155,7 +169,7 @@ case "$cmd" in
         do_push
     else
         echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
-        echo "   ./gitx commit/push/reset/merge/merge-from/fetch/checkout 또는 ./gitx \"[prefix] : message\""
+        echo "   ./gitx commit/push/reset/merge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
         exit 1
     fi
     ;;
