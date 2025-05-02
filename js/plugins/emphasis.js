@@ -1,11 +1,11 @@
 /**
- * LiteEditor Highlight Plugin
+ * LiteEditor Emphasis Plugin
  * 텍스트 배경색(하이라이트) 플러그인
  */
 
 (function() {
   // 하이라이트(배경색) 플러그인
-  LiteEditor.registerPlugin('highlight', {
+  LiteEditor.registerPlugin('emphasis', {
     customRender: function(toolbar, contentArea) {
       // 하이라이트 컨테이너 생성
       const highlightContainer = document.createElement('div');
@@ -15,7 +15,7 @@
       const icon = document.createElement('i');
       icon.className = 'material-icons';
       icon.textContent = 'format_color_fill';
-      highlightContainer.setAttribute('title', 'Highlight');
+      highlightContainer.setAttribute('title', 'Emphasis');
       highlightContainer.appendChild(icon);
       
       // 선택된 색상 표시기
@@ -127,13 +127,13 @@
           dropdownMenu.style.pointerEvents = 'auto';
           dropdownMenu.style.display = 'block';
           dropdownMenu.style.zIndex = '99999';
-          console.log('Highlight dropdown opened');
+          console.log('emphasis dropdown opened');
         } else {
           // 드롭다운이 닫히는 경우
           dropdownMenu.style.display = 'none';
           dropdownMenu.style.visibility = 'hidden';
           dropdownMenu.style.opacity = '0';
-          console.log('Highlight dropdown closed by toggle');
+          console.log('emphasis dropdown closed by toggle');
         }
         
         console.log('드롭다운 상태:', dropdownMenu.classList.contains('show') ? '열림' : '닫힘');
@@ -148,7 +148,7 @@
             dropdownMenu.style.display = 'none';
             dropdownMenu.style.visibility = 'hidden';
             dropdownMenu.style.opacity = '0';
-            console.log('Highlight dropdown closed by body click');
+            console.log('emphasis dropdown closed by body click');
           }
         }
       };

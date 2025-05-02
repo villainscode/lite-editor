@@ -308,20 +308,20 @@
             const editor1 = LiteEditor.init('#lite-editor', {
                 // 사용할 플러그인 목록 지정
                 plugins: [
-                    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
                     'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
                     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
                     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
                     'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
                     'unorderedList', 'orderedList', 'checkList',              // 목록 
-                    'align', 'formatIndent'                                   // 정렬과 인덴트
+                    'align', 'formatIndent',                                  // 정렬과 인덴트
+                    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
                 ],
                 // 구분선 위치 정의
                 dividers: [4, 8, 12, 16, 20, 23],
                 // 에디터 크기 설정 (너비와 높이)
                 dimensions: {
                     editor: {
-                        width: '920px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장)
+                        width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장)
                         maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
                         height: '650px'    // 에디터 전체 높이 (고정)
                     },

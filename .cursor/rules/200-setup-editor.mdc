@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: "오픈소스 웹 에디터 설치 가이드 정의서"
+globs: ["**/*.js", "**/*.ts", "**/*.html", "**/*.css"]
+alwaysApply: true
+---
+
+# 📝 오픈소스 웹 에디터 설치 가이드 
+
+## 1. 설치화면에 아래와 같이 스크립트로 속성을 정의하여 설치할 수 있습니다.
+- 
+    <!-- 통합 스크립트 로더 -->
+    <script src="js/loader.js"></script>
+    
+    <script>
+        // 모든 스크립트 로드 완료 후 에디터 초기화
+        document.addEventListener('lite-editor-loaded', function() {
+            // 기본 에디터 초기화
+            const editor1 = LiteEditor.init('#lite-editor', {
+                // 사용할 플러그인 목록 지정
+                plugins: [
+                    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+                    'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
+                    'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
+                    'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
+                    'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
+                    'unorderedList', 'orderedList', 'checkList',              // 목록 
+                    'align', 'formatIndent'                                   // 정렬과 인덴트
+                ],
+                // 구분선 위치 정의
+                dividers: [4, 8, 12, 16, 20, 23],
+                // 에디터 크기 설정 (너비와 높이)
+                dimensions: {
+                    editor: {
+                        width: '920px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장)
+                        maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
+                        height: '650px'    // 에디터 전체 높이 (고정)
+                    },
+                    toolbar: {
+                        height: '42px'     // 툴바 높이 (고정)
+                    },
+                    content: {
+                        height: '608px',   // 콘텐츠 영역 높이 (650px - 42px)
+                        minHeight: '608px' // 콘텐츠 영역 최소 높이
+                    }
+                }
+            });
+            
+            // 디버그 정보 표시
+            console.log('LiteEditor 초기화 완료');
+        });
+    </script>
+    - plugins 에서 설치 후 화면에 표시할 아이콘들을 지정해줍니다. 
+    - 현재 전체 기능은 historyInit', 'undo', 'redo', 'reset', 'fontFamily', 'heading', 'fontColor', 'highlight', 'bold', 'italic', 'underline', 'strike','link', 'imageUpload', 'table', 'media','line','blockquote', 'code', 'codeBlock', 'unorderedList','orderedList', 'checkList', 'align', 'formatIndent' 의 순서대로 아이콘이 표시됩니다.
+    - dividers로 아이콘 사이에 구분선을 넣을 수 있습니다. 숫자로 표시된 값을 통해 아이콘의 다음 칸에 구분선을 넣어줍니다.
+    - dimensionsd의 값에 따라 에디터의 너비, 높이, 최대 높이, 에디터 툴바의 높이, 컨텐츠의 높이를 지정할 수 있습니다.
+    - 에디터 툴바의 아래에 rich 모드와 source 모드를 화면에서 전환할 수 있도록 탭 매뉴를 추가할 수 있습니다. 

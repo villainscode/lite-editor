@@ -1,0 +1,634 @@
+/**
+ * LiteEditor Code Block Plugin
+ * highlight.js 기반 코드 하이라이팅 기능
+ */
+
+(function() {
+  // 전역 상태 변수
+  let activeModal = null;
+  let savedRange = null;
+  let modalCleanupFn = null;
+  
+  // PluginUtil 참조
+  const util = window.PluginUtil;
+  
+  // 플러그인 등록
+  LiteEditor.registerPlugin('codeBlock', {
+    title: 'Code Block',
+    icon: 'code_blocks',
+    customRender: function(toolbar, contentArea) {
+      // 툴바에 모달 이벤트 등록
+      if(util && util.setupToolbarModalEvents) {
+        util.setupToolbarModalEvents(toolbar);
+      }
+      
+      // 버튼 생성
+      const button = document.createElement('button');
+      button.className = 'lite-editor-button lite-editor-code-block-button';
+      button.title = 'Code Block';
+      
+      // 아이콘 추가
+      const icon = document.createElement('i');
+      icon.className = 'material-icons';
+      icon.textContent = 'data_object';
+      button.appendChild(icon);
+      
+      // 버튼을 활성 모달 관리자에 등록
+      if(util && util.activeModalManager) {
+        util.activeModalManager.registerButton(button);
+      }
+      
+      // 클릭 이벤트
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Code Block 버튼 클릭됨');
+        
+        // 토글 로직: 이미 열려있으면 닫고, 아니면 열기
+        if (activeModal && document.body.contains(activeModal)) {
+          closeModal();
+        } else {
+          // 다른 모달 닫기
+          if(util && util.activeModalManager) {
+            util.activeModalManager.closeAll();
+          }
+          // 현재 선택 영역 저장
+          saveSelection();
+          // 새 모달 열기
+          showCodeBlockModal(button, contentArea);
+        }
+      });
+      
+      // 버튼을 툴바에 추가
+      toolbar.appendChild(button);
+    }
+  });
+
+  // 선택 영역 저장
+  function saveSelection() {
+    if(util && util.selection) {
+      savedRange = util.selection.saveSelection();
+    } else {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        savedRange = selection.getRangeAt(0).cloneRange();
+      }
+    }
+  }
+  
+  // 저장된 선택 영역 복원
+  function restoreSelection() {
+    if (savedRange) {
+      if(util && util.selection) {
+        util.selection.restoreSelection(savedRange);
+      } else {
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(savedRange);
+      }
+      return true;
+    }
+    return false;
+  }
+  
+  // 선택 영역 초기화
+  function clearSelection() {
+    savedRange = null;
+  }
+
+  // 코드 블록 모달 표시
+  function showCodeBlockModal(buttonElement, contentArea) {
+    // 기존 모달 닫기
+    closeModal();
+    
+    // 다른 활성화된 모달 모두 닫기
+    if(util && util.activeModalManager) {
+      util.activeModalManager.closeAll();
+    }
+    
+    // 모달 생성
+    activeModal = document.createElement('div');
+    activeModal.className = 'lite-editor-codeblock-popup';
+    activeModal.innerHTML = `
+      <div class="lite-editor-codeblock-title">코드 블록 삽입</div>
+      
+      <div class="lite-editor-codeblock-group">
+        <label>언어 선택:</label>
+        <select class="code-language">
+          <option value="">선택</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="react">React</option>
+          <option value="java">Java</option>
+          <option value="python">Python</option>
+          <option value="bash">Bash</option>
+          <option value="rust">Rust</option>
+          <option value="go">Go</option>
+          <option value="cpp">C++</option>
+        </select>
+      </div>
+      
+      <div class="lite-editor-codeblock-group">
+        <label>코드:</label>
+        <textarea class="code-input" style="width: 100%; min-height: 150px; font-family: monospace;"></textarea>
+      </div>
+      
+      <div class="lite-editor-codeblock-footer">
+        <button class="lite-editor-codeblock-insert">삽입</button>
+        <button class="lite-editor-codeblock-cancel">취소</button>
+      </div>
+    `;
+    
+    // 모달 위치 설정 및 등록
+    document.body.appendChild(activeModal);
+    
+    // Link.js 방식으로 레이어 위치 설정
+    if(util && util.layer) {
+      util.layer.setLayerPosition(activeModal, buttonElement);
+    } else {
+      // 기본 위치 설정 (버튼 아래)
+      const buttonRect = buttonElement.getBoundingClientRect();
+      activeModal.style.position = 'absolute';
+      activeModal.style.left = buttonRect.left + 'px';
+      activeModal.style.top = (buttonRect.bottom + window.scrollY + 5) + 'px';
+    }
+    
+    // 활성 모달 관리자에 등록
+    if(util && util.activeModalManager) {
+      activeModal.closeCallback = closeModal;
+      util.activeModalManager.register(activeModal);
+    }
+    
+    // 이벤트 설정
+    const languageSelect = activeModal.querySelector('.code-language');
+    const codeInput = activeModal.querySelector('.code-input');
+    const insertButton = activeModal.querySelector('.lite-editor-codeblock-insert');
+    const cancelButton = activeModal.querySelector('.lite-editor-codeblock-cancel');
+    
+    // 삽입 버튼 클릭 이벤트
+    insertButton.addEventListener('click', () => {
+      const language = languageSelect.value;
+      const code = codeInput.value;
+      
+      if (code) {
+        contentArea.focus();
+        setTimeout(() => insertCodeBlock(language, code, contentArea), 0);
+      } else {
+        alert('코드를 입력해주세요.');
+      }
+    });
+    
+    // 취소 버튼 클릭 이벤트
+    cancelButton.addEventListener('click', () => {
+      clearSelection();
+      closeModal();
+    });
+    
+    // 모달 클릭 시 이벤트 전파 방지
+    activeModal.addEventListener('click', e => e.stopPropagation());
+    
+    // 모달 닫기 이벤트 설정
+    if(util && util.modal) {
+      modalCleanupFn = util.modal.setupModalCloseEvents(activeModal, () => {
+        clearSelection();
+        closeModal();
+      });
+    } else {
+      // 기본 닫기 이벤트 설정
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+    
+    // 언어 선택 필드에 포커스
+    setTimeout(() => languageSelect.focus(), 0);
+  }
+  
+  // 문서 클릭 시 모달 닫기 처리
+  function handleClickOutside(e) {
+    if (activeModal && !activeModal.contains(e.target)) {
+      clearSelection();
+      closeModal();
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    }
+  }
+  
+  // ESC 키 처리
+  function handleEscape(e) {
+    if (e.key === 'Escape') {
+      clearSelection();
+      closeModal();
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    }
+  }
+  
+  // 모달 닫기
+  function closeModal() {
+    // 모달 이벤트 정리
+    if (modalCleanupFn) {
+      modalCleanupFn();
+      modalCleanupFn = null;
+    }
+    
+    if (activeModal && activeModal.parentNode) {
+      // 활성 모달에서 제거
+      if(util && util.activeModalManager) {
+        util.activeModalManager.unregister(activeModal);
+      }
+      
+      activeModal.parentNode.removeChild(activeModal);
+      activeModal = null;
+    }
+  }
+  
+  // 코드 블록 삽입 함수
+  function insertCodeBlock(language, code, contentArea) {
+    // 저장된 선택 영역 복원
+    restoreSelection();
+    
+    if (code) {
+      const highlightedCode = highlightCode(code, language, null);
+      const codeBlockContainer = document.createElement('div');
+      codeBlockContainer.className = 'lite-editor-code-block-container';
+      codeBlockContainer.innerHTML = `<pre>${highlightedCode}</pre>`;
+      
+      try {
+        if(LiteEditor.insertElement) {
+          LiteEditor.insertElement(codeBlockContainer);
+        } else {
+          document.execCommand('insertHTML', false, codeBlockContainer.outerHTML);
+        }
+        
+        // 에디터 이벤트 발생
+        if(util && util.editor) {
+          util.editor.dispatchEditorEvent(contentArea);
+        }
+      } catch (e) {
+        console.error('코드 블록 삽입 실패:', e);
+      }
+    }
+    
+    clearSelection();
+    closeModal();
+  }
+  
+  // 스타일 추가
+  const modalStyle = `
+    .lite-editor-codeblock-popup {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      border-radius: 4px;
+      padding: 15px;
+      z-index: 1000;
+      width: 300px;
+    }
+
+    .lite-editor-codeblock-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .lite-editor-codeblock-group {
+      margin-bottom: 12px;
+    }
+
+    .lite-editor-codeblock-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .lite-editor-codeblock-group select,
+    .lite-editor-codeblock-group textarea {
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .lite-editor-codeblock-footer {
+      text-align: right;
+    }
+
+    .lite-editor-codeblock-footer button {
+      margin-left: 8px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .lite-editor-codeblock-insert {
+      background: #4285f4;
+      color: white;
+    }
+
+    .lite-editor-codeblock-insert:hover {
+      background: #3367d6;
+    }
+
+    .lite-editor-codeblock-cancel {
+      background: #f1f1f1;
+      color: #333;
+    }
+
+    .lite-editor-codeblock-cancel:hover {
+      background: #e4e4e4;
+    }
+
+    .lite-editor-code-block-container pre {
+      background-color: #f0f4f8;
+      font-family: Consolas, monospace;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      white-space: pre-wrap; /* 줄 바꿈 활성화 */
+      word-break: break-all; /* 긴 단어 줄 바꿈 */
+      display: block; /* pre 태그는 블록 요소 */
+    }
+
+    .lite-editor-code-block-container pre .code-container {
+      /* background-color: inherit; /* pre 태그의 배경색 상속 */
+      font-family: inherit; /* pre 태그의 글꼴 상속 */
+      padding: 0; /* 내부 컨테이너의 패딩 제거 (pre에 적용) */
+      border: none; /* 내부 컨테이너의 테두리 제거 (pre에 적용) */
+      white-space: inherit; /* pre 태그의 white-space 상속 */
+      word-break: inherit; /* pre 태그의 word-break 상속 */
+      display: inline; /* 또는 inline-block; 내부 요소 흐름에 맞게 */
+    }
+
+    .lite-editor-code-block-container pre .keyword-tag {
+      color: #c678dd; /* 예시 색상 */
+      font-weight: bold; /* 예시 스타일 */
+      display: inline; /* 태그를 인라인으로 처리 */
+    }
+      
+
+    .lite-editor-code-block-container pre .keyword-function { color: #89519b; font-weight: bold; } /* 보라색 계열 (함수 정의) */
+    .lite-editor-code-block-container pre .keyword-control { color: #e06c75; font-weight: bold; } /* 붉은색 계열 (제어 흐름) */
+    .lite-editor-code-block-container pre .keyword-variable { color: #d19a66; font-weight: bold; } /* 주황색 계열 (변수 선언) */
+    .lite-editor-code-block-container pre .keyword-other { color: #717880; font-weight: bold; } /* 회색 계열 (기타 예약어) */
+    .lite-editor-code-block-container pre .keyword-builtin { color: #56b6c2; font-weight: bold; } /* 청록색 계열 (내장 값) */
+    .lite-editor-code-block-container pre .keyword-tag { color: #e06c75; font-weight: bold; } /* HTML 태그 */
+    .lite-editor-code-block-container pre .keyword-attribute { color: #ad721e; } /* HTML 속성 */
+    .lite-editor-code-block-container pre .keyword-property { color: #c678dd; } /* CSS 속성 */
+    .lite-editor-code-block-container pre .keyword-value { color:rgb(109, 142, 85); } /* CSS 값 (필요에 따라 추가) */
+    .lite-editor-code-block-container pre .keyword-keyword { color: #e06c75; font-weight: bold; } /* Java, Python 등의 일반 키워드 */
+    .lite-editor-code-block-container pre .keyword-literal { color: #56b6c2; } /* Java, Python 등의 리터럴 */
+    .lite-editor-code-block-container pre .keyword-constant { color: #56b6c2; } /* Python 상수 */
+    .lite-editor-code-block-container pre .keyword-type { color: #61afef; } /* Rust, TypeScript 등의 타입 */
+    .lite-editor-code-block-container pre .keyword-namespace { color: #9ea7b4; } /* C++ 네임스페이스 */
+    .lite-editor-code-block-container pre .string { color: #2d8434; } /* 밝은 녹색 계열 (문자열) */
+    .lite-editor-code-block-container pre .comment { color: #5c6370; font-style: italic; } /* 어두운 회색 계열 (주석) */
+    .lite-editor-code-block-container pre .code-default { color: #081c5f; } /* 일반 코드 색상 */
+    .lite-editor-code-block-container pre .function-name { color: #61afef; } /* 밝은 파란색 계열 (함수명) */
+  `;
+
+  // <style> 태그를 생성하여 modalStyle 적용
+  const styleElement = document.createElement('style');
+  styleElement.textContent = modalStyle;
+  document.head.appendChild(styleElement);
+  
+  // 코드 하이라이팅 함수들
+  const keywords = {
+    html: {
+      tag: ['<!DOCTYPE', '<html>', '<head>', '<title>', '<meta', '<link>', '<style>', '<script>', '<body>', '<div>', '<span>', '<p>', '<a>', '<img>', '<ul>', '<ol>', '<li>', '<table>', '<tr>', '<th>', '<td>', '<form>', '<input>', '<button>', '<select>', '<option>', '<textarea>', '<h1>', '<h2>', '<h3>', '<h4>', '<h5>', '<h6>'],
+      attribute: ['class', 'id', 'style', 'src', 'href', 'alt', 'type', 'name', 'value', 'method', 'action', 'target', 'width', 'height', 'language']
+    },
+    css: {
+      property: ['color', 'background', 'font-size', 'font-weight', 'text-align', 'margin', 'padding', 'border', 'display', 'position', 'width', 'height', 'float', 'clear', 'list-style', 'text-decoration'],
+      value: [] // CSS 속성 값은 다양하므로 필요에 따라 추가
+    },
+    javascript: {
+      function: ['function'],
+      control: ['if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'try', 'catch', 'finally', 'throw', 'new', 'typeof', 'instanceof', 'in', 'this', 'arguments'],
+      variable: ['var', 'let', 'const'],
+      other: ['class', 'extends', 'import', 'export', 'new', 'typeof', 'instanceof', 'in', 'this', 'arguments'],
+      builtin: ['true', 'false', 'null', 'undefined', 'NaN', 'Infinity', '&&', '||', '!', '===', '!==', '==', '!=', '>=', '<=', '>',  '+=', '-=']
+    },
+    java: {
+      keyword: ['public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'int', 'float', 'double', 'boolean', 'char', 'byte', 'short', 'long', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'try', 'catch', 'finally', 'throw', 'new', 'import', 'package', 'synchronized', 'volatile', 'transient', 'strictfp', 'abstract'],
+      literal: ['true', 'false', 'null']
+    },
+    python: {
+      keyword: ['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'break', 'continue', 'return', 'try', 'except', 'finally', 'raise', 'import', 'from', 'as', 'global', 'nonlocal', 'pass', 'del', 'with', 'yield', 'assert', 'async', 'await', 'lambda'],
+      constant: ['True', 'False', 'None']
+    },
+    bash: {
+      keyword: ['if', 'then', 'else', 'elif', 'fi', 'for', 'in', 'while', 'do', 'done', 'case', 'esac', 'function', 'return'],
+      builtin: [] // Bash 내장 명령어는 다양하므로 필요에 따라 추가
+    },
+    rust: {
+      keyword: ['fn', 'let', 'mut', 'if', 'else', 'loop', 'while', 'for', 'in', 'match', 'mod', 'use', 'struct', 'enum', 'trait', 'impl', 'static', 'const', 'unsafe', 'crate', 'pub', 'priv', 'as', 'break', 'continue', 'return'],
+      type: ['Option', 'Result', 'Ok', 'Err', 'String', 'Vec', 'Box'],
+      literal: ['true', 'false']
+    },
+    go: {
+      keyword: ['package', 'import', 'func', 'var', 'const', 'if', 'else', 'for', 'range', 'switch', 'case', 'default', 'go', 'chan', 'select', 'type', 'struct', 'interface', 'return', 'break', 'continue'],
+      builtin: ['true', 'false', 'nil', 'string', 'int', 'float64', 'bool', 'error']
+    },
+    typescript: {
+      keyword: ['let', 'const', 'function', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'try', 'catch', 'finally', 'throw', 'class', 'extends', 'implements', 'import', 'export', 'new', 'typeof', 'instanceof', 'in', 'this', 'super'],
+      type: ['string', 'number', 'boolean', 'any', 'void', 'unknown', 'never'],
+      literal: ['true', 'false', 'null', 'undefined', 'NaN', 'Infinity']
+    },
+    react: {
+      keyword: ['import', 'from', 'function', 'class', 'extends', 'return', 'const', 'let', 'if', 'else'],
+      builtin: ['useState', 'useEffect', 'useContext', 'useReducer', 'useCallback', 'useMemo', 'useRef', 'React']
+    },
+    cpp: {
+      keyword: ['int', 'float', 'double', 'bool', 'char', 'void', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'class', 'struct', 'public', 'private', 'protected', 'template', 'typename', 'using', 'namespace', 'include'],
+      literal: ['true', 'false', 'nullptr'],
+      namespace: ['std']
+    }
+  };
+
+  function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;")
+         .replace(/`/g, "&#96;");
+  }
+
+  function highlightKeywordsAndStrings(line, language) {
+    let highlightedLine = '';
+    const wordsAndSpaces = line.split(/(\s+|'[^']*'|"[^"]*"|`[^`]*`)/);
+    const langKeywords = keywords[language] || {};
+    const keywordsToCheck = ['if', 'else', 'else if', 'try', 'while', 'for', 'switch']; // 처리할 키워드 목록
+
+  
+    for (const part of wordsAndSpaces) {
+      console.log(`현재 단어: "${part}"`); // 추가
+      let isHighlighted = false;
+      let cleanedPart = part.trim().replace(/[,;]$/, ''); // 기존 정리
+  
+      // ( 또는 {가 바로 뒤에 붙은 키워드 처리
+      let keywordMatch = null;
+      for (const keyword of keywordsToCheck) {
+        if (
+          (cleanedPart.startsWith(keyword) && (cleanedPart.endsWith('(') || cleanedPart.endsWith('{'))) ||
+          (cleanedPart.endsWith(keyword) && cleanedPart.startsWith('}'))
+        ) {
+          keywordMatch = keyword;
+          cleanedPart = keyword; // 주변 특수 문자 제거
+          break;
+        } else if (cleanedPart === keyword) {
+          keywordMatch = keyword; // 온전한 키워드인 경우
+          break;
+        }
+      }
+  
+      // 문자열 처리 (원래 part 사용)
+      if (part.startsWith("'") && part.endsWith("'") || part.startsWith('"') && part.endsWith('"') || part.startsWith('`') && part.endsWith('`')) {
+        highlightedLine += `<span class="string">${escapeHtml(part)}</span>`;
+        isHighlighted = true;
+      } else {
+        // 키워드 처리 (cleanedPart 사용)
+        for (const key in langKeywords) {
+          if (langKeywords[key] && Array.isArray(langKeywords[key]) && langKeywords[key].includes(cleanedPart)) {
+            const actualPart = keywordMatch ? keywordMatch : part; // ( 또는 {가 붙은 키워드는 원래 키워드 사용
+            highlightedLine += `<span class="keyword-${key}">${escapeHtml(actualPart)}</span>`;
+            isHighlighted = true;
+            break;
+          }
+        }
+  
+        // 함수명 처리 (기존 로직 유지)
+        if (!isHighlighted && wordsAndSpaces[wordsAndSpaces.indexOf(part) - 1] === 'function') {
+          highlightedLine += `<span class="function-name">${escapeHtml(part)}</span>`;
+          isHighlighted = true;
+        }
+  
+        // 일반 코드 (원래 part 사용)
+        if (!isHighlighted && part.trim() !== '') {
+          highlightedLine += `<span class="code-default">${escapeHtml(part)}</span>`;
+          isHighlighted = true;
+        } else if (!isHighlighted) {
+          highlightedLine += escapeHtml(part);
+        }
+      }
+    }
+    return highlightedLine;
+  }
+
+
+  function highlightSpecificCode(code, language) {
+    if (!keywords[language]) {
+      return `<span class="code-default">${escapeHtml(code).replace(/\n/g, '<br>')}</span>`;
+    }
+
+    let highlightedCode = '';
+    const lines = code.split('\n');
+
+    for (const line of lines) {
+      let currentLine = line;
+
+      // 주석 처리
+      if (language === 'javascript' || language === 'typescript' || language === 'java' || language === 'cpp') {
+        const commentIndex = currentLine.indexOf('//');
+        if (commentIndex !== -1) {
+          const codePart = currentLine.substring(0, commentIndex);
+          const commentPart = currentLine.substring(commentIndex);
+          highlightedCode += highlightKeywordsAndStrings(codePart, language) + `<span class="comment">${escapeHtml(commentPart)}</span><br>`;
+          continue;
+        }
+      } else if (language === 'python' || language === 'bash' || language === 'rust' || language === 'go') {
+        const commentIndex = currentLine.indexOf('#');
+        if (commentIndex !== -1) {
+          const codePart = currentLine.substring(0, commentIndex);
+          const commentPart = currentLine.substring(commentIndex);
+          highlightedCode += highlightKeywordsAndStrings(codePart, language) + `<span class="comment">${escapeHtml(commentPart)}</span><br>`;
+          continue;
+        }
+      }
+
+      highlightedCode += highlightKeywordsAndStrings(currentLine, language) + '<br>';
+    }
+    return `<div class="code-container">${highlightedCode}</div>`;
+  }
+
+  function highlightCode(code, language, codeBlockElement) {
+    if (language === 'html') {
+      let highlightedHTML = '';
+      let currentIndex = 0;
+      const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+      const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+      const tagRegex = /(<[^>]+>)/gi;
+  
+      let match;
+  
+      // <style> 태그 처리
+      while ((match = styleRegex.exec(code)) !== null) {
+        const styleTag = code.substring(match.index, styleRegex.lastIndex);
+        const styleContent = match[1];
+        const highlightedContent = highlightSpecificCode(styleContent, 'css');
+        highlightedHTML += escapeHtml(code.substring(currentIndex, match.index)) +
+                         `<span class="keyword-tag">${escapeHtml(styleTag.substring(0, styleTag.indexOf(styleContent)))}</span>` +
+                         `<div class="code-container">${highlightedContent}</div>` +
+                         `<span class="keyword-tag">${escapeHtml(styleTag.substring(styleTag.indexOf('</style>')))}</span>`;
+        currentIndex = styleRegex.lastIndex;
+      }
+  
+      // <script> 태그 처리
+      while ((match = scriptRegex.exec(code)) !== null) {
+        const scriptTag = code.substring(match.index, scriptRegex.lastIndex);
+        const scriptContent = match[1];
+        const scriptLanguageMatch = scriptTag.match(/language=["']?([^"']+)["']?|type=["']?text\/([^"']+)["']?/);
+        let scriptLanguage = 'javascript';
+        if (scriptLanguageMatch && (scriptLanguageMatch[1] || scriptLanguageMatch[2])) {
+          scriptLanguage = scriptLanguageMatch[1] || scriptLanguageMatch[2];
+        }
+        const highlightedContent = highlightSpecificCode(scriptContent, scriptLanguage);
+        highlightedHTML += escapeHtml(code.substring(currentIndex, match.index)) +
+                         `<span class="keyword-tag">${escapeHtml(scriptTag.substring(0, scriptTag.indexOf(scriptContent)))}</span>` +
+                         `<div class="code-container">${highlightedContent}</div>` +
+                         `<span class="keyword-tag">${escapeHtml(scriptTag.substring(scriptTag.indexOf('</script>')))}</span>`;
+        currentIndex = scriptRegex.lastIndex;
+      }
+  
+      // 나머지 HTML 태그 하이라이팅
+      let remainingHTML = code.substring(currentIndex);
+      let highlightedRemainingHTML = '';
+      let lastIndex = 0;
+  
+      while ((match = tagRegex.exec(remainingHTML)) !== null) {
+        highlightedRemainingHTML += escapeHtml(remainingHTML.substring(lastIndex, match.index));
+        const tag = match[0];
+        const tagNameMatch = tag.match(/^<(\/?\w+)/);
+        if (tagNameMatch) {
+          const tagName = tagNameMatch[1].toLowerCase();
+          if (keywords.html.tag.includes(tagName)) { // <와 > 없이 비교
+            highlightedRemainingHTML += `<span class="keyword-tag">${escapeHtml(tag)}</span>`;
+          } else {
+            highlightedRemainingHTML += escapeHtml(tag);
+          }
+        } else {
+          highlightedRemainingHTML += escapeHtml(tag);
+        }
+        lastIndex = tagRegex.lastIndex;
+      }
+      highlightedRemainingHTML += escapeHtml(remainingHTML.substring(lastIndex));
+  
+      highlightedHTML += highlightedRemainingHTML;
+      return highlightedHTML;
+  
+    } else {
+      return `<pre><div class="code-container">${highlightSpecificCode(code, language)}</div></pre>`;
+    }
+  }
+
+})();
