@@ -5,13 +5,11 @@
 
 /* 코드 블록 컨테이너 */
 .lite-editor-code-block {
-  margin: 1em 0;
-  border: 1px solid #ddd;
   border-radius: 4px;
   overflow: hidden;
 }
 
-/* 코드 영역 스타일 */
+/* 코드 영역 스타일 & 배경색 지정 */
 .lite-editor-code-block [class*="shj-lang-"] {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 13px;
@@ -19,6 +17,7 @@
   padding: 1em;
   overflow-x: auto;
   white-space: pre;
+  background-color: #f4f4f4 !important;  
   tab-size: 2;
 }
 
