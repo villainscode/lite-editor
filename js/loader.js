@@ -18,6 +18,7 @@
         // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
         'js/debug-utils.js',
         'js/plugins/plugin-util.js',
+        
         // 3. 유틸리티 및 기본 기능
         'js/plugins/history.js',
         'js/plugins/format-utils.js',
@@ -30,34 +31,34 @@
         'js/plugins/strike.js',
         'js/plugins/code.js',
         'js/plugins/blockquote.js',
+        
+        // 5. highlight.js 로더 및 코드 블록 플러그인
         'js/plugins/codeBlock.js',
         
-        // 5. 폰트 및 색상 관련 플러그인
+        // 6. 폰트 및 색상 관련 플러그인
         'js/plugins/fontFamily.js',
         'js/plugins/fontColor.js',
-        'js/plugins/highlight.js',
+        'js/plugins/emphasis.js',
         'js/plugins/heading.js',
         
-        // 6. 구조 및 정렬 관련 플러그인
+        // 7. 구조 및 정렬 관련 플러그인
         'js/plugins/align.js',
         'js/plugins/formatIndent.js',
         
-        // 7. 삽입 관련 플러그인
+        // 8. 삽입 관련 플러그인
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
         'js/plugins/media.js',
         'js/plugins/line.js',
         
-        // 8. 체크리스트 플러그인
+        // 9. 체크리스트 플러그인
         'js/plugins/checkList.js',
         'js/plugins/bulletList.js',
         'js/plugins/numberedList.js',
 
-
-        // 9. 기타 플러그인
+        // 10. 기타 플러그인
         'js/modal.js',
-        
     ];
     
     // 스크립트 순차적 로드 함수

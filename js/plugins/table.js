@@ -58,14 +58,216 @@
         }
     };
     
+    // 컬럼 리사이즈 관리
+    const resizerManager = {
+        // 리사이즈 상태 (최소 필요 상태만 유지)
+        state: {
+            active: null // 현재 활성화된 리사이저 상태 정보
+        },
+        
+        // 테이블에 리사이저 초기화
+        initTableResizers(table) {
+            if (!table || table.classList.contains('resizer-initialized')) {
+                return; // 이미 초기화된 경우 스킵
+            }
+            
+            // 테이블 레이아웃 및 너비 설정
+            this.setupTableLayout(table);
+            
+            // 첫 번째 행의 모든 셀에 리사이저 추가
+            this.setupColumnResizers(table);
+            
+            // 초기화 완료 표시
+            table.classList.add('resizer-initialized');
+        },
+        
+        // 테이블 레이아웃 설정
+        setupTableLayout(table) {
+            // 테이블 레이아웃을 fixed로 설정
+            table.style.tableLayout = 'fixed';
+            
+            // 테이블 너비 설정 (픽셀 단위로 고정)
+            if (!table.style.width || table.style.width.indexOf('%') !== -1) {
+                table.style.width = table.offsetWidth + 'px';
+            }
+        },
+        
+        // 컬럼 리사이저 설정
+        setupColumnResizers(table) {
+            const firstRow = table.querySelector('tr');
+            if (!firstRow) return;
+            
+            const cells = firstRow.querySelectorAll('th, td');
+            
+            // 각 셀에 기본 너비 부여 (픽셀 단위)
+            const cellCount = cells.length;
+            const defaultCellWidth = Math.floor(table.offsetWidth / cellCount);
+            
+            cells.forEach(cell => {
+                // 셀에 명시적 픽셀 단위 너비 설정
+                if (!cell.style.width || cell.style.width.indexOf('%') !== -1) {
+                    cell.style.width = defaultCellWidth + 'px';
+                }
+                
+                // 리사이저 추가
+                this.addResizerToCell(cell);
+            });
+        },
+        
+        // 셀에 리사이저 추가
+        addResizerToCell(cell) {
+            // 이미 리사이저가 있는 경우 스킵
+            if (cell.querySelector('.resizer')) return;
+            
+            // 셀에 상대 위치 스타일 적용
+            cell.style.position = 'relative';
+            
+            // 리사이저 요소 생성
+            const resizer = this.createResizerElement();
+            
+            // 리사이저에 이벤트 리스너 추가
+            resizer.addEventListener('mousedown', this.handleResizeStart.bind(this));
+            
+            // 셀에 리사이저 추가
+            cell.appendChild(resizer);
+        },
+        
+        // 리사이저 요소 생성
+        createResizerElement() {
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            resizer.contentEditable = 'false';
+            
+            // 필수 인라인 스타일만 적용 (나머지는 CSS로 처리)
+            Object.assign(resizer.style, {
+                position: 'absolute',
+                top: '0',
+                right: '0',
+                width: '5px',
+                height: '100%',
+                cursor: 'col-resize',
+                zIndex: '10'
+            });
+            
+            return resizer;
+        },
+        
+        // 리사이징 시작 처리
+        handleResizeStart(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const resizer = e.target;
+            const cell = resizer.parentElement;
+            const table = cell.closest('table');
+            
+            if (!table) return;
+            
+            // 리사이징 시작 전 모든 셀에 명시적 픽셀 너비 설정
+            this.fixColumnWidths(table);
+            
+            // 리사이징 상태 저장
+            this.state.active = {
+                resizer,
+                cell,
+                table,
+                startX: e.clientX,
+                startWidth: cell.offsetWidth,
+                startTableWidth: table.offsetWidth
+            };
+            
+            // 리사이징 상태 표시
+            resizer.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            
+            // 이벤트 리스너 추가
+            document.addEventListener('mousemove', this.handleResizeMove, true);
+            document.addEventListener('mouseup', this.handleResizeEnd, true);
+        },
+        
+        // 모든 컬럼 너비를 픽셀 단위로 고정
+        fixColumnWidths(table) {
+            table.querySelectorAll('th, td').forEach(cell => {
+                if (!cell.style.width || cell.style.width.indexOf('%') !== -1) {
+                    cell.style.width = cell.offsetWidth + 'px';
+                }
+            });
+        },
+        
+        // 리사이징 중 처리 (정적 메서드로 정의)
+        handleResizeMove(e) {
+            const state = resizerManager.state;
+            if (!state.active) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const deltaX = e.clientX - state.active.startX;
+            const newWidth = state.active.startWidth + deltaX;
+            
+            // 최소 너비 제한
+            if (newWidth > 30) {
+                // 현재 셀 너비만 조정
+                state.active.cell.style.width = newWidth + 'px';
+                
+                // 테이블 전체 너비도 조정 (다른 셀은 그대로 유지)
+                state.active.table.style.width = (state.active.startTableWidth + deltaX) + 'px';
+            }
+        },
+        
+        // 리사이징 종료 처리 (정적 메서드로 정의)
+        handleResizeEnd(e) {
+            const state = resizerManager.state;
+            if (!state.active) return;
+            
+            // 리사이징 클래스 제거
+            state.active.resizer.classList.remove('resizing');
+            
+            // 커서 스타일 복원
+            document.body.style.cursor = '';
+            
+            // 에디터 상태 업데이트
+            resizerManager.notifyEditorUpdate();
+            
+            // 이벤트 리스너 제거
+            document.removeEventListener('mousemove', resizerManager.handleResizeMove, true);
+            document.removeEventListener('mouseup', resizerManager.handleResizeEnd, true);
+            
+            // 상태 초기화
+            state.active = null;
+        },
+        
+        // 에디터 상태 업데이트 알림
+        notifyEditorUpdate() {
+            const editor = document.querySelector('#lite-editor');
+            if (editor && typeof util !== 'undefined' && util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(editor);
+            }
+        },
+        
+        // 에디터 내 모든 테이블 리사이저 초기화
+        initAllTables(contentArea) {
+            if (!contentArea) return;
+            
+            const tables = contentArea.querySelectorAll('table:not(.resizer-initialized)');
+            tables.forEach(table => {
+                this.initTableResizers(table);
+            });
+        }
+    };
+    
+    // 정적 핸들러 설정
+    resizerManager.handleResizeMove = resizerManager.handleResizeMove.bind(resizerManager);
+    resizerManager.handleResizeEnd = resizerManager.handleResizeEnd.bind(resizerManager);
+    
     // 그리드 레이어 관리
     const gridLayerManager = {
         toggleGridLayer(buttonElement) {
             if (state.isGridLayerVisible) {
                 this.hideGridLayer();
-            return;
-        }
-        
+                return;
+            }
+            
             this.showGridLayer(buttonElement);
         },
         
@@ -75,22 +277,33 @@
             // 다른 열린 모달 모두 닫기
             util.activeModalManager.closeAll();
             
+            // 그리드 레이어 생성
             state.gridLayer = this.createGridLayer();
             state.isGridLayerVisible = true;
+            
+            // 레이어 위치 설정 및 표시
+            this.positionAndShowLayer(buttonElement);
+            
+            // 모달 닫기 이벤트 설정
+            this.setupModalCloseEvents();
+        },
         
+        positionAndShowLayer(buttonElement) {
             // PluginUtil을 사용하여 레이어 위치 설정
             util.layer.setLayerPosition(state.gridLayer, buttonElement);
             
-            // 레이어에 closeCallback 추가 (activeModalManager에서 사용)
+            // 레이어를 활성 모달로 등록
             state.gridLayer.closeCallback = () => {
                 this.hideGridLayer();
             };
             
-            // 레이어를 활성 모달로 등록
             util.activeModalManager.register(state.gridLayer);
-        
-            state.gridLayer.style.display = 'block';
             
+            // 레이어 표시
+            state.gridLayer.style.display = 'block';
+        },
+        
+        setupModalCloseEvents() {
             // 모달 닫기 이벤트 설정 (ESC 키 및 외부 클릭)
             state.cleanupFn = util.modal.setupModalCloseEvents(state.gridLayer, () => {
                 this.hideGridLayer();
@@ -98,12 +311,13 @@
         },
         
         hideGridLayer() {
-            if (state.gridLayer) {
-                state.gridLayer.style.display = 'none';
-                
-                // 활성 모달에서 제거
-                util.activeModalManager.unregister(state.gridLayer);
-            }
+            if (!state.gridLayer) return;
+            
+            // 레이어 숨기기
+            state.gridLayer.style.display = 'none';
+            
+            // 활성 모달에서 제거
+            util.activeModalManager.unregister(state.gridLayer);
             state.isGridLayerVisible = false;
             
             // 모달 이벤트 정리
@@ -426,7 +640,7 @@
                 zIndex: '10',
                 fontSize: '11px',
                 marginTop: '0',
-                width: '100%',
+                width: '95%',
                 borderRadius: '0.375rem',
                 backgroundColor: 'white',
                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
@@ -547,13 +761,6 @@
                     color: '#374151'
                 });
                 
-                // 활성화된 아이템 스타일 적용
-                if (option === defaultValue) {
-                    optionEl.classList.add('active');
-                    optionEl.style.backgroundColor = '#f3f4f6';
-                    textCell.style.fontWeight = '500';
-                }
-                
                 // 셀 추가
                 optionEl.appendChild(iconCell);
                 optionEl.appendChild(textCell);
@@ -574,7 +781,6 @@
                     });
                     
                     optionEl.classList.add('active');
-                    optionEl.style.backgroundColor = '#f3f4f6';
                     textCell.style.fontWeight = '500';
                     
                     // 드롭다운 닫기
@@ -588,9 +794,7 @@
                 });
                 
                 optionEl.addEventListener('mouseleave', () => {
-                    if (!optionEl.classList.contains('active')) {
-                        optionEl.style.backgroundColor = '';
-                    }
+                    optionEl.style.backgroundColor = '';
                 });
                 
                 menuContent.appendChild(optionEl);
@@ -641,16 +845,16 @@
     // 테이블 생성 및 삽입
     const tableManager = {
         insertTable(rows, cols, tableOptions = {}) {
-        const editor = document.querySelector('#lite-editor');
-        if (!editor) return;
-        
-        editor.focus();
+            const editor = document.querySelector('#lite-editor');
+            if (!editor) return;
+            
+            editor.focus();
             selectionManager.restoreSelection();
-        
-        // 테이블 스타일 설정
-        const style = tableOptions.style || 'basic';
-        const line = tableOptions.line || 'solid';
-        
+            
+            // 테이블 스타일 설정
+            const style = tableOptions.style || 'basic';
+            const line = tableOptions.line || 'solid';
+            
             // 스타일에 따른 클래스 설정
             let tableClass = '';
             if (style === 'header') {
@@ -667,81 +871,102 @@
             } else if (line === 'no-border') {
                 tableClass += ' lite-table-no-border';
             }
-        
-        // 테이블 생성
+            
+            // 테이블 생성
             const table = util.dom.createElement('table', {
                 className: tableClass
             }, {
                 width: '100%',
-                borderCollapse: 'collapse'
+                borderCollapse: 'collapse',
+                tableLayout: 'fixed' // 테이블 레이아웃을 fixed로 설정
             });
-        
-        // 선 스타일 적용
-        let borderStyle = '1px solid #ccc';
-        if (line === 'dotted') {
+            
+            // 선 스타일 적용
+            let borderStyle = '1px solid #ccc';
+            if (line === 'dotted') {
                 borderStyle = '1px dotted #666';
-        } else if (line === 'no-border') {
+            } else if (line === 'no-border') {
                 // no-border의 경우 에디터에서는 점선으로 표시
                 borderStyle = '0.5px dashed #f8f8f8';
-        }
-        
-        table.style.border = borderStyle;
-        
-        // 테이블 바디 생성
+            }
+            
+            table.style.border = borderStyle;
+            
+            // 테이블 바디 생성
             const tbody = util.dom.createElement('tbody');
-        
-            // Basic 스타일은 기본 구성으로 생성
-            this.createBasicTable(tbody, rows, cols, borderStyle);
-        
-        table.appendChild(tbody);
-        
-        // 현재 선택 위치에 테이블 삽입
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(table);
-        
-        // 테이블 뒤에 줄바꿈 추가
+            
+            // 통합된 테이블 구조 생성
+            this.createTableStructure(tbody, rows, cols, borderStyle, style);
+            
+            table.appendChild(tbody);
+            
+            // 현재 선택 위치에 테이블 삽입
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(table);
+            
+            // 테이블에 리사이저 초기화
+            resizerManager.initTableResizers(table);
+            
+            // 테이블 뒤에 줄바꿈 추가
             const br = util.dom.createElement('br');
-        table.parentNode.insertBefore(br, table.nextSibling);
-        
-        // 커서 위치 이동
-        const newRange = document.createRange();
-        newRange.setStartAfter(br);
-        newRange.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-        
-        // 에디터 상태 업데이트
+            table.parentNode.insertBefore(br, table.nextSibling);
+            
+            // 커서 위치 이동
+            const newRange = document.createRange();
+            newRange.setStartAfter(br);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // 에디터 상태 업데이트
             util.editor.dispatchEditorEvent(editor);
         },
         
-        createHeaderTable(tbody, rows, cols, borderStyle) {
-            // 헤더 테이블은 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
-            this.createBasicTable(tbody, rows, cols, borderStyle);
-        },
-        
-        createColumnTable(tbody, rows, cols, borderStyle) {
-            // 컬럼 테이블도 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
-            this.createBasicTable(tbody, rows, cols, borderStyle);
-        },
-        
-        createComplexTable(tbody, rows, cols, borderStyle) {
-            // 복합 테이블도 기본 테이블과 동일하게 생성하고 CSS로 스타일 적용
-            this.createBasicTable(tbody, rows, cols, borderStyle);
-        },
-        
-        createBasicTable(tbody, rows, cols, borderStyle) {
+        // 통합된 테이블 구조 생성 함수
+        createTableStructure(tbody, rows, cols, borderStyle, tableType) {
+            // 테이블 너비 지정 및 각 셀의 기본 너비 계산 (픽셀 단위)
+            const editorWidth = (document.querySelector('#lite-editor')?.clientWidth || 600) * 0.95; // 테이블 너비 
+            const cellWidth = Math.floor(editorWidth / cols);
+            
+            // 문서 프래그먼트를 사용하여 DOM 삽입 최소화
+            const fragment = document.createDocumentFragment();
+            
             for (let i = 0; i < rows; i++) {
                 const row = util.dom.createElement('tr');
                 
                 for (let j = 0; j < cols; j++) {
-                    const cell = this.createCell(false, borderStyle);
+                    // 테이블 타입에 따라 헤더 셀 결정
+                    let isHeader = false;
+                    
+                    switch (tableType) {
+                        case 'header':
+                            isHeader = (i === 0);
+                            break;
+                        case 'column':
+                            isHeader = (j === 0);
+                            break;
+                        case 'complex':
+                            isHeader = (i === 0 || j === 0);
+                            break;
+                        // basic은 기본값인 false 유지
+                    }
+                    
+                    // 셀에 명시적 너비 지정 (픽셀 단위)
+                    const cellStyles = {
+                        width: cellWidth + 'px'
+                    };
+                    
+                    const cell = this.createCell(isHeader, borderStyle, cellStyles);
                     row.appendChild(cell);
                 }
                 
-                tbody.appendChild(row);
+                fragment.appendChild(row);
             }
+            
+            // 최적화된 DOM 업데이트 (한 번에 모든 행 추가)
+            tbody.appendChild(fragment);
         },
         
         createCell(isHeader, borderStyle, styles = {}) {
@@ -802,6 +1027,42 @@
             
             // 버튼을 툴바에 추가
             toolbar.appendChild(tableButton);
+            
+            // 에디터 로드 후 기존 테이블 리사이저 초기화
+            setTimeout(() => {
+                resizerManager.initAllTables(contentArea);
+            }, 0);
+            
+            // 에디터 콘텐츠 변경 감지를 위한 MutationObserver 설정
+            const tableObserver = new MutationObserver(mutations => {
+                let hasTableChanges = false;
+                
+                mutations.forEach(mutation => {
+                    if (mutation.type === 'childList') {
+                        // 새로운 테이블이 추가되었는지 확인
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeName === 'TABLE') {
+                                hasTableChanges = true;
+                            } else if (node.nodeType === 1) { // Element node
+                                if (node.querySelector('table')) {
+                                    hasTableChanges = true;
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // 테이블 변경이 감지된 경우에만 리사이저 초기화
+                if (hasTableChanges) {
+                    resizerManager.initAllTables(contentArea);
+                }
+            });
+            
+            // observer 설정 및 시작
+            tableObserver.observe(contentArea, {
+                childList: true,
+                subtree: true
+            });
             
             return tableButton;
         }

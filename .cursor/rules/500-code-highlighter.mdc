@@ -1,0 +1,134 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Feature: Code highlighting with highlight.js
+
+## 🎯 Goal
+Implement a code block plugin using [highlight.js](mdc:https:/highlightjs.readthedocs.io/en/latest) that supports:
+- Language-specific syntax highlighting
+- Block-specific theme settings
+- User-selectable languages ​​and themes
+- Highlight.js language auto-detection fallback
+
+---
+
+## ✅ Step 1: Insert a basic code block
+
+### Summary
+When the user clicks the `data_object` icon in the editor toolbar, a selection layer appears where they can select a language and theme, which triggers the following actions in `codeBlock.js`:
+- Insert an empty code block
+- Set focus to the caret inside the new block
+- Dynamically apply syntax highlighting using highlight.js based on the pasted code
+- The selection layer defaults to auto for language and default for theme.
+- highlight.js automatically detects the language using its internal highlightAuto() function if there is no explicit language specification in the code block. This function compares the code content to various language definitions and selects the language with the highest “relevance” score.
+
+### Sample code 
+// 코드 블록 삽입 함수
+function insertCodeBlock(language = 'auto', theme = 'default') {
+  const pre = document.createElement('pre');
+  const code = document.createElement('code');
+  
+  // 언어 클래스 설정
+  if (language !== 'auto') {
+    code.className = `language-${language}`;
+  }
+  
+  code.contentEditable = true;
+  code.spellcheck = false;
+  code.innerText = ''; // 초기 내용
+  
+  pre.appendChild(code);
+  document.execCommand('insertHTML', false, pre.outerHTML);
+  
+  // 포커스 설정
+  setTimeout(() => {
+    code.focus();
+  }, 0);
+  
+  // 테마 적용
+  applyTheme(theme);
+  
+  // 구문 강조 적용
+  if (language === 'auto') {
+    hljs.highlightElement(code);
+  } else {
+    hljs.highlightBlock(code);
+  }
+}
+
+### Behavior
+- highlight.js is fetched via CDN, and the theme is applied via library.css file.
+
+- Required styles (`highlight.js` theme file) should be fetched via CSS (not inline).
+- CSS should be separated into a dedicated file (e.g. `code-highlight.css`).
+
+### Supported languages ​​(selectable):
+
+```js
+[
+'bash', 'cpp', 'csharp', 'css', 'curl', 'dart', 'django',
+'go', 'html', 'java', 'javascript', 'json', 'kotlin',
+'objectivec', 'php', 'properties', 'python', 'rust',
+'typescript', 'xml', 'yaml', 'markdown', 'sql'
+]
+```
+
+### Supported themes
+
+/* Default styles */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css'); /* Dark theme */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/dracula.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/monokai.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/solarized-dark.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/nord.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/obsidian.min.css');
+/* light theme */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/github.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/xcode.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/googlecode.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/idea.min.css');
+
+
+
+### Note
+• If the language is not explicitly set, the default behavior is to auto-detect the language (supported by highlight.js).
+• If the implementation is successful, move on to step 2.
+
+## ✅ Step 2: Language and theme control per block
+
+### Summary
+
+You can add UI controls inside each code block to:
+- Select language (top left dropdown)
+- Select theme (top right dropdown)
+- Since you have already selected the language and theme in the selection layer, this function will perform the change theme, change language functions.
+
+### sample code 
+
+Requirements
+- Each block has a unique ID, and each block can have different languages ​​and themes.
+- Changing the language/theme in one block should not affect other blocks.
+- The dropdown should appear on click, not on hover.
+- Theme changes should be applied to the block immediately.
+- When changing the language, hljs.highlightElement() should be re-run.
+- If you edit inside the block, the new language should be applied.
+
+UI Design
+• Dropdowns use plain HTML <select> or Tailwind popovers.
+• Code blocks use the <pre><code class="language-xxx"></code></pre> structure.
+
+Assets
+• Theme loaded via CDN from https://cdnjs.com/libraries/highlight.js
+• If the requested theme is not available, clearly state "This theme is not available on the CDN."
+
+### 🔒 Constraints
+• Must not interfere with other plugins.
+• Initialization should be lightweight.
+• Language and theme lists should be easily extensible via settings.
+• Don't over-design. Copy the structure of the code-highlight.html file.
+• Use MutationObserver if needed to re-apply highlighting when code content changes.
+⸻

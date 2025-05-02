@@ -13,7 +13,7 @@ const LiteEditor = (function() {
   // 플러그인 순서 - 한 곳에서만 정의 (중복 제거)
   const PLUGIN_ORDER = [
     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
-    'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
+    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
     'line', 'blockquote', 'code', 'codeBlock',                // 인용 및 코드 
@@ -25,7 +25,21 @@ const LiteEditor = (function() {
   const defaultConfig = {
     plugins: PLUGIN_ORDER,  // 플러그인 순서 상수 참조
     placeholder: '내용을 입력하세요...',
-    dividers: [4, 8, 12, 16, 19] // 구분선 위치 정의
+    dividers: [4, 8, 12, 16, 19], // 구분선 위치 정의
+    dimensions: {
+      editor: {
+        width: '100%',
+        height: 'auto'
+      },
+      toolbar: {
+        width: '100%',
+        height: 'auto'
+      },
+      content: {
+        width: '100%',
+        minHeight: '120px'
+      }
+    }
   };
   
   /**
@@ -133,6 +147,55 @@ const LiteEditor = (function() {
       }
     }
     
+    // 에디터 크기 설정 (사용자 정의 dimensions 적용)
+    if (config.dimensions) {
+      // 에디터 컨테이너 크기 적용
+      if (config.dimensions.editor) {
+        if (config.dimensions.editor.width) {
+          editorContainer.style.width = config.dimensions.editor.width;
+        }
+        if (config.dimensions.editor.height) {
+          editorContainer.style.height = config.dimensions.editor.height;
+        }
+        if (config.dimensions.editor.maxWidth) {
+          editorContainer.style.maxWidth = config.dimensions.editor.maxWidth;
+        }
+      }
+      
+      // 툴바 크기 적용
+      if (config.dimensions.toolbar) {
+        if (config.dimensions.toolbar.width) {
+          toolbar.style.width = config.dimensions.toolbar.width;
+        }
+        if (config.dimensions.toolbar.height) {
+          toolbar.style.height = config.dimensions.toolbar.height;
+          toolbar.style.minHeight = config.dimensions.toolbar.height;
+          toolbar.style.maxHeight = config.dimensions.toolbar.height;
+          toolbar.style.overflow = 'hidden'; // 툴바 내용이 넘칠 경우 숨김 처리
+        }
+      }
+      
+      // 콘텐츠 영역 크기 적용
+      if (config.dimensions.content) {
+        if (config.dimensions.content.width) {
+          contentArea.style.width = config.dimensions.content.width;
+        }
+        if (config.dimensions.content.height) {
+          contentArea.style.height = config.dimensions.content.height;
+          contentArea.style.maxHeight = config.dimensions.content.height;
+          contentArea.style.overflowY = 'auto'; // 내용이 넘칠 경우 스크롤 표시
+        }
+        if (config.dimensions.content.minHeight) {
+          contentArea.style.minHeight = config.dimensions.content.minHeight;
+        }
+      }
+      
+      // 자동 높이 계산이 아닌 경우 컨테이너 내부 요소 조정
+      if (config.dimensions.editor.height && config.dimensions.editor.height !== 'auto') {
+        editorContainer.style.overflow = 'hidden'; // 컨테이너 넘침 방지
+      }
+    }
+    
     // 이벤트 리스너 설정
     setupEventListeners(contentArea, originalElement);
     
@@ -212,7 +275,7 @@ const LiteEditor = (function() {
         else if (pluginName === 'fontFamily') { defaultIcon = 'font_download'; defaultTitle = 'Font'; }
         else if (pluginName === 'fontSize') { defaultIcon = 'format_size'; defaultTitle = 'Font Size'; }
         else if (pluginName === 'fontColor') { defaultIcon = 'format_color_text'; defaultTitle = 'Font Color'; }
-        else if (pluginName === 'highlight') { defaultIcon = 'highlight'; defaultTitle = 'Highlight'; }
+        else if (pluginName === 'emphasis') { defaultIcon = 'emphasis'; defaultTitle = 'Emphasis'; }
         else if (pluginName === 'bold') { defaultIcon = 'format_bold'; defaultTitle = 'Bold'; }
         else if (pluginName === 'italic') { defaultIcon = 'format_italic'; defaultTitle = 'Italic'; }
         else if (pluginName === 'underline') { defaultIcon = 'format_underlined'; defaultTitle = 'Underline'; }
@@ -222,7 +285,7 @@ const LiteEditor = (function() {
         else if (pluginName === 'outdent') { defaultIcon = 'format_indent_decrease'; defaultTitle = 'Outdent'; }
         else if (pluginName === 'blockquote') { defaultIcon = 'format_quote'; defaultTitle = 'Blockquote'; }
         else if (pluginName === 'code') { defaultIcon = 'code'; defaultTitle = 'Code'; }
-        else if (pluginName === 'codeBlock') { defaultIcon = 'receipt'; defaultTitle = 'Code Block'; }
+        else if (pluginName === 'codeBlock') { defaultIcon = 'data_object'; defaultTitle = 'Code Block'; }
         else if (pluginName === 'bulletList') { defaultIcon = 'format_list_bulleted'; defaultTitle = 'Bullet List'; }
         else if (pluginName === 'numberList') { defaultIcon = 'format_list_numbered'; defaultTitle = 'Number List'; }
         else if (pluginName === 'checkList') { defaultIcon = 'checklist'; defaultTitle = 'Check List'; }
@@ -257,7 +320,7 @@ const LiteEditor = (function() {
               if (headingLevel && ['1', '2', '3'].includes(headingLevel)) {
                 document.execCommand('formatBlock', false, 'h' + headingLevel);
               }
-            } else if (pluginName === 'highlight') {
+            } else if (pluginName === 'emphasis') {
               // 배경색 기능 구현
               document.execCommand('hiliteColor', false, 'yellow');
             } else if (pluginName === 'align') {

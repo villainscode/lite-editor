@@ -203,3 +203,54 @@
 .lite-table-no-border th {
   border: 0.5px dashed #f8f8f8 !important;
 }
+
+/* 테이블 리사이저 스타일 */
+.lite-editor table th,
+.lite-editor table td {
+    position: relative;
+}
+
+.lite-editor .resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    background-color: transparent;
+    transition: background-color 0.2s;
+    z-index: 10;  /* 리사이저를 더 높은 z-index로 설정 */
+}
+
+.lite-editor .resizer:hover {
+    background-color: rgba(0, 120, 212, 0.2);
+}
+
+.lite-editor .resizer.resizing {
+    background-color: rgba(0, 120, 212, 0.4);
+}
+
+/* 리사이징 활성화 상태의 에디터 스타일 */
+#lite-editor.resizing-active {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+/* 리사이징 중에는 텍스트 선택 방지 */
+#lite-editor.resizing-active * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+/* 리사이저 hover 시 명확하게 표시 */
+.lite-editor .resizer:hover::after,
+.lite-editor .resizer.resizing::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 100%;
+    background-color: rgba(0, 120, 212, 0.6);
+}
