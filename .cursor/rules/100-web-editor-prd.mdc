@@ -122,7 +122,7 @@ alwaysApply: true
     *   폰트 종류 변경, 설정 레이어 연동 
 *   **`js/plugins/fontColor.js`**:
     *   텍스트 색상 변경, 설정 레이어 연동 
-*   **`js/plugins/highlight.js`**:
+*   **`js/plugins/emphasis.js`**:
     *   텍스트 배경색 변경, 설정 레이어 연동 
 *   **`js/plugins/reset.js`**:
     *   서식 제거 기능 

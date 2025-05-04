@@ -434,7 +434,7 @@ const LiteEditor = (function() {
               document.execCommand('removeFormat', false, null);
             } else {
               // 기본 기능이 없는 경우, 아직 구현되지 않았음을 알림
-              console.log(`플러그인 ${pluginName}은 아직 구현되지 않았습니다.`);
+              console.log(`플러그인 ${pluginName}은 `);
             }
           }
         };

@@ -32,7 +32,7 @@
         'js/plugins/code.js',
         'js/plugins/blockquote.js',
         
-        // 5. highlight.js 로더 및 코드 블록 플러그인
+        // 5. 코드 블록 플러그인
         'js/plugins/codeBlock.js',
         
         // 6. 폰트 및 색상 관련 플러그인
