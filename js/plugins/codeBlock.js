@@ -16,7 +16,8 @@
   
   // 지원 언어 목록
   const LANGUAGES = [
-    { value: "auto", label: "자동 감지" },
+    { value: "", label: "Select Code..." },
+    { value: "auto", label: "Auto detect" },
     { value: "bash", label: "Bash" },
     { value: "c", label: "C" },
     { value: "css", label: "CSS" },
@@ -155,7 +156,7 @@
     // 선택된 텍스트 표시 영역
     const selectedText = document.createElement('span');
     selectedText.className = 'lite-editor-code-dropdown-text';
-    selectedText.textContent = '자동 감지';
+    selectedText.textContent = 'Select Code...';
     
     // 화살표 아이콘
     const arrowIcon = document.createElement('span');
@@ -182,8 +183,8 @@
       item.dataset.value = lang.value;
       item.textContent = lang.label;
       
-      // 자동 감지 옵션을 기본 선택으로 표시
-      if (lang.value === 'auto') {
+      // 첫 번째 항목(Select Code...)을 기본 선택으로 표시
+      if (lang.value === '') {
         item.classList.add('active');
       }
       
@@ -272,7 +273,7 @@
     activeLayer.className = 'lite-editor-code-block-layer';
     activeLayer.innerHTML = `
       <div class="lite-editor-code-block-form">
-        <textarea placeholder="코드를 입력하세요..." class="lite-editor-code-input"></textarea>
+        <textarea placeholder="Please insert your code here" class="lite-editor-code-input"></textarea>
         <div class="lite-editor-code-block-actions">
           <button class="lite-editor-code-insert-btn">
             <span class="material-icons" style="font-size: 18px; color: #5f6368;">add_circle</span>
@@ -367,9 +368,11 @@
     if (!code.trim()) return;
     
     try {
-      // 언어 결정: 자동 감지 또는 선택된 언어 사용
+      // 언어 결정: 빈 값이면 plain, 자동 감지면 감지 시도, 아니면 선택값 사용
       let finalLanguage = language;
-      if (language === 'auto' || !language) {
+      if (!language) {
+        finalLanguage = 'plain';
+      } else if (language === 'auto') {
         finalLanguage = SpeedHighlight.detectLanguage(code) || 'plain';
       }
       
