@@ -22,3 +22,5 @@
 <!-- feature/2025-04-26 브랜치를 현재 브랜치에 병합하고 푸시 ./gitx merge-from feature/2025-04-26 -->
 ./gitx merge-from  [branch명]
 
+<!-- 현재 진행 중인 병합 취소 (git merge --abort) >
+./gitx abort                              

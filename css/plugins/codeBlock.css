@@ -9,7 +9,7 @@
   overflow: hidden;
 }
 
-/* 코드 영역 스타일 & 배경색 지정 */
+/* 코드 영역 스타일 & 배경색 지정 (원래 없음) */
 .lite-editor-code-block [class*="shj-lang-"] {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 13px;
