@@ -11,6 +11,7 @@
   // 전역 상태 변수 추가
   let savedRange = null;          // 임시로 저장된 선택 영역
   
+  // TODO 리팩토링 (공통 영역 util로 빼기)
   // 선택 영역 저장 함수 복구 (기능 유지)
   function saveSelection() {
     if (window.liteEditorSelection) {
@@ -25,7 +26,8 @@
       }
     }
   }
-  
+
+  // TODO 리팩토링 (공통 영역 util로 빼기)
   // 선택 영역 복원 함수 복구 (기능 유지)
   function restoreSelection() {
     if (!savedRange) return false;
