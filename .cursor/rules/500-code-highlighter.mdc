@@ -3,132 +3,173 @@ description:
 globs: 
 alwaysApply: false
 ---
-# Feature: Code highlighting with highlight.js
+# Feature: Code highlighting with Speed-highlight JS
 
 ## 🎯 Goal
-Implement a code block plugin using [highlight.js](mdc:https:/highlightjs.readthedocs.io/en/latest) that supports:
+Implement a code block plugin using [Speed-highlight JS](mdc:https:/github.com/speed-highlight/core) that supports:
 - Language-specific syntax highlighting
-- Block-specific theme settings
-- User-selectable languages ​​and themes
-- Highlight.js language auto-detection fallback
+- Light-weight, performant code highlighting (only ~2KB for core + ~1KB per language)
+- User-selectable languages
+- Automatic language detection fallback
 
 ---
 
-## ✅ Step 1: Insert a basic code block
+## ✅ Step 1: Insert a code block
 
 ### Summary
-When the user clicks the `data_object` icon in the editor toolbar, a selection layer appears where they can select a language and theme, which triggers the following actions in `codeBlock.js`:
-- Insert an empty code block
-- Set focus to the caret inside the new block
-- Dynamically apply syntax highlighting using highlight.js based on the pasted code
-- The selection layer defaults to auto for language and default for theme.
-- highlight.js automatically detects the language using its internal highlightAuto() function if there is no explicit language specification in the code block. This function compares the code content to various language definitions and selects the language with the highest “relevance” score.
+When the user clicks the `data_object` icon in the editor toolbar, a selection layer appears where they can:
+- Enter their code in a textarea
+- Select a language from the dropdown (or use auto-detection)
+- Insert the formatted code block into the editor
 
-### Sample code 
-// 코드 블록 삽입 함수
-function insertCodeBlock(language = 'auto', theme = 'default') {
-  const pre = document.createElement('pre');
-  const code = document.createElement('code');
-  
-  // 언어 클래스 설정
-  if (language !== 'auto') {
-    code.className = `language-${language}`;
-  }
-  
-  code.contentEditable = true;
-  code.spellcheck = false;
-  code.innerText = ''; // 초기 내용
-  
-  pre.appendChild(code);
-  document.execCommand('insertHTML', false, pre.outerHTML);
-  
-  // 포커스 설정
-  setTimeout(() => {
-    code.focus();
-  }, 0);
-  
-  // 테마 적용
-  applyTheme(theme);
-  
-  // 구문 강조 적용
-  if (language === 'auto') {
-    hljs.highlightElement(code);
-  } else {
-    hljs.highlightBlock(code);
-  }
-}
+The code block system in `codeBlock.js` will:
+- Create a well-formatted code container
+- Insert the escaped code content
+- Dynamically apply syntax highlighting using Speed-highlight JS
+- Auto-detect language when "자동 감지" is selected
 
-### Behavior
-- highlight.js is fetched via CDN, and the theme is applied via library.css file.
+### Implementation details
 
-- Required styles (`highlight.js` theme file) should be fetched via CSS (not inline).
-- CSS should be separated into a dedicated file (e.g. `code-highlight.css`).
-
-### Supported languages ​​(selectable):
-
-```js
-[
-'bash', 'cpp', 'csharp', 'css', 'curl', 'dart', 'django',
-'go', 'html', 'java', 'javascript', 'json', 'kotlin',
-'objectivec', 'php', 'properties', 'python', 'rust',
-'typescript', 'xml', 'yaml', 'markdown', 'sql'
-]
+The plugin loads Speed-highlight JS resources from CDN:
+```javascript
+const CDN_SCRIPT = 'https://unpkg.com/@speed-highlight/core/dist/index.js';
+const CDN_STYLE = 'https://unpkg.com/@speed-highlight/core/dist/themes/default.css';
+const CDN_DETECT = 'https://unpkg.com/@speed-highlight/core/dist/detect.js';
 ```
 
-### Supported themes
+Code blocks are created with the following structure:
+```html
+<div class="lite-editor-code-block">
+  <div class="shj-lang-${language}">${escapedCode}</div>
+</div>
+```
 
-/* Default styles */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css'); /* Dark theme */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/dracula.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/monokai.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/solarized-dark.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/nord.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/obsidian.min.css');
-/* light theme */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/github.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/xcode.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/googlecode.min.css');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/idea.min.css');
+Syntax highlighting is applied using:
+```javascript
+SpeedHighlight.highlightElement(element, language);
+```
 
+### Supported languages
 
+The plugin supports the following languages:
+```javascript
+const LANGUAGES = [
+  { value: "auto", label: "자동 감지" },
+  { value: "bash", label: "Bash" },
+  { value: "c", label: "C" },
+  { value: "css", label: "CSS" },
+  { value: "docker", label: "Docker" },
+  { value: "go", label: "Go" },
+  { value: "html", label: "HTML" },
+  { value: "http", label: "HTTP" },
+  { value: "java", label: "Java" },
+  { value: "js", label: "JavaScript" },
+  { value: "json", label: "JSON" },
+  { value: "md", label: "Markdown" },
+  { value: "plain", label: "Plain Text" },
+  { value: "py", label: "Python" },
+  { value: "rs", label: "Rust" },
+  { value: "sql", label: "SQL" },
+  { value: "ts", label: "TypeScript" },
+  { value: "xml", label: "XML" },
+  { value: "yaml", label: "YAML" }
+];
+```
 
-### Note
-• If the language is not explicitly set, the default behavior is to auto-detect the language (supported by highlight.js).
-• If the implementation is successful, move on to step 2.
+### Behavior
 
-## ✅ Step 2: Language and theme control per block
+1. When the user clicks the code block button, a layer appears with:
+   - A text area for entering code
+   - A language dropdown (default: "자동 감지")
+   - An insert button
 
-### Summary
+2. When the user inserts code:
+   - Code is escaped to prevent HTML injection
+   - If "자동 감지" is selected, the plugin uses `detectLanguage()` to determine the language
+   - The code block is inserted at the current cursor position
+   - Speed-highlight JS applies syntax highlighting
 
-You can add UI controls inside each code block to:
-- Select language (top left dropdown)
-- Select theme (top right dropdown)
-- Since you have already selected the language and theme in the selection layer, this function will perform the change theme, change language functions.
+3. Styling:
+   - The default theme from Speed-highlight JS is applied
+   - Additional custom styles are defined in `css/plugins/codeBlock.css`
+   - Code blocks are displayed with a rounded border, proper font family, and appropriate spacing
 
-### sample code 
+## ✅ Step 2: CSS and styling
 
-Requirements
-- Each block has a unique ID, and each block can have different languages ​​and themes.
-- Changing the language/theme in one block should not affect other blocks.
-- The dropdown should appear on click, not on hover.
-- Theme changes should be applied to the block immediately.
-- When changing the language, hljs.highlightElement() should be re-run.
-- If you edit inside the block, the new language should be applied.
+### Code block styling
 
-UI Design
-• Dropdowns use plain HTML <select> or Tailwind popovers.
-• Code blocks use the <pre><code class="language-xxx"></code></pre> structure.
+The code blocks are styled with CSS:
+```css
+/* 코드 블록 컨테이너 */
+.lite-editor-code-block {
+  border-radius: 4px;
+  overflow: hidden;
+}
 
-Assets
-• Theme loaded via CDN from https://cdnjs.com/libraries/highlight.js
-• If the requested theme is not available, clearly state "This theme is not available on the CDN."
+/* 코드 영역 스타일 */
+.lite-editor-code-block [class*="shj-lang-"] {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 1em;
+  overflow-x: auto;
+  white-space: pre;
+  background-color: #f4f4f4 !important;  
+  tab-size: 2;
+}
+```
 
-### 🔒 Constraints
-• Must not interfere with other plugins.
-• Initialization should be lightweight.
-• Language and theme lists should be easily extensible via settings.
-• Don't over-design. Copy the structure of the code-highlight.html file.
-• Use MutationObserver if needed to re-apply highlighting when code content changes.
-⸻
+### Input layer styling
+
+The code input layer is also styled:
+```css
+/* 코드 입력 레이어 */
+.lite-editor-code-block-layer {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  z-index: 9999;
+  position: fixed;
+  display: block;
+}
+
+/* 코드 입력 폼 */
+.lite-editor-code-block-form {
+  padding: 10px;
+}
+
+/* 코드 입력 텍스트영역 */
+.lite-editor-code-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+```
+
+## 🔒 Implementation considerations
+
+1. **Performance**: Speed-highlight JS is lightweight (~2KB core + ~1KB per language) and faster than alternative libraries like highlight.js and Prism.js
+
+2. **Language detection**: When "자동 감지" is selected, the plugin uses `detectLanguage()` from Speed-highlight JS to analyze code and determine the appropriate language
+
+3. **Error handling**: The plugin includes comprehensive error handling for loading scripts, inserting code blocks, and applying syntax highlighting
+
+4. **Accessibility**: The dropdown menu includes proper ARIA attributes and keyboard navigation support
+
+5. **Security**: User input is properly escaped to prevent XSS vulnerabilities
+
+## 📝 Future enhancements
+
+1. **Theme selection**: Add support for selecting different Speed-highlight JS themes
+2. **Line numbers**: Implement optional line numbers for code blocks
+3. **Copy button**: Add a button to copy code block content to clipboard
+4. **Code folding**: Add support for collapsible code sections
+5. **Local caching**: Implement local caching of Speed-highlight JS resources to reduce reliance on CDN
