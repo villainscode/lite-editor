@@ -24,7 +24,7 @@ alwaysApply: true
                 // 사용할 플러그인 목록 지정
                 plugins: [
                     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
-                    'fontFamily', 'heading', 'fontColor', 'highlight',        // 폰트서식 
+                    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
                     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
                     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
                     'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
@@ -55,7 +55,7 @@ alwaysApply: true
         });
     </script>
     - plugins 에서 설치 후 화면에 표시할 아이콘들을 지정해줍니다. 
-    - 현재 전체 기능은 historyInit', 'undo', 'redo', 'reset', 'fontFamily', 'heading', 'fontColor', 'highlight', 'bold', 'italic', 'underline', 'strike','link', 'imageUpload', 'table', 'media','line','blockquote', 'code', 'codeBlock', 'unorderedList','orderedList', 'checkList', 'align', 'formatIndent' 의 순서대로 아이콘이 표시됩니다.
+    - 현재 전체 기능은 historyInit', 'undo', 'redo', 'reset', 'fontFamily', 'heading', 'fontColor', 'emphasis', 'bold', 'italic', 'underline', 'strike','link', 'imageUpload', 'table', 'media','line','blockquote', 'code', 'codeBlock', 'unorderedList','orderedList', 'checkList', 'align', 'formatIndent' 의 순서대로 아이콘이 표시됩니다.
     - dividers로 아이콘 사이에 구분선을 넣을 수 있습니다. 숫자로 표시된 값을 통해 아이콘의 다음 칸에 구분선을 넣어줍니다.
     - dimensionsd의 값에 따라 에디터의 너비, 높이, 최대 높이, 에디터 툴바의 높이, 컨텐츠의 높이를 지정할 수 있습니다.
     - 에디터 툴바의 아래에 rich 모드와 source 모드를 화면에서 전환할 수 있도록 탭 매뉴를 추가할 수 있습니다. 
