@@ -92,17 +92,13 @@
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    */
   function showMediaModal(buttonElement, contentArea) {
-    
-    // 선택 영역 저장
-    saveSelection();
-    
     // 기존 모달 닫기
     closeMediaModal();
     
     // 다른 활성화된 모달 모두 닫기
     util.activeModalManager.closeAll();
     
-    // 모달 생성 - link.js와 유사한 방식으로 HTML 문자열 사용
+    // 모달 생성
     activeModal = document.createElement('div');
     activeModal.className = 'lite-editor-media-popup';
     activeModal.innerHTML = `
@@ -117,9 +113,15 @@
       </div>
     `;
     
+    // 현재 스크롤 위치 저장 (추가 코드)
+    const currentScrollY = window.scrollY;
+    
     // 모달 위치 설정 및 등록
     document.body.appendChild(activeModal);
     util.layer.setLayerPosition(activeModal, buttonElement);
+    
+    // 스크롤 위치 복원 (추가 코드)
+    window.scrollTo(window.scrollX, currentScrollY);
     
     activeModal.closeCallback = closeMediaModal;
     util.activeModalManager.register(activeModal);
@@ -140,7 +142,6 @@
         return;
       }
       
-      contentArea.focus();
       setTimeout(() => insertYouTubeVideo(url, contentArea), 0);
     };
     
@@ -245,12 +246,14 @@
    */
   function insertYouTubeVideo(url, contentArea) {
     try {
+      // 현재 스크롤 위치 저장
+      const currentScrollY = window.scrollY;
+      
       // URL 유효성 검사
       if (!isValidYouTubeUrl(url)) {
         alert('유효한 YouTube URL을 입력해주세요.');
         return;
       }
-      
       
       // YouTube ID 추출
       const videoId = parseYouTubeID(url);
@@ -258,10 +261,6 @@
       // 모달 닫기
       closeMediaModal();
       
-      // 컨텐트 영역에 포커스 주고 선택 영역 복원
-      contentArea.focus();
-      
-      // 선택 영역 복원 후 삽입 진행
       // 선택 영역 복원
       restoreSelection();
       
@@ -300,8 +299,7 @@
         selection.removeAllRanges();
         selection.addRange(range);
         
-        // 포커스 유지
-        contentArea.focus();
+        // 포커스는 이미 selection 조작으로 처리됨
       } else {
         // 선택 영역이 없는 경우 에디터 끝에 삽입
         contentArea.appendChild(wrapper);
@@ -315,11 +313,13 @@
       // 선택 영역 초기화
       clearSelection();
       
+      // 스크롤 위치 복원
+      setTimeout(() => {
+        window.scrollTo(window.scrollX, currentScrollY);
+      }, 0);
+      
     } catch (error) {
       console.error('동영상 삽입 중 오류 발생:', error);
-    } finally {
-      // 언제나 선택 영역 초기화
-      clearSelection();
     }
   }
   
@@ -347,8 +347,14 @@
       return;
     }
     
+    // 현재 선택 영역 저장 (추가 코드)
+    saveSelection();
+    
     // 모달이 닫혀있는 경우 열기 (토글 동작)
     showMediaModal(buttonElement, contentArea);
+    
+    // 이벤트 전파 중지를 위한 추가 코드
+    return false;
   }
   
   /**
@@ -358,7 +364,52 @@
     LiteEditor.registerPlugin(PLUGIN_ID, {
       icon: 'live_tv',
       title: 'Insert Media',
-      action: insertMedia
+      customRender: function(toolbar, contentArea) {
+        // 버튼 생성
+        const button = util.dom.createElement('button', {
+          className: 'lite-editor-button lite-editor-media-button',
+          title: 'Insert Media'
+        });
+        
+        // 아이콘 추가
+        const icon = util.dom.createElement('i', {
+          className: 'material-icons',
+          textContent: 'live_tv'
+        });
+        
+        button.appendChild(icon);
+        
+        // 버튼을 활성 모달 관리자에 등록
+        util.activeModalManager.registerButton(button);
+        
+        // 클릭 이벤트 추가
+        button.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 모달 닫기 진행 중이면 무시
+          if (isClosingModal) {
+            return;
+          }
+          
+          // 모달이 열려있는 경우 닫기 (토글 동작)
+          if (activeModal && activeModal.parentNode) {
+            closeMediaModal();
+            return;
+          }
+          
+          // 선택 영역 저장
+          saveSelection();
+          
+          // 모달 표시
+          showMediaModal(button, contentArea);
+        });
+        
+        // 버튼을 툴바에 추가
+        toolbar.appendChild(button);
+        
+        return button;
+      }
     });
   }
 })();

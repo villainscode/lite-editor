@@ -3,15 +3,23 @@ set -euo pipefail
 
 # ──────────────────────────────────────────────────────────────
 # 사용법 (프로젝트 로컬)
-#   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push)
-#   ./gitx commit "[prefix] : Your commit"    # git add → commit
-#   ./gitx push                               # git fetch → push
-#   ./gitx reset                            # 로컬 변경사항 버리기 (reset --hard, clean -fd)
-#   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합
-#   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all)
-#   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃
-#   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시
-#   ./gitx abort                              # 현재 진행 중인 병합 취소 (git merge --abort)
+#   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push) - ./gitx "feat : 로그인 기능 추가"
+#
+#   ./gitx commit "[prefix] : Your commit"    # git add → commit - ./gitx commit "feat : 로그인 기능 추가"
+#
+#   ./gitx push                               # git fetch → push - ./gitx push
+#
+#   ./gitx reset                              # 로컬 변경사항 버리기 (reset --hard, clean -fd) - ./gitx reset
+#
+#   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합 - ./gitx merge 
+#
+#   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all) - ./gitx fetch
+#
+#   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃 - ./gitx checkout feature/login
+#
+#   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시 - ./gitx merge-from develop
+#
+#   ./gitx abort                              # 현재 진행 중인 병합 취소 (git merge --abort) - ./gitx abort
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {
@@ -48,7 +56,11 @@ do_merge() {
     exit 1
   fi
 
+  # 두 번째 인자로 커밋 메시지를 받거나, 기본 메시지 사용
+  merge_msg="${2:-"Merge branch '$current_branch' into main"}"
+
   echo "ℹ️ 현재 브랜치 '$current_branch'를 'main' 브랜치로 병합합니다."
+  echo "ℹ️ 커밋 메시지: \"$merge_msg\""
   read -p "계속하시겠습니까? (y/N): " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "취소되었습니다."
@@ -60,7 +72,7 @@ do_merge() {
   echo "🔄 'main' 브랜치의 최신 변경사항을 가져오는 중..."
   git pull origin main
   echo "🔄 '$current_branch' 브랜치를 'main'으로 병합 중..."
-  git merge "$current_branch" --no-ff
+  git merge "$current_branch" --no-ff -m "$merge_msg"
   echo "✅ '$current_branch' 브랜치가 'main'으로 병합되었습니다."
   echo "ℹ️ 변경사항을 원격 'main' 브랜치에 푸시하려면 './gitx push'를 실행하세요."
 }
@@ -145,7 +157,7 @@ case "$cmd" in
     do_reset
     ;;
   merge)
-    do_merge
+    do_merge "$@"
     ;;
   merge-from)
     do_merge_from "$@"

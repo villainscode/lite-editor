@@ -134,6 +134,12 @@ const PluginUtil = (function() {
          * @returns {Range|null} 저장된 Range 객체
          */
         saveSelection() {
+            // liteEditorSelection이 있으면 먼저 사용
+            if (window.liteEditorSelection) {
+                window.liteEditorSelection.save();
+                return window.liteEditorSelection.get();
+            }
+            
             const sel = window.getSelection();
             if (sel.rangeCount > 0) {
                 return sel.getRangeAt(0).cloneRange();
@@ -144,12 +150,25 @@ const PluginUtil = (function() {
         /**
          * 저장된 선택 영역 복원
          * @param {Range} savedRange - 저장된 Range 객체
+         * @returns {boolean} 복원 성공 여부
          */
         restoreSelection(savedRange) {
-            if (savedRange) {
+            if (!savedRange) return false;
+            
+            // liteEditorSelection이 있으면 먼저 사용
+            if (window.liteEditorSelection) {
+                window.liteEditorSelection.restore();
+                return true;
+            }
+            
+            try {
                 const sel = window.getSelection();
                 sel.removeAllRanges();
                 sel.addRange(savedRange);
+                return true;
+            } catch (e) {
+                console.error('선택 영역 복원 실패:', e);
+                return false;
             }
         },
         
