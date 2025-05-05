@@ -4,6 +4,9 @@
  */
 
 (function() {
+  // 전역 상태 변수 추가
+  let savedRange = null;          // 임시로 저장된 선택 영역
+  
   // 안전하게 Selection 객체를 가져오는 함수
   function getSafeSelection() {
     try {
@@ -12,6 +15,27 @@
       console.warn('Error getting selection:', e);
       return null;
     }
+  }
+  
+  // 선택 영역 저장 함수
+  function saveSelection() {
+    const selection = getSafeSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedRange = selection.getRangeAt(0).cloneRange();
+    }
+  }
+
+  // 선택 영역 복원 함수
+  function restoreSelection() {
+    if (!savedRange) return false;
+    
+    const selection = getSafeSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+      return true;
+    }
+    return false;
   }
 
   // 제목 플러그인
@@ -32,13 +56,14 @@
       
       // 드롭다운 생성
       const dropdownMenu = document.createElement('div');
-      dropdownMenu.className = 'lite-editor-dropdown-menu';
-      
-      // 드롭다운 헤더 생성
-      const dropdownHeader = document.createElement('div');
-      dropdownHeader.className = 'lite-editor-dropdown-header';
-      dropdownHeader.textContent = 'Heading';
-      dropdownMenu.appendChild(dropdownHeader);
+      dropdownMenu.className = 'lite-editor-heading-dropdown';
+      dropdownMenu.style.position = 'absolute';
+      dropdownMenu.style.zIndex = '2147483647';
+      dropdownMenu.style.backgroundColor = '#fff';
+      dropdownMenu.style.border = '1px solid #ccc';
+      dropdownMenu.style.borderRadius = '4px';
+      dropdownMenu.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      dropdownMenu.style.padding = '8px 0';
       
       // 제목 레벨 옵션
       const headingLevels = [
@@ -51,17 +76,17 @@
       // 각 제목 레벨에 대한 옵션 추가
       headingLevels.forEach(level => {
         const option = document.createElement('div');
-        option.className = 'lite-editor-dropdown-item lite-editor-heading-' + level.tag;
+        option.className = 'lite-editor-heading-option lite-editor-heading-' + level.tag;
         option.textContent = level.text;
         
         // 해당 태그에 맞는 스타일 적용
         switch (level.tag) {
           case 'h1':
-            option.style.fontSize = '24px';
+            option.style.fontSize = '28px';
             option.style.fontWeight = 'bold';
             break;
           case 'h2':
-            option.style.fontSize = '20px';
+            option.style.fontSize = '22px';
             option.style.fontWeight = 'bold';
             break;
           case 'h3':
@@ -77,21 +102,24 @@
         // 클릭 이벤트
         option.addEventListener('click', (e) => {
           e.preventDefault();
-          // e.stopPropagation() 제거 - 이벤트 전파 허용
+          e.stopPropagation();
           
-          // 선택 영역 처리
-          if (window.liteEditorSelection) {
-            // 1. 선택 영역 저장
-            window.liteEditorSelection.save();
-            
-            // 2. 에디터 포커스
+          // 현재 스크롤 위치 저장
+          const currentScrollY = window.scrollY;
+          
+          // 드롭다운 닫기
+          closeDropdown();
+          
+          // 에디터에 포커스 (스크롤 방지 옵션 추가)
+          try {
+            contentArea.focus({ preventScroll: true });
+          } catch (e) {
+            // 일부 구형 브라우저에서는 preventScroll 옵션을 지원하지 않음
             contentArea.focus();
-            
-            // 3. 선택 영역 복원
-            window.liteEditorSelection.restore();
           }
           
-          console.log('level : ', level);
+          // 선택 영역 복원
+          restoreSelection();
           
           // Range API를 사용한 heading 적용 (직접 DOM 조작)
           const selection = getSafeSelection();
@@ -188,7 +216,7 @@
                 selection.addRange(newRange);
               }
             } else {
-              // 새 테그 요소 생성 (H1, H2, H3, P)
+              // 새 태그 요소 생성 (H1, H2, H3, P)
               const heading = document.createElement(level.tag.toUpperCase());
               
               // 선택한 내용을 사용하여 새 요소에 추가
@@ -200,92 +228,86 @@
               console.log('새 헤딩 적용:', level.tag.toUpperCase());
             }
             
-            // 선택 영역 정리
-            selection.removeAllRanges();
-            selection.addRange(range);
+            // 에디터 상태 업데이트
+            contentArea.dispatchEvent(new Event('input', { bubbles: true }));
           } else {
             console.log('선택된 범위가 없습니다.');
           }
           
-          // 드롭다운 닫기 (클래스만 제거하지 말고 closeDropdown 함수 호출)
-          closeDropdown();
-          
-          // 5. 선택 영역 재저장
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.save();
-          }
+          // 스크롤 위치 복원 (애니메이션 프레임 사용)
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              window.scrollTo(window.scrollX, currentScrollY);
+            }, 50);
+          });
         });
         
         dropdownMenu.appendChild(option);
       });
       
-      // 드롭다운 관리를 위한 변수
-      let documentClickHandler;
-      
       // 드롭다운 닫기 함수
       const closeDropdown = () => {
-        dropdownMenu.classList.remove('show');
-        // 문서 레벨 클릭 이벤트 리스너 제거
-        if (documentClickHandler) {
-          document.removeEventListener('click', documentClickHandler);
-          documentClickHandler = null;
+        dropdownMenu.style.display = 'none';
+        document.removeEventListener('click', documentClickHandler);
+      };
+      
+      // 문서 클릭 이벤트 핸들러
+      const documentClickHandler = (e) => {
+        if (!dropdownMenu.contains(e.target) && !headingButton.contains(e.target)) {
+          closeDropdown();
         }
       };
       
-      // 드롭다운과 버튼 연결
-      headingButton.dropdownMenu = dropdownMenu;
-      
-      // 클릭 이벤트 추가
+      // 버튼 클릭 이벤트 추가
       headingButton.addEventListener('click', (e) => {
         e.preventDefault();
-        // 이벤트 버블링 방지를 제거하여 전역 이벤트 흐름 유지
+        e.stopPropagation();
         
-        // 선택 영역 저장
-        if (window.liteEditorSelection) {
-          window.liteEditorSelection.save();
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
+        
+        // 선택 영역 저장 (나중에 복원하기 위해)
+        saveSelection();
+        
+        // 드롭다운 토글
+        if (dropdownMenu.style.display === 'block') {
+          closeDropdown();
+          return;
         }
         
-        // 다른 모든 드롭다운 먼저 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
-          if (menu !== headingButton.dropdownMenu) menu.classList.remove('show');
+        // 다른 모든 드롭다운 닫기
+        document.querySelectorAll('.lite-editor-dropdown-menu.show, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
+          if (menu !== dropdownMenu && menu.style.display === 'block') {
+            menu.style.display = 'none';
+          }
         });
         
-        // 이 드롭다운 토글
-        const isShowing = headingButton.dropdownMenu.classList.toggle('show');
+        // 레이어 위치 설정 (버튼 바로 아래)
+        const buttonRect = headingButton.getBoundingClientRect();
+        dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+        dropdownMenu.style.left = buttonRect.left + 'px';
         
-        // 드롭다운 메뉴 위치 조정
-        if (isShowing) {
-          // 드롭다운이 표시되면 body에 추가
-          document.body.appendChild(dropdownMenu);
-          
-          const buttonRect = headingButton.getBoundingClientRect();
-          
-          // 절대 위치로 계산
-          headingButton.dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          headingButton.dropdownMenu.style.left = buttonRect.left + 'px';
-          
-          // 문서 레벨 클릭 이벤트 추가 (다음 이벤트 루프에서 등록)
+        // 드롭다운 표시
+        dropdownMenu.style.display = 'block';
+        
+        // 클릭 이벤트 등록
+        setTimeout(() => {
+          document.addEventListener('click', documentClickHandler);
+        }, 0);
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
           setTimeout(() => {
-            documentClickHandler = (evt) => {
-              // 버튼이나 드롭다운 영역 외부 클릭 시 드롭다운 닫기
-              if (!headingButton.contains(evt.target) && !dropdownMenu.contains(evt.target)) {
-                closeDropdown();
-              }
-            };
-            document.addEventListener('click', documentClickHandler);
-          }, 0);
-        } else {
-          closeDropdown();
-        }
+            window.scrollTo(window.scrollX, currentScrollY);
+          }, 10);
+        });
       });
       
-      // 페이지 unload 시 이벤트 정리
-      window.addEventListener('unload', () => {
-        if (documentClickHandler) {
-          document.removeEventListener('click', documentClickHandler);
-        }
-      });
+      // 드롭다운을 document.body에 직접 추가
+      document.body.appendChild(dropdownMenu);
       
+      // 버튼을 툴바에 추가
+      toolbar.appendChild(headingButton);
       return headingButton;
     }
   });
