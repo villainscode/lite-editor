@@ -4,21 +4,13 @@ set -euo pipefail
 # ──────────────────────────────────────────────────────────────
 # 사용법 (프로젝트 로컬)
 #   ./gitx "[prefix] : Your commit message"   # 전체 워크플로우 (add → commit → push) - ./gitx "feat : 로그인 기능 추가"
-#
 #   ./gitx commit "[prefix] : Your commit"    # git add → commit - ./gitx commit "feat : 로그인 기능 추가"
-#
 #   ./gitx push                               # git fetch → push - ./gitx push
-#
-#   ./gitx reset                              # 로컬 변경사항 버리기 (reset --hard, clean -fd) - ./gitx reset
-#
-#   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합 - ./gitx merge 
-#
+#   ./gitx reset                              # 로컬 변경사항 버리기 (reset --hard, clean -fd) -" ./gitx reset
+#   ./gitx merge                              # 현재 브랜치를 main 브랜치로 병합 - ./gitx merge "[docs] : 문서 수정"
 #   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all) - ./gitx fetch
-#
-#   ./gitx checkout [branch명]                # 새 브랜치 생성 및 체크아웃 - ./gitx checkout feature/login
-#
+#   ./gitx checkout [branch명]                 # 새 브랜치 생성 및 체크아웃 - ./gitx checkout feature/login
 #   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시 - ./gitx merge-from develop
-#
 #   ./gitx abort                              # 현재 진행 중인 병합 취소 (git merge --abort) - ./gitx abort
 # ──────────────────────────────────────────────────────────────
 
