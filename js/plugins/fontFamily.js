@@ -150,7 +150,7 @@
             const divider = util.dom.createElement('hr', {
               className: 'lite-editor-font-divider'
             }, {
-              margin: '5px 0'
+              margin: '0'
             });
             dropdownMenu.appendChild(divider);
             return;
@@ -164,7 +164,8 @@
               fontWeight: 'bold',
               padding: '5px 10px',
               color: '#666',
-              fontSize: '12px'
+              fontSize: '12px',
+              backgroundColor: '#f5f5f5'  // 옅은 회색 배경색 추가
             });
             dropdownMenu.appendChild(header);
             return;
@@ -221,37 +222,9 @@
             // Apply font
             console.log(`Applying font: ${font.name} with value: ${font.value}`);
             
-            // Special handling for coding fonts
-            if (font.name.includes('Mono') || font.name.includes('Code') || font.name.includes('Hack')) {
-              const selection = util.selection.getSafeSelection();
-              if (selection && selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                
-                // Create span to wrap selected text
-                const span = util.dom.createElement('span', {
-                  className: 'lite-editor-coding-font'
-                }, {
-                  fontFamily: font.value
-                });
-                
-                // Put selected text into span
-                const fragment = range.extractContents();
-                span.appendChild(fragment);
-                range.insertNode(span);
-                
-                // Update selection
-                selection.removeAllRanges();
-                const newRange = document.createRange();
-                newRange.selectNode(span);
-                selection.addRange(newRange);
-                
-                console.log(`Coding font '${font.name}' applied`);
-              }
-            } else {
-              // Regular fonts use default execCommand
-              document.execCommand('fontName', false, font.value);
-              console.log(`Regular font '${font.name}' applied`);
-            }
+            // Regular fonts use default execCommand
+            document.execCommand('fontName', false, font.value);
+            console.log(`Regular font '${font.name}' applied`);
             
             // Update UI
             fontText.textContent = font.name;
