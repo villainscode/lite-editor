@@ -248,10 +248,11 @@
                 // 현재 스크롤 위치 저장
                 const currentScrollY = window.scrollY;
                 
-                // 드롭다운 API 사용
+                // 드롭다운 API 사용 - closeOthers: true 옵션 추가
                 const dropdownAPI = util.dropdown.setupDropdown(linkButton, dropdownMenu, {
                     buttonActiveClass: 'active',
                     toolbar: toolbar,
+                    closeOthers: true,
                     onOpen: () => {
                         // 선택 영역 저장
                         saveSelection();
