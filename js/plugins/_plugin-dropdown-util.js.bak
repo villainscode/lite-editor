@@ -9,8 +9,90 @@
     return;
   }
   
-  // 활성화된 드롭다운 관리를 위한 내부 상태
-  const activeDropdowns = new Set();
+  // 통합된 레이어 관리 시스템 구현
+  const layerManager = {
+    activeLayers: new Set(),  // 모든 활성 레이어 추적 (드롭다운, 모달 등)
+    
+    // 레이어 등록
+    register(layer, button) {
+      if (layer) {
+        this.activeLayers.add({
+          element: layer,
+          button: button,
+          type: button ? 'dropdown' : 'modal'
+        });
+      }
+    },
+    
+    // 레이어 등록 해제
+    unregister(layer) {
+      if (!layer) return;
+      
+      // Set에서 해당 레이어 항목 찾아 제거
+      this.activeLayers.forEach(item => {
+        if (item.element === layer) {
+          this.activeLayers.delete(item);
+        }
+      });
+    },
+    
+    // 모든 레이어 닫기 (특정 레이어 제외 가능)
+    closeAll(exceptLayer) {
+      this.activeLayers.forEach(item => {
+        if (item.element !== exceptLayer) {
+          if (item.type === 'dropdown') {
+            // 드롭다운 닫기
+            item.element.classList.remove('show');
+            if (item.button) item.button.classList.remove('active');
+          } else {
+            // 모달 닫기
+            if (item.element.closeCallback) {
+              item.element.closeCallback();
+            }
+          }
+        }
+      });
+      
+      // 제외된 레이어 외에는 모두 제거
+      this.activeLayers.forEach(item => {
+        if (item.element !== exceptLayer) {
+          this.activeLayers.delete(item);
+        }
+      });
+    },
+    
+    // 레이어 토글
+    toggleLayer(layer, button, params = {}) {
+      const isOpen = layer.classList.contains('show');
+      
+      // 다른 레이어 닫기
+      if (params.closeOthers !== false) {
+        this.closeAll(isOpen ? null : layer);
+      }
+      
+      // 레이어 토글
+      if (isOpen) {
+        // 닫기
+        layer.classList.remove('show');
+        if (button) button.classList.remove('active');
+        this.unregister(layer);
+      } else {
+        // 열기
+        layer.classList.add('show');
+        if (button) button.classList.add('active');
+        
+        // 위치 설정
+        if (button && params.position !== false) {
+          PluginUtil.layer.setLayerPosition(layer, button, params);
+        }
+        
+        // 레이어 등록
+        this.register(layer, button);
+      }
+      
+      return !isOpen;
+    }
+  };
   
   // 드롭다운 유틸리티 추가
   window.PluginUtil.dropdown = {
@@ -78,7 +160,7 @@
         }
         
         // 활성 드롭다운에서 제거
-        activeDropdowns.delete(dropdownMenu);
+        layerManager.unregister(dropdownMenu);
         
         // 닫힘 콜백 호출
         if (typeof options.onClose === 'function') {
@@ -90,7 +172,7 @@
       const openDropdown = () => {
         // 다른 드롭다운 닫기
         if (options.closeOthers) {
-          this.closeAllDropdowns();
+          layerManager.closeAll(dropdownMenu);
         }
         
         // 위치 설정
@@ -112,7 +194,7 @@
         }
         
         // 활성 드롭다운에 추가
-        activeDropdowns.add(dropdownMenu);
+        layerManager.register(dropdownMenu, button);
         
         // 열림 콜백 호출
         if (typeof options.onOpen === 'function') {
@@ -186,24 +268,7 @@
      * 모든 활성 드롭다운 닫기
      */
     closeAllDropdowns: function() {
-      activeDropdowns.forEach(dropdown => {
-        dropdown.style.display = 'none';
-        dropdown.classList.remove('show');
-      });
-      
-      // 모든 버튼 비활성화
-      document.querySelectorAll('.lite-editor-button.active, .lite-editor-font-button.active').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
-      // 모든 화살표 아이콘 방향 초기화
-      document.querySelectorAll('.material-icons').forEach(icon => {
-        if (icon.textContent === 'arrow_drop_up') {
-          icon.textContent = 'arrow_drop_down';
-        }
-      });
-      
-      activeDropdowns.clear();
+      layerManager.closeAll();
     }
   };
 })();

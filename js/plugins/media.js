@@ -1,7 +1,7 @@
 /**
  * LiteEditor Media Plugin
  * 동영상 삽입 관련 플러그인
- * 리팩토링: 공통 드롭다운 유틸리티 적용
+ * 통합 레이어 관리 방식으로 변경
  */
 
 (function() {
@@ -204,11 +204,13 @@
         margin: '0',
         boxShadow: '0 1px 5px rgba(0,0,0,0.1)',
         textAlign: 'left',
-        display: 'flex',
+        display: 'none',
         flexDirection: 'column',
         overflow: 'hidden',
         borderRadius: '4px',
-        backgroundColor: 'transparent'
+        backgroundColor: 'transparent',
+        position: 'absolute',
+        zIndex: '99999'
       });
       
       // 4. 헤더 생성 - 상단에 완전히 맞도록 조정
@@ -308,9 +310,13 @@
         }
         
         // 드롭다운 닫기
-        if (mediaButton._dropdownAPI) {
-          mediaButton._dropdownAPI.close();
-        }
+        dropdownMenu.classList.remove('show');
+        dropdownMenu.style.display = 'none';
+        mediaButton.classList.remove('active');
+        isDropdownOpen = false;
+        
+        // 모달 관리 시스템에서 제거
+        util.activeModalManager.unregister(dropdownMenu);
         
         // 동영상 삽입
         insertYouTubeVideo(url, contentArea);
@@ -326,7 +332,7 @@
         }
       });
       
-      // 9. 버튼 클릭 이벤트 - 드롭다운 토글
+      // 9. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
       mediaButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -334,37 +340,62 @@
         // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // 드롭다운 API 사용
-        const dropdownAPI = util.dropdown.setupDropdown(mediaButton, dropdownMenu, {
-          buttonActiveClass: 'active',
-          toolbar: toolbar,
-          closeOthers: true,
-          customStyles: {
-            width: DROPDOWN_WIDTH + 'px',
-            height: DROPDOWN_HEIGHT + 'px',
-            padding: '0',
-            margin: '0',
-            overflow: 'hidden'
-          },
-          onOpen: () => {
-            // 선택 영역 저장
-            saveSelection();
-            
-            // 입력창 초기화 및 포커스
-            urlInput.value = '';
-            setTimeout(() => urlInput.focus(), 10);
-          },
-          onClose: () => {
-            // 드롭다운 상태 업데이트
+        // 선택 영역 저장
+        saveSelection();
+        
+        // 현재 드롭다운의 상태 확인
+        const isVisible = dropdownMenu.classList.contains('show');
+        
+        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
+        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        if (!isVisible) {
+          util.activeModalManager.closeAll();
+        }
+        
+        if (isVisible) {
+          // 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          mediaButton.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
+        } else {
+          // 열기
+          dropdownMenu.classList.add('show');
+          dropdownMenu.style.display = 'flex'; // flex로 변경 (레이아웃 유지)
+          mediaButton.classList.add('active');
+          isDropdownOpen = true;
+          
+          // 위치 설정
+          const buttonRect = mediaButton.getBoundingClientRect();
+          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+          dropdownMenu.style.left = buttonRect.left + 'px';
+          
+          // 입력창 초기화 및 포커스
+          urlInput.value = '';
+          setTimeout(() => urlInput.focus(), 10);
+          
+          // 활성 모달 등록 (관리 시스템에 추가)
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            mediaButton.classList.remove('active');
             isDropdownOpen = false;
-          }
-        });
-        
-        // 토글 수행
-        dropdownAPI.toggle(e);
-        
-        // 상태 업데이트
-        isDropdownOpen = dropdownAPI.isOpen();
+          };
+          
+          util.activeModalManager.register(dropdownMenu);
+          
+          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          util.setupOutsideClickHandler(dropdownMenu, () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            mediaButton.classList.remove('active');
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          }, [mediaButton]);
+        }
         
         // 스크롤 위치 복원
         requestAnimationFrame(() => {
@@ -373,9 +404,6 @@
           }, 50);
         });
       });
-      
-      // 10. 활성 모달 관리자에 버튼 등록
-      util.activeModalManager.registerButton(mediaButton);
       
       return mediaButton;
     }

@@ -1,6 +1,7 @@
 /**
  * LiteEditor Code Block Plugin
  * Speed Highlight 기반 코드 하이라이팅 기능
+ * 통합 레이어 관리 방식으로 변경
  */
 
 (function() {
@@ -16,8 +17,8 @@
   
   // 지원 언어 목록
   const LANGUAGES = [
-    { value: "", label: "Select Code..." },
-    { value: "auto", label: "Auto detect" },
+    { value: "", label: "Select Code" },
+    { value: "auto", label: "Auto Detect" },
     { value: "bash", label: "Bash" },
     { value: "c", label: "C" },
     { value: "css", label: "CSS" },
@@ -43,8 +44,8 @@
   
   // 전역 상태 변수
   let activeLayer = null;
-  let layerCleanupFn = null;
   let savedRange = null;
+  let codeBlockButton = null;
   
   /**
    * SpeedHighlight 스타일 로드
@@ -124,19 +125,24 @@
    * 레이어 닫기
    */
   function closeCodeBlockLayer() {
-    if (layerCleanupFn) {
-      layerCleanupFn();
-      layerCleanupFn = null;
+    if (!activeLayer) return;
+    
+    // 버튼 상태 업데이트
+    if (codeBlockButton) {
+      codeBlockButton.classList.remove('active');
     }
     
-    if (activeLayer && activeLayer.parentNode) {
-      if (util.activeModalManager) {
-        util.activeModalManager.unregister(activeLayer);
-      }
-      
-      activeLayer.parentNode.removeChild(activeLayer);
-      activeLayer = null;
+    // 활성 모달에서 제거
+    if (util.activeModalManager) {
+      util.activeModalManager.unregister(activeLayer);
     }
+    
+    // 레이어 제거
+    if (activeLayer.parentNode) {
+      activeLayer.parentNode.removeChild(activeLayer);
+    }
+    
+    activeLayer = null;
   }
   
   /**
@@ -156,7 +162,7 @@
     // 선택된 텍스트 표시 영역
     const selectedText = document.createElement('span');
     selectedText.className = 'lite-editor-code-dropdown-text';
-    selectedText.textContent = 'Select Code...';
+    selectedText.textContent = 'Select Code';
     
     // 화살표 아이콘
     const arrowIcon = document.createElement('span');
@@ -257,11 +263,11 @@
    * 코드 블록 레이어 표시
    */
   function showCodeBlockLayer(buttonElement, contentArea, SpeedHighlight) {
+    // 현재 스크롤 위치 저장
+    const currentScrollY = window.scrollY;
+    
     // 선택 영역 저장
     saveSelection();
-    
-    // 기존 레이어 닫기
-    closeCodeBlockLayer();
     
     // 다른 활성화된 모달 모두 닫기
     if (util.activeModalManager) {
@@ -282,6 +288,15 @@
       </div>
     `;
     
+    // 스타일 설정
+    activeLayer.style.position = 'absolute';
+    activeLayer.style.zIndex = '99999';
+    activeLayer.style.backgroundColor = '#fff';
+    activeLayer.style.border = '1px solid #ccc';
+    activeLayer.style.borderRadius = '4px';
+    activeLayer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    activeLayer.style.width = '400px';
+    
     // 레이어를 DOM에 추가
     document.body.appendChild(activeLayer);
     
@@ -291,22 +306,16 @@
     actionsDiv.insertBefore(languageDropdown.container, actionsDiv.firstChild);
     
     // 레이어 위치 설정
-    if (util.layer && util.layer.setLayerPosition) {
-      util.layer.setLayerPosition(activeLayer, buttonElement);
-    } else {
-      // 버튼 위치 기준으로 레이어 위치 설정
-      const buttonRect = buttonElement.getBoundingClientRect();
-      activeLayer.style.position = 'fixed';
-      activeLayer.style.left = buttonRect.left + 'px';
-      activeLayer.style.top = (buttonRect.bottom + 5) + 'px';
-      activeLayer.style.width = '400px';
-      activeLayer.style.zIndex = '1000';
-    }
+    const buttonRect = buttonElement.getBoundingClientRect();
+    activeLayer.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+    activeLayer.style.left = buttonRect.left + 'px';
     
-    if (util.activeModalManager) {
-      activeLayer.closeCallback = closeCodeBlockLayer;
-      util.activeModalManager.register(activeLayer);
-    }
+    // 버튼 상태 업데이트
+    buttonElement.classList.add('active');
+    
+    // 활성 모달 등록
+    activeLayer.closeCallback = closeCodeBlockLayer;
+    util.activeModalManager.register(activeLayer);
     
     // 이벤트 설정
     const codeInput = activeLayer.querySelector('.lite-editor-code-input');
@@ -329,34 +338,18 @@
     // 레이어 내부 클릭 시 이벤트 전파 중단
     activeLayer.addEventListener('click', e => e.stopPropagation());
     
-    // 모든 외부 클릭 및 드롭다운 이벤트 통합 관리
-    if (util.modal && util.modal.setupModalCloseEvents) {
-      // PluginUtil의 모달 클로즈 이벤트 사용
-      layerCleanupFn = util.modal.setupModalCloseEvents(activeLayer, () => {
-        clearSelection();
-        closeCodeBlockLayer();
-      });
-    } else {
-      // 수동 이벤트 처리 - 외부 클릭과 드롭다운 클릭 통합
-      const handleOutsideClick = (e) => {
-        // 레이어 외부 클릭 시 레이어 닫기
-        if (!activeLayer.contains(e.target) && e.target !== buttonElement) {
-          clearSelection();
-          closeCodeBlockLayer();
-        } 
-        // 드롭다운 외부 클릭 시 드롭다운만 닫기
-        else if (activeLayer.contains(e.target) && !languageDropdown.container.contains(e.target)) {
-          languageDropdown.menu.classList.add('hidden');
-          languageDropdown.button.setAttribute('aria-expanded', 'false');
-        }
-      };
-      
-      document.addEventListener('click', handleOutsideClick);
-      layerCleanupFn = () => document.removeEventListener('click', handleOutsideClick);
-    }
+    // 외부 클릭 시 닫기 설정
+    util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
     
     // 텍스트 영역에 포커스
     setTimeout(() => codeInput.focus(), 0);
+    
+    // 스크롤 위치 복원
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.scrollTo(window.scrollX, currentScrollY);
+      }, 50);
+    });
     
     return activeLayer;
   }
@@ -458,15 +451,16 @@
       
       button.appendChild(icon);
       
-      // 활성 모달 관리자에 등록
-      if (util.activeModalManager) {
-        util.activeModalManager.registerButton(button);
-      }
+      // 버튼 참조 저장
+      codeBlockButton = button;
       
       // 클릭 이벤트
       button.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
         
         // 레이어가 이미 열려있다면 닫기
         if (activeLayer && document.body.contains(activeLayer)) {
@@ -483,10 +477,16 @@
         
         // 코드 블록 레이어 표시
         showCodeBlockLayer(button, contentArea, SpeedHighlight);
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo(window.scrollX, currentScrollY);
+          }, 50);
+        });
       });
       
-      // 버튼을 툴바에 추가
-      toolbar.appendChild(button);
+      return button;
     }
   });
 })();

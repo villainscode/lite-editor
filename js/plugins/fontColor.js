@@ -178,10 +178,14 @@
             // 현재 스크롤 위치 저장
             const currentScrollY = window.scrollY;
             
-            // 드롭다운 API를 통해 닫기
-            if (colorContainer._dropdownAPI) {
-              colorContainer._dropdownAPI.close();
-            }
+            // 드롭다운 닫기
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            colorContainer.classList.remove('active');
+            isDropdownOpen = false;
+            
+            // 모달 관리 시스템에서 제거
+            util.activeModalManager.unregister(dropdownMenu);
             
             // 색상 적용
             applyFontColor(color, contentArea, colorIndicator);
@@ -201,7 +205,7 @@
       // 7. 드롭다운을 document.body에 직접 추가
       document.body.appendChild(dropdownMenu);
       
-      // 8. 버튼 클릭 이벤트 - 드롭다운 토글 (공통 API 사용)
+      // 8. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
       colorContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -209,25 +213,58 @@
         // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // 드롭다운 API 사용
-        const dropdownAPI = util.dropdown.setupDropdown(colorContainer, dropdownMenu, {
-          buttonActiveClass: 'active',
-          toolbar: toolbar,
-          onOpen: () => {
-            // 선택 영역 저장
-            saveSelection();
-          },
-          onClose: () => {
-            // 드롭다운 상태 업데이트
+        // 선택 영역 저장
+        saveSelection();
+        
+        // 현재 드롭다운의 상태 확인
+        const isVisible = dropdownMenu.classList.contains('show');
+        
+        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
+        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        if (!isVisible) {
+          util.activeModalManager.closeAll();
+        }
+        
+        if (isVisible) {
+          // 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          colorContainer.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
+        } else {
+          // 열기
+          dropdownMenu.classList.add('show');
+          dropdownMenu.style.display = 'block';
+          colorContainer.classList.add('active');
+          isDropdownOpen = true;
+          
+          // 위치 설정
+          const buttonRect = colorContainer.getBoundingClientRect();
+          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+          dropdownMenu.style.left = buttonRect.left + 'px';
+          
+          // 활성 모달 등록 (관리 시스템에 추가)
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            colorContainer.classList.remove('active');
             isDropdownOpen = false;
-          }
-        });
-        
-        // 토글 수행
-        dropdownAPI.toggle(e);
-        
-        // 상태 업데이트
-        isDropdownOpen = dropdownAPI.isOpen();
+          };
+          
+          util.activeModalManager.register(dropdownMenu);
+          
+          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          util.setupOutsideClickHandler(dropdownMenu, () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            colorContainer.classList.remove('active');
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          }, [colorContainer]);
+        }
         
         // 스크롤 위치 복원
         requestAnimationFrame(() => {

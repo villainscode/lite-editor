@@ -18,7 +18,8 @@
         isGridLayerVisible: false,
         savedRange: null,
         gridLayer: null,
-        cleanupFn: null // 이벤트 정리 함수
+        cleanupFn: null, // 이벤트 정리 함수
+        tableButton: null
     };
     
     // 선택 영역 관리
@@ -263,12 +264,22 @@
     // 그리드 레이어 관리
     const gridLayerManager = {
         toggleGridLayer(buttonElement) {
+            // 현재 스크롤 위치 저장
+            const currentScrollY = window.scrollY;
+            
             if (state.isGridLayerVisible) {
                 this.hideGridLayer();
                 return;
             }
             
             this.showGridLayer(buttonElement);
+            
+            // 스크롤 위치 복원
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    window.scrollTo(window.scrollX, currentScrollY);
+                }, 50);
+            });
         },
         
         showGridLayer(buttonElement) {
@@ -284,13 +295,22 @@
             // 레이어 위치 설정 및 표시
             this.positionAndShowLayer(buttonElement);
             
-            // 모달 닫기 이벤트 설정
-            this.setupModalCloseEvents();
+            // 버튼 상태 업데이트
+            buttonElement.classList.add('active');
+            
+            // 외부 클릭 이벤트 설정
+            util.setupOutsideClickHandler(state.gridLayer, () => {
+                this.hideGridLayer();
+            }, [buttonElement]);
         },
         
         positionAndShowLayer(buttonElement) {
-            // PluginUtil을 사용하여 레이어 위치 설정
-            util.layer.setLayerPosition(state.gridLayer, buttonElement);
+            // 버튼 위치 기반으로 레이어 위치 설정
+            const buttonRect = buttonElement.getBoundingClientRect();
+            state.gridLayer.style.position = 'absolute';
+            state.gridLayer.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+            state.gridLayer.style.left = buttonRect.left + 'px';
+            state.gridLayer.style.zIndex = '99999';
             
             // 레이어를 활성 모달로 등록
             state.gridLayer.closeCallback = () => {
@@ -303,24 +323,22 @@
             state.gridLayer.style.display = 'block';
         },
         
-        setupModalCloseEvents() {
-            // 모달 닫기 이벤트 설정 (ESC 키 및 외부 클릭)
-            state.cleanupFn = util.modal.setupModalCloseEvents(state.gridLayer, () => {
-                this.hideGridLayer();
-            });
-        },
-        
         hideGridLayer() {
             if (!state.gridLayer) return;
             
             // 레이어 숨기기
             state.gridLayer.style.display = 'none';
             
+            // 버튼 상태 업데이트
+            if (state.tableButton) {
+                state.tableButton.classList.remove('active');
+            }
+            
             // 활성 모달에서 제거
             util.activeModalManager.unregister(state.gridLayer);
             state.isGridLayerVisible = false;
             
-            // 모달 이벤트 정리
+            // 모달 이벤트 정리 (필요 없으므로 제거 가능)
             if (state.cleanupFn) {
                 state.cleanupFn();
                 state.cleanupFn = null;
@@ -328,30 +346,30 @@
         },
         
         createGridLayer() {
-        // 기존 레이어 삭제
-        const existingLayer = document.querySelector('.grid-layer');
-        if (existingLayer) existingLayer.remove();
-        
-        // 새 레이어 생성
+            // 기존 레이어 삭제
+            const existingLayer = document.querySelector('.grid-layer');
+            if (existingLayer) existingLayer.remove();
+            
+            // 새 레이어 생성
             const gridLayer = util.dom.createElement('div', {
                 className: 'grid-layer'
             });
-        
-        // 제목 추가
+            
+            // 제목 추가
             const title = util.dom.createElement('p', {
                 textContent: `Drag to select table size (Max ${GRID_SIZE}×${GRID_SIZE})`
             });
-        
-        // 그리드 컨테이너 생성
+            
+            // 그리드 컨테이너 생성
             const gridContainer = util.dom.createElement('div', {
                 className: 'grid-container'
             });
-        
-        // 그리드 테이블과 선택 핸들러 설정
+            
+            // 그리드 테이블과 선택 핸들러 설정
             const { gridTable, getSelectedDimensions } = this.createGridTable();
-        gridContainer.appendChild(gridTable);
-        
-        // 옵션 패널 추가
+            gridContainer.appendChild(gridTable);
+            
+            // 옵션 패널 추가
             const optionsPanel = util.dom.createElement('div', {
                 className: 'options-panel'
             });
@@ -1015,8 +1033,8 @@
             
             tableButton.appendChild(tableIcon);
             
-            // 버튼을 활성 모달 관리자에 등록
-            util.activeModalManager.registerButton(tableButton);
+            // 버튼 참조 저장
+            state.tableButton = tableButton;
             
             // 클릭 이벤트 추가
             tableButton.addEventListener('click', e => {
@@ -1024,9 +1042,6 @@
                 e.stopPropagation();
                 gridLayerManager.toggleGridLayer(tableButton);
             });
-            
-            // 버튼을 툴바에 추가
-            toolbar.appendChild(tableButton);
             
             // 에디터 로드 후 기존 테이블 리사이저 초기화
             setTimeout(() => {

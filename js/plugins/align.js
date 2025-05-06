@@ -1,7 +1,7 @@
 /**
  * LiteEditor Alignment Plugin
  * 텍스트 정렬 관련 통합 플러그인
- * 리팩토링: 공통 드롭다운 유틸리티 적용
+ * 통합 레이어 관리 방식으로 변경
  */
 
 // 디버깅 유틸리티 공통 참조
@@ -13,6 +13,7 @@
   
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
+  let isDropdownOpen = false;     // 드롭다운 열림 상태
   
   // 선택 영역 저장/복원 함수
   function saveSelection() {
@@ -155,7 +156,13 @@
         width: 'auto',
         minWidth: '140px',
         padding: '4px',
-        boxShadow: '0 1px 5px rgba(0,0,0,0.1)'
+        boxShadow: '0 1px 5px rgba(0,0,0,0.1)',
+        position: 'absolute',
+        zIndex: '99999',
+        backgroundColor: '#fff',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        display: 'none'
       });
       
       // 3-1. 가로 레이아웃을 위한 컨테이너 추가
@@ -250,9 +257,13 @@
           e.stopPropagation();
           
           // 드롭다운 닫기
-          if (alignButton._dropdownAPI) {
-            alignButton._dropdownAPI.close();
-          }
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          alignButton.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
           
           // 정렬 적용
           applyAlignment(option.align, contentArea);
@@ -264,7 +275,7 @@
       // 5. 드롭다운을 document.body에 추가
       document.body.appendChild(dropdownMenu);
       
-      // 6. 드롭다운 설정
+      // 6. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
       alignButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -272,21 +283,58 @@
         // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // 드롭다운 API 사용
-        const dropdownAPI = util.dropdown.setupDropdown(alignButton, dropdownMenu, {
-          buttonActiveClass: 'active',
-          toolbar: toolbar,
-          onOpen: () => {
-            // 선택 영역 저장
-            saveSelection();
-          },
-          customStyles: {
-            padding: '4px'
-          }
-        });
+        // 선택 영역 저장
+        saveSelection();
         
-        // 토글 수행
-        dropdownAPI.toggle(e);
+        // 현재 드롭다운의 상태 확인
+        const isVisible = dropdownMenu.classList.contains('show');
+        
+        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
+        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        if (!isVisible) {
+          util.activeModalManager.closeAll();
+        }
+        
+        if (isVisible) {
+          // 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          alignButton.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
+        } else {
+          // 열기
+          dropdownMenu.classList.add('show');
+          dropdownMenu.style.display = 'block';
+          alignButton.classList.add('active');
+          isDropdownOpen = true;
+          
+          // 위치 설정
+          const buttonRect = alignButton.getBoundingClientRect();
+          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+          dropdownMenu.style.left = buttonRect.left + 'px';
+          
+          // 활성 모달 등록 (관리 시스템에 추가)
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            alignButton.classList.remove('active');
+            isDropdownOpen = false;
+          };
+          
+          util.activeModalManager.register(dropdownMenu);
+          
+          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          util.setupOutsideClickHandler(dropdownMenu, () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            alignButton.classList.remove('active');
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          }, [alignButton]);
+        }
         
         // 스크롤 위치 복원
         requestAnimationFrame(() => {

@@ -1,7 +1,7 @@
 /**
  * LiteEditor imageUpload Plugin
  * 이미지 업로드 플러그인 (리팩토링 버전)
- * 공통 유틸리티 활용 및 코드 최적화
+ * 통합 레이어 관리 방식으로 수정
  */
 (function() {
     // 1. 상수 및 전역 변수 선언
@@ -338,6 +338,15 @@
         // 모달 오버레이 생성
         const modal = util.dom.createElement('div', {
             className: 'modal-overlay'
+        }, {
+            position: 'absolute',
+            zIndex: '99999',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            borderRadius: '4px',
+            opacity: '0',
+            visibility: 'hidden',
+            transition: 'opacity 0.2s ease, visibility 0.2s ease'
         });
         
         // 모달 컨텐츠 생성
@@ -398,9 +407,6 @@
             }
         });
 
-        // 모달 닫기 이벤트 (Outside Click, ESC) 설정
-        util.modal.setupModalCloseEvents(modal, closeImageModal, [button]);
-        
         return {
             modal: modal,
             urlInput: urlInput
@@ -417,14 +423,8 @@
         imageModal.style.opacity = '0';
         imageModal.style.visibility = 'hidden';
         
-        // 공통 관리 시스템에서 제거
-        if (window._activeModals && window._activeModals.size > 0) {
-            window._activeModals.forEach(item => {
-                if (item.element === imageModal) {
-                    window._activeModals.delete(item);
-                }
-            });
-        }
+        // 활성 모달 관리자에서 제거
+        util.activeModalManager.unregister(imageModal);
         
         setTimeout(() => {
             if (imageModal && imageModal.parentNode) {
@@ -439,21 +439,17 @@
      * 모달 토글
      */
     function toggleImageModal(button) {
-        // 다른 모든 드롭다운 닫기
-        if (window.PluginUtil && window.PluginUtil.dropdown) {
-            window.PluginUtil.dropdown.closeAllDropdowns();
-        }
-        
-        // 추가: 다른 모든 활성 모달 닫기
-        if (window.PluginUtil && window.PluginUtil.activeModalManager) {
-            window.PluginUtil.activeModalManager.closeAll();
-        }
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
         
         // 이미 열려있으면 닫기
         if (isModalOpen && imageModal) {
             closeImageModal();
             return;
         }
+        
+        // 다른 모든 활성 모달/드롭다운 닫기
+        util.activeModalManager.closeAll();
         
         // 선택 영역 저장
         saveSelection();
@@ -463,10 +459,12 @@
         document.body.appendChild(modal);
         imageModal = modal;
         
-        // 모달 위치 계산 - util.layer 활용
-        util.layer.setLayerPosition(modal, button);
+        // 모달 위치 설정
+        const buttonRect = button.getBoundingClientRect();
+        modal.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+        modal.style.left = buttonRect.left + 'px';
         
-        // 화면 경계 체크 추가
+        // 화면 경계 체크
         setTimeout(() => {
             const modalContent = modal.querySelector('.modal-content');
             if (modalContent) {
@@ -476,7 +474,6 @@
                 
                 // 아래쪽 경계를 벗어나면 버튼 위에 표시
                 if (topPosition + modalRect.height > viewportHeight - 20) {
-                    const buttonRect = button.getBoundingClientRect();
                     modal.style.top = (buttonRect.top + window.scrollY - modalRect.height) + 'px';
                 }
             }
@@ -493,15 +490,20 @@
             
             isModalOpen = true;
             
-            // 모달이 열렸을 때 글로벌 등록 (공통 관리 시스템에 등록)
-            if (typeof window._activeModals === 'undefined') {
-                window._activeModals = new Set();
-            }
-            window._activeModals.add({
-                element: modal,
-                close: closeImageModal
-            });
+            // 활성 모달로 등록
+            modal.closeCallback = closeImageModal;
+            util.activeModalManager.register(modal);
+            
+            // 외부 클릭 시 닫기 설정
+            util.setupOutsideClickHandler(modal, closeImageModal, [button]);
         }, 10);
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                window.scrollTo(window.scrollX, currentScrollY);
+            }, 50);
+        });
     }
     
     /**
@@ -524,42 +526,6 @@
         util.styles.addInlineStyle('imageModalHoverStyles', hoverStyles);
     }
 
-    // 공통 관리 시스템 등록 함수 추가
-    function registerCloseImageModal() {
-        // 글로벌 closeAllModals 함수 등록
-        window.closeAllModals = function() {
-            if (window._activeModals && window._activeModals.size > 0) {
-                window._activeModals.forEach(item => {
-                    if (typeof item.close === 'function') {
-                        item.close();
-                    }
-                });
-            }
-            
-            // 이미지 모달이 열려있다면 닫기
-            if (isModalOpen && imageModal) {
-                closeImageModal();
-            }
-        };
-        
-        // util.dropdown에 이미지 모달 닫는 코드 추가
-        if (window.PluginUtil && window.PluginUtil.dropdown) {
-            // 기존 closeAllDropdowns 함수를 백업
-            const originalCloseAllDropdowns = window.PluginUtil.dropdown.closeAllDropdowns;
-            
-            // 함수 확장 (이미지 모달도 함께 닫기)
-            window.PluginUtil.dropdown.closeAllDropdowns = function() {
-                // 원래 함수 실행
-                originalCloseAllDropdowns.apply(window.PluginUtil.dropdown);
-                
-                // 이미지 모달도 닫기
-                if (isModalOpen && imageModal) {
-                    closeImageModal();
-                }
-            };
-        }
-    }
-
     // 플러그인 등록
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Insert Image',
@@ -567,9 +533,6 @@
         customRender: (toolbar, contentArea) => {
             // 스타일 로드
             loadStyles();
-            
-            // 공통 관리 시스템 등록
-            registerCloseImageModal();
 
             // 버튼 생성
             const button = util.dom.createElement('button', {
@@ -590,9 +553,6 @@
                 e.stopPropagation();
                 toggleImageModal(button);
             });
-            
-            // 버튼을 툴바에 추가
-            toolbar.appendChild(button);
             
             return button;
         }
