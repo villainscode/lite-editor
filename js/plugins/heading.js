@@ -7,35 +7,18 @@
   // 전역 상태 변수 추가
   let savedRange = null;          // 임시로 저장된 선택 영역
   
-  // 안전하게 Selection 객체를 가져오는 함수
-  function getSafeSelection() {
-    try {
-      return window.getSelection();
-    } catch (e) {
-      console.warn('Error getting selection:', e);
-      return null;
-    }
-  }
+  // PluginUtil 참조
+  const util = window.PluginUtil || {};
   
   // 선택 영역 저장 함수
   function saveSelection() {
-    const selection = getSafeSelection();
-    if (selection && selection.rangeCount > 0) {
-      savedRange = selection.getRangeAt(0).cloneRange();
-    }
+    savedRange = util.selection.saveSelection();
   }
 
   // 선택 영역 복원 함수
   function restoreSelection() {
     if (!savedRange) return false;
-    
-    const selection = getSafeSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(savedRange);
-      return true;
-    }
-    return false;
+    return util.selection.restoreSelection(savedRange);
   }
 
   // 제목 플러그인
@@ -122,7 +105,7 @@
           restoreSelection();
           
           // Range API를 사용한 heading 적용 (직접 DOM 조작)
-          const selection = getSafeSelection();
+          const selection = util.selection.getSafeSelection();
           if (selection && selection.rangeCount > 0) {
             // 선택한 영역의 범위 가져오기
             const range = selection.getRangeAt(0);
