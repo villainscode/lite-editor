@@ -448,7 +448,9 @@ const LiteEditor = (function() {
         const customElement = currentPlugin.customRender(toolbar, contentArea);
         if (customElement) {
           // 커스텀 요소의 디스플레이 스타일 확인
-          if (customElement.tagName === 'BUTTON' && !customElement.querySelector('.material-icons')) {
+          if (customElement.tagName === 'BUTTON' && 
+              !customElement.querySelector('.material-icons') && 
+              !customElement.querySelector('.material-symbols-outlined')) {
             // 버튼이고 아이콘이 없으면 아이콘 추가
             if (currentPlugin.icon) {
               const iconElement = document.createElement('span');
