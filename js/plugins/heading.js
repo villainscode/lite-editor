@@ -251,6 +251,7 @@
         const dropdownAPI = util.dropdown.setupDropdown(headingButton, dropdownMenu, {
           buttonActiveClass: 'active',
           toolbar: toolbar,
+          closeOthers: true,
           onOpen: () => {
             // 선택 영역 저장
             saveSelection();

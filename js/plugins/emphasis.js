@@ -218,6 +218,7 @@
         const dropdownAPI = util.dropdown.setupDropdown(highlightContainer, dropdownMenu, {
           buttonActiveClass: 'active',
           toolbar: toolbar,
+          closeOthers: true,
           onOpen: () => {
             // 선택 영역 저장
             saveSelection();
