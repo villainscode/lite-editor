@@ -1,48 +1,34 @@
 /**
  * LiteEditor Alignment Plugin
  * 텍스트 정렬 관련 통합 플러그인
- * 디버깅 코드는 debug-utils.js의 함수를 활용하여 공통화
+ * 리팩토링: 공통 드롭다운 유틸리티 적용
  */
 
 // 디버깅 유틸리티 공통 참조
 // @[js/debug-utils.js]
 
 (function() {
-  // 상수 정의
-  const PLUGIN_ID = 'align';
-  const MODULE_NAME = 'ALIGN'; // 디버깅 로그용 모듈명
+  // PluginUtil 참조
+  const util = window.PluginUtil || {};
   
-  // 팝업 저장 변수
-  let popup = null;
+  // 전역 상태 변수
+  let savedRange = null;          // 임시로 저장된 선택 영역
   
-  /**
-   * 선택 영역 저장 (정렬 적용 후 복원용)
-   */
+  // 선택 영역 저장/복원 함수
   function saveSelection() {
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      return selection.getRangeAt(0).cloneRange();
-    }
-    return null;
+    savedRange = util.selection.saveSelection();
   }
-  
-  /**
-   * 저장된 선택 영역 복원
-   */
-  function restoreSelection(savedSelection) {
-    if (savedSelection) {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelection);
-      
-      // 디버깅: 선택 영역 복원 로그
-      DebugUtils.debugLog(MODULE_NAME, '선택 영역 복원됨', null, '#4CAF50');
-    }
+
+  function restoreSelection() {
+    if (!savedRange) return false;
+    return util.selection.restoreSelection(savedRange);
   }
   
   /**
    * 더블클릭 선택 정규화 함수
    * 브라우저의 더블클릭 선택 범위를 정확한 단어 경계로 조정
+   * @param {HTMLElement} contentArea - 편집 영역 요소
+   * @returns {Range|null} - 정규화된 선택 범위
    */
   function normalizeDoubleClickSelection(contentArea) {
     const selection = window.getSelection();
@@ -50,16 +36,6 @@
     
     const range = selection.getRangeAt(0);
     const text = range.toString();
-    
-    // 디버깅: 원본 선택 영역 정보
-    DebugUtils.debugLog(MODULE_NAME, '원본 선택 영역', {
-      text: text,
-      length: text.length,
-      startContainer: range.startContainer.nodeType,
-      endContainer: range.endContainer.nodeType,
-      startOffset: range.startOffset,
-      endOffset: range.endOffset
-    }, '#FF9800');
     
     // 선택된 텍스트에서 줄바꿈과 후발 공백 제거
     const cleanText = text.split('\n')[0].trim();
@@ -69,16 +45,10 @@
     
     // 더블클릭 선택이거나 공백이 포함된 경우 처리
     if ((text.length < 50 || hasExtraWhitespace) && range.startContainer.nodeType === 3) {
-      DebugUtils.debugLog(MODULE_NAME, '선택 영역 조정 필요', {
-        originalText: text,
-        cleanText: cleanText,
-        hasExtraWhitespace: hasExtraWhitespace
-      }, '#E91E63');
-      
       // 텍스트 노드의 전체 내용
       const fullText = range.startContainer.textContent;
       
-      // 정확한 위치 찾기 - 시작 위치에서부터 검색
+      // 정확한 위치 찾기
       let startPos = -1;
       let searchStart = Math.max(0, range.startOffset - cleanText.length);
       
@@ -110,14 +80,6 @@
       selection.removeAllRanges();
       selection.addRange(newRange);
       
-      // 디버깅: 조정된 선택 영역 정보
-      DebugUtils.debugLog(MODULE_NAME, '선택 영역 정규화됨', {
-        originalText: text,
-        cleanText: cleanText,
-        originalRange: `${range.startOffset}-${range.endOffset}`,
-        normalizedRange: `${startPos}-${endPos}`
-      }, '#4CAF50');
-      
       return newRange;
     }
     
@@ -127,204 +89,214 @@
   
   /**
    * 정렬 적용 함수
+   * @param {string} alignType - 정렬 유형 (Left/Center/Right/Full)
+   * @param {HTMLElement} contentArea - 편집 영역 요소
    */
   function applyAlignment(alignType, contentArea) {
-    // 디버깅: 정렬 적용 시작 로그
-    DebugUtils.debugLog(MODULE_NAME, `정렬 적용: ${alignType}`, null, '#FF9800');
-    
-    // 선택 영역 정규화 (더블클릭 처리)
-    normalizeDoubleClickSelection(contentArea);
-    
-    // 선택 영역 정보 출력
-    DebugUtils.getEditorSelectionInfo(contentArea);
-    
-    // 선택 영역 저장
-    const savedSelection = saveSelection();
-    
-    // 정렬 명령 실행
-    document.execCommand('justify' + alignType);
-    
-    // 선택 영역 복원
-    restoreSelection(savedSelection);
-    
-    // 디버깅: 정렬 적용 완료 로그
-    DebugUtils.debugLog(MODULE_NAME, `정렬 적용 완료: ${alignType}`, null, '#4CAF50');
-    // 디버깅 요소 표시
-    DebugUtils.showDebugElement(`정렬 적용: ${alignType}`, 1500, '#4CAF50');
-  }
-  
-  /**
-   * 정렬 팝업 생성 및 표시
-   */
-  function createAlignPopup(button, contentArea) {
-    // 디버깅: 팝업 생성 로그
-    DebugUtils.debugLog(MODULE_NAME, '정렬 팝업 생성', null, '#2196F3');
-    
-    // 기존 팝업 제거
-    if (popup) {
-      document.body.removeChild(popup);
-      popup = null;
-    }
-    
-    // 새 팝업 생성
-    popup = document.createElement('div');
-    popup.innerHTML = `
-      <button class="align-btn" data-align="Left"><i class="material-icons">format_align_left</i></button>
-      <button class="align-btn" data-align="Center"><i class="material-icons">format_align_center</i></button>
-      <button class="align-btn" data-align="Right"><i class="material-icons">format_align_right</i></button>
-      <button class="align-btn" data-align="Full"><i class="material-icons">format_align_justify</i></button>
-    `;
-    
-    // 팝업 스타일 직접 적용
-    popup.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      display: flex;
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      padding: 4px;
-      z-index: 99999;
-    `;
-    
-    // 버튼 스타일 적용
-    const buttons = popup.querySelectorAll('.align-btn');
-    buttons.forEach(btn => {
-      btn.style.cssText = `
-        width: 32px;
-        height: 32px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        padding: 0;
-        margin: 0 2px;
-        transition: background-color 0.2s;
-      `;
+    try {
+      // 현재 스크롤 위치 저장
+      const currentScrollY = window.scrollY;
+      const currentScrollX = window.scrollX;
       
-      // 호버 효과 추가
-      btn.addEventListener('mouseover', function() {
-        this.style.backgroundColor = '#f0f0f0';
-      });
+      // 포커스 설정 (스크롤 방지)
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
       
-      btn.addEventListener('mouseout', function() {
-        this.style.backgroundColor = 'transparent';
-      });
+      // 선택 영역 복원
+      restoreSelection();
       
-      // 클릭 이벤트 추가
-      btn.addEventListener('click', function() {
-        const alignType = this.getAttribute('data-align');
-        
-        // 디버깅: 정렬 버튼 클릭 로그
-        DebugUtils.debugLog(MODULE_NAME, `정렬 버튼 클릭: ${alignType}`, null, '#FF9800');
-        
-        // 정렬 적용
-        applyAlignment(alignType, contentArea);
-        
-        // 팝업 닫기
-        closePopup();
+      // 선택 영역 정규화 (더블클릭 처리)
+      normalizeDoubleClickSelection(contentArea);
+      
+      // 정렬 명령 실행
+      document.execCommand('justify' + alignType);
+      
+      // 선택 영역 재저장
+      saveSelection();
+      
+      // 에디터 변경 이벤트 발생
+      util.editor.dispatchEditorEvent(contentArea);
+      
+      // 스크롤 위치 복원
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.scrollTo(currentScrollX, currentScrollY);
+        }, 50);
       });
-    });
-    
-    // 팝업 문서에 추가
-    document.body.appendChild(popup);
-    
-    // 버튼 위치 기준으로 팝업 위치 설정
-    const rect = button.getBoundingClientRect();
-    popup.style.top = (rect.bottom + window.scrollY) + 'px';
-    popup.style.left = (rect.left + window.scrollX) + 'px';
-    
-    // 디버깅: 팝업 위치 로그
-    DebugUtils.debugLog(MODULE_NAME, '팝업 위치 설정', {
-      top: popup.style.top,
-      left: popup.style.left,
-      rect: rect
-    });
-    
-    // 외부 클릭 시 팝업 닫기
-    setTimeout(() => {
-      document.addEventListener('click', handleOutsideClick);
-    }, 10);
-    
-    return popup;
-  }
-  
-  /**
-   * 외부 클릭 처리
-   */
-  function handleOutsideClick(e) {
-    if (popup && !popup.contains(e.target)) {
-      // 디버깅: 외부 클릭 감지 로그
-      DebugUtils.debugLog(MODULE_NAME, '외부 클릭으로 팝업 닫기');
-      closePopup();
+    } catch (e) {
+      console.error('정렬 적용 중 오류:', e);
     }
   }
   
-  /**
-   * 팝업 닫기
-   */
-  function closePopup() {
-    if (popup && popup.parentNode) {
-      document.removeEventListener('click', handleOutsideClick);
-      popup.parentNode.removeChild(popup);
-      popup = null;
-      
-      // 디버깅: 팝업 닫기 로그
-      DebugUtils.debugLog(MODULE_NAME, '팝업 닫힘');
-    }
-  }
-  
-  // 플러그인 등록
-  LiteEditor.registerPlugin(PLUGIN_ID, {
-    title: 'Alignment',
-    icon: 'format_align_left',
+  // 정렬 플러그인 등록
+  LiteEditor.registerPlugin('align', {
     customRender: function(toolbar, contentArea) {
-      // 디버깅: 플러그인 초기화 로그
-      DebugUtils.debugLog(MODULE_NAME, '플러그인 초기화', null, '#9C27B0');
+      // 1. 정렬 버튼 생성
+      const alignButton = util.dom.createElement('div', {
+        className: 'lite-editor-button',
+        title: 'Text Alignment'
+      });
       
-      // 버튼 생성
-      const button = document.createElement('button');
-      button.className = 'lite-editor-button';
-      button.title = 'Text Alignment';
+      // 2. 버튼 아이콘 추가
+      const icon = util.dom.createElement('i', {
+        className: 'material-icons',
+        textContent: 'format_align_left'
+      });
+      alignButton.appendChild(icon);
       
-      // 아이콘 추가
-      const icon = document.createElement('i');
-      icon.className = 'material-icons';
-      icon.textContent = 'format_align_left';
-      button.appendChild(icon);
+      // 3. 드롭다운 메뉴 생성
+      const dropdownMenu = util.dom.createElement('div', {
+        className: 'lite-editor-dropdown-menu align-dropdown',
+        id: 'align-dropdown-' + Math.random().toString(36).substr(2, 9)
+      }, {
+        width: 'auto',
+        minWidth: '140px',
+        padding: '4px',
+        boxShadow: '0 1px 5px rgba(0,0,0,0.1)'
+      });
       
-      // 클릭 이벤트
-      button.addEventListener('click', function(e) {
+      // 3-1. 가로 레이아웃을 위한 컨테이너 추가
+      const buttonContainer = util.dom.createElement('div', {
+        className: 'align-button-container'
+      }, {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        width: '100%',
+        margin: '0',
+        padding: '2px 0'
+      });
+      
+      dropdownMenu.appendChild(buttonContainer);
+      
+      // 4. 정렬 버튼들 생성
+      const alignOptions = [
+        { align: 'Left', icon: 'format_align_left' },
+        { align: 'Center', icon: 'format_align_center' },
+        { align: 'Right', icon: 'format_align_right' },
+        { align: 'Full', icon: 'format_align_justify' }
+      ];
+      
+      alignOptions.forEach(option => {
+        const alignBtn = util.dom.createElement('div', {
+          className: 'align-btn',
+          'data-align': option.align
+        }, {
+          width: '28px',
+          height: '28px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          borderRadius: '3px',
+          margin: '0 1px',
+          transition: 'all 0.2s ease',
+          boxSizing: 'border-box'
+        });
+        
+        // 호버 효과 추가
+        alignBtn.addEventListener('mouseover', function() {
+          this.style.backgroundColor = '#f0f0f0';
+        });
+        
+        alignBtn.addEventListener('mouseout', function() {
+          this.style.backgroundColor = 'transparent';
+        });
+        
+        // 클릭 효과 추가 (mousedown/mouseup 이벤트)
+        alignBtn.addEventListener('mousedown', function() {
+          this.style.backgroundColor = '#d0d0d0';
+          this.style.transform = 'scale(0.95)';
+        });
+        
+        alignBtn.addEventListener('mouseup', function() {
+          this.style.backgroundColor = '#f0f0f0';
+          this.style.transform = 'scale(1)';
+        });
+        
+        // 클릭 끝난 후 처리
+        alignBtn.addEventListener('mouseleave', function() {
+          if(this.style.transform === 'scale(0.95)') {
+            this.style.transform = 'scale(1)';
+            this.style.backgroundColor = 'transparent';
+          }
+        });
+        
+        // 아이콘 스타일 개선
+        const btnIcon = util.dom.createElement('i', {
+          className: 'material-icons',
+          textContent: option.icon
+        }, {
+          fontSize: '18px',
+          width: '18px',
+          height: '18px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          lineHeight: '1',
+          textAlign: 'center',
+          overflow: 'hidden'
+        });
+        
+        alignBtn.appendChild(btnIcon);
+        
+        // 정렬 버튼 클릭 이벤트
+        alignBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 드롭다운 닫기
+          if (alignButton._dropdownAPI) {
+            alignButton._dropdownAPI.close();
+          }
+          
+          // 정렬 적용
+          applyAlignment(option.align, contentArea);
+        });
+        
+        buttonContainer.appendChild(alignBtn);
+      });
+      
+      // 5. 드롭다운을 document.body에 추가
+      document.body.appendChild(dropdownMenu);
+      
+      // 6. 드롭다운 설정
+      alignButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 디버깅: 메인 버튼 클릭 로그
-        DebugUtils.debugLog(MODULE_NAME, '정렬 메인 버튼 클릭');
-        // 선택 영역 정보 출력
-        DebugUtils.getEditorSelectionInfo(contentArea);
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
         
-        // 팝업 토글
-        if (popup) {
-          closePopup();
-        } else {
-          createAlignPopup(this, contentArea);
-        }
+        // 드롭다운 API 사용
+        const dropdownAPI = util.dropdown.setupDropdown(alignButton, dropdownMenu, {
+          buttonActiveClass: 'active',
+          toolbar: toolbar,
+          onOpen: () => {
+            // 선택 영역 저장
+            saveSelection();
+          },
+          customStyles: {
+            padding: '4px'
+          }
+        });
+        
+        // 토글 수행
+        dropdownAPI.toggle(e);
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo(window.scrollX, currentScrollY);
+          }, 50);
+        });
       });
       
-      toolbar.appendChild(button);
-      return button;
-    },
-    // 단축키 설정 (추후 구현 가능)
-    shortcuts: {
-      // 'ctrl+l': 'justifyLeft',
-      // 'ctrl+e': 'justifyCenter',
-      // 'ctrl+r': 'justifyRight',
-      // 'ctrl+j': 'justifyFull'
+      return alignButton;
     }
   });
 })();
