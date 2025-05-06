@@ -97,7 +97,7 @@
         selection.addRange(newRange);
         
         // 에디터 변경 이벤트 발생
-        util.styles.dispatchEditorEvent(contentArea);
+        util.editor.dispatchEditorEvent(contentArea);
       }
       
       // 스크롤 위치 복원
@@ -156,14 +156,7 @@
       });
       dropdownMenu.appendChild(colorGrid);
       
-      // 6. 드롭다운 닫기 함수
-      const closeDropdown = () => {
-        isDropdownOpen = false;
-        dropdownMenu.classList.remove('show');
-        dropdownMenu.style.display = 'none';
-      };
-      
-      // 7. 외부 색상 데이터 파일 로드 후 드롭다운 구성
+      // 6. 외부 색상 데이터 파일 로드 후 드롭다운 구성
       loadColorScript(function() {
         // 색상 목록 가져오기
         const colors = loadFontColorData();
@@ -178,22 +171,37 @@
           });
           
           // 색상 클릭 이벤트
-          colorCell.addEventListener('click', () => {
+          colorCell.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 현재 스크롤 위치 저장
+            const currentScrollY = window.scrollY;
+            
+            // 드롭다운 API를 통해 닫기
+            if (colorContainer._dropdownAPI) {
+              colorContainer._dropdownAPI.close();
+            }
+            
             // 색상 적용
             applyFontColor(color, contentArea, colorIndicator);
             
-            // 드롭다운 닫기
-            closeDropdown();
+            // 스크롤 위치 복원
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                window.scrollTo(window.scrollX, currentScrollY);
+              }, 50);
+            });
           });
           
           colorGrid.appendChild(colorCell);
         });
       });
       
-      // 8. 드롭다운을 document.body에 직접 추가
+      // 7. 드롭다운을 document.body에 직접 추가
       document.body.appendChild(dropdownMenu);
       
-      // 9. 버튼 클릭 이벤트 - 드롭다운 토글
+      // 8. 버튼 클릭 이벤트 - 드롭다운 토글 (공통 API 사용)
       colorContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -201,32 +209,25 @@
         // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // 드롭다운이 열려 있으면 닫기 (토글 동작)
-        if (isDropdownOpen || dropdownMenu.style.display === 'block') {
-          closeDropdown();
-          return;
-        }
-        
-        // 다른 모든 드롭다운 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
-          if (menu !== dropdownMenu && (menu.style.display === 'block' || menu.classList.contains('show'))) {
-            menu.style.display = 'none';
-            menu.classList.remove('show');
+        // 드롭다운 API 사용
+        const dropdownAPI = util.dropdown.setupDropdown(colorContainer, dropdownMenu, {
+          buttonActiveClass: 'active',
+          toolbar: toolbar,
+          onOpen: () => {
+            // 선택 영역 저장
+            saveSelection();
+          },
+          onClose: () => {
+            // 드롭다운 상태 업데이트
+            isDropdownOpen = false;
           }
         });
         
-        // 선택 영역 저장
-        saveSelection();
+        // 토글 수행
+        dropdownAPI.toggle(e);
         
-        // 드롭다운 표시
-        dropdownMenu.style.display = 'block';
-        dropdownMenu.classList.add('show');
-        isDropdownOpen = true;
-        
-        // 레이어 위치 설정 - fontFamily.js와 동일한 방식으로 변경
-        const buttonRect = colorContainer.getBoundingClientRect();
-        dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-        dropdownMenu.style.left = buttonRect.left + 'px';
+        // 상태 업데이트
+        isDropdownOpen = dropdownAPI.isOpen();
         
         // 스크롤 위치 복원
         requestAnimationFrame(() => {
@@ -235,17 +236,6 @@
           }, 50);
         });
       });
-      
-      // 10. 툴바의 다른 요소 클릭 시 드롭다운 닫기
-      toolbar.addEventListener('mousedown', function(e) {
-        // 현재 버튼이 아닌 다른 툴바 요소 클릭 시 닫기
-        if (e.target !== colorContainer && !colorContainer.contains(e.target)) {
-          closeDropdown();
-        }
-      }, true);
-      
-      // 11. body 클릭 시 드롭다운 닫기 - fontFamily.js와 같은 방식으로 처리
-      util.setupOutsideClickHandler(dropdownMenu, closeDropdown, [colorContainer]);
       
       return colorContainer;
     }

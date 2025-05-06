@@ -76,8 +76,8 @@
 .lite-editor-content h4, 
 .lite-editor-content h5, 
 .lite-editor-content h6 {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
   font-weight: 600;
   line-height: 1.3;
 }
