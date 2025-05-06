@@ -18,6 +18,7 @@
         // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
         'js/debug-utils.js',
         'js/plugins/plugin-util.js',
+        'js/plugins/plugin-dropdown-util.js',
         
         // 3. 유틸리티 및 기본 기능
         'js/plugins/history.js',

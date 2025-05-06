@@ -8,7 +8,6 @@
 (function() {
   // PluginUtil 참조
   const util = window.PluginUtil || {};
-  
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
   let isDropdownOpen = false;
@@ -111,13 +110,18 @@
       });
       fontContainer.appendChild(fontText);
       
-      // 4. 드롭다운 화살표 추가
+      // 4. 드롭다운 화살표 추가 - 오른쪽에 표시되도록 수정
       const arrowIcon = util.dom.createElement('i', {
-        className: 'material-icons',
-        textContent: 'arrow_drop_down'
+        className: 'material-icons arrow-icon', // 특별한 클래스 추가
+        textContent: 'expand_more'
       }, {
-        fontSize: '18px',
-        marginLeft: '5px'
+        fontSize: '20px',
+        fontWeight: 'bold',
+        position: 'absolute',
+        right: '1px', // 오른쪽에 배치
+        top: '50%', 
+        transform: 'translateY(-50%)', // 수직 중앙 정렬
+        left: 'auto' // 왼쪽 위치 속성 제거
       });
       fontContainer.appendChild(arrowIcon);
       
@@ -203,18 +207,19 @@
             
             // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
-            arrowIcon.textContent = 'arrow_drop_down';
+            dropdownMenu.classList.remove('show');
+            arrowIcon.textContent = 'expand_more';
             fontContainer.classList.remove('active');
+            isDropdownOpen = false;
             
             // 에디터에 포커스 (스크롤 방지 옵션 추가)
             try {
               contentArea.focus({ preventScroll: true });
             } catch (e) {
-              // 일부 구형 브라우저에서는 preventScroll 옵션을 지원하지 않음
               contentArea.focus();
             }
             
-            // 선택 영역 복원
+            // 선택 영역 복원 - 반드시 execCommand 전에 해야 함
             restoreSelection();
             
             // 글꼴 적용을 위한 스타일 주입
@@ -222,18 +227,14 @@
             
             // 글꼴 적용
             console.log(`글꼴 적용 중: ${font.name} 값: ${font.value}`);
-            
-            // 일반 글꼴은 기본 execCommand 사용
             document.execCommand('fontName', false, font.value);
             console.log(`일반 글꼴 '${font.name}' 적용됨`);
             
             // UI 업데이트
             fontText.textContent = font.name;
             
-            // 스크롤 위치 복원 (개선된 방법)
-            // requestAnimationFrame을 사용하여 다음 렌더 사이클에서 스크롤 복원
+            // 스크롤 위치 복원
             requestAnimationFrame(() => {
-              // 더 긴 지연 시간 적용 (50ms)
               setTimeout(() => {
                 window.scrollTo(window.scrollX, currentScrollY);
               }, 50);
@@ -247,7 +248,7 @@
       // 6. 드롭다운을 document.body에 직접 추가 (정렬 플러그인과 동일)
       document.body.appendChild(dropdownMenu);
       
-      // 7. 버튼 클릭 이벤트 - 드롭다운 토글 (업데이트됨)
+      // 7. 버튼 클릭 이벤트 - 드롭다운 토글
       fontContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -255,77 +256,39 @@
         // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // 드롭다운이 열려 있으면 닫기 (개선된 토글 동작)
-        if (isDropdownOpen || dropdownMenu.style.display === 'block') {
-          dropdownMenu.style.display = 'none';
-          dropdownMenu.classList.remove('show');
-          arrowIcon.textContent = 'arrow_drop_down';
-          fontContainer.classList.remove('active');
-          isDropdownOpen = false;
-          return;
-        }
-        
-        // 다른 모든 드롭다운 닫기 (개선된 셀렉터)
-        document.querySelectorAll('.lite-editor-dropdown-menu, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
-          if (menu !== dropdownMenu && (menu.style.display === 'block' || menu.classList.contains('show'))) {
-            menu.style.display = 'none';
-            menu.classList.remove('show');
+        // 드롭다운 API 사용
+        // 참고: setupDropdown은 매번 호출해도 첫 번째 설정 후 동일한 API 객체 반환
+        const dropdownAPI = util.dropdown.setupDropdown(fontContainer, dropdownMenu, {
+          arrowIcon: arrowIcon,
+          buttonActiveClass: 'active',
+          toolbar: toolbar,
+          onOpen: () => {
+            // 선택 영역 저장
+            saveSelection();
+            // 화살표 아이콘 변경 - expand_more에서 expand_less로 변경
+            arrowIcon.textContent = 'expand_less';
+          },
+          onClose: () => {
+            // 드롭다운 상태 업데이트
+            isDropdownOpen = false;
+            // 화살표 아이콘 변경 - expand_less에서 expand_more로 변경
+            arrowIcon.textContent = 'expand_more';
           }
         });
         
-        // 선택 영역 저장
-        saveSelection();
+        // 토글 수행
+        dropdownAPI.toggle(e);
         
-        // 드롭다운 표시
-        dropdownMenu.style.display = 'block';
-        dropdownMenu.classList.add('show');
-        isDropdownOpen = true;
+        // 상태 업데이트
+        isDropdownOpen = dropdownAPI.isOpen();
         
-        // 버튼에 활성 스타일 추가
-        fontContainer.classList.add('active');
-        
-        // 레이어 위치 설정
-        if (util.layer && util.layer.setLayerPosition) {
-          util.layer.setLayerPosition(dropdownMenu, fontContainer);
-        } else {
-          const buttonRect = fontContainer.getBoundingClientRect();
-          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
-        }
-        
-        // 화살표 변경
-        arrowIcon.textContent = 'arrow_drop_up';
-        
-        // 스크롤 위치 복원 (개선된 방법)
+        // 스크롤 위치 복원
         requestAnimationFrame(() => {
           setTimeout(() => {
             window.scrollTo(window.scrollX, currentScrollY);
           }, 50);
         });
       });
-      
-      // 8. body 클릭 시 드롭다운 닫기 (업데이트됨)
-      util.setupOutsideClickHandler(dropdownMenu, () => {
-        dropdownMenu.style.display = 'none';
-        dropdownMenu.classList.remove('show');
-        arrowIcon.textContent = 'arrow_drop_down';
-        fontContainer.classList.remove('active');
-        isDropdownOpen = false;
-      }, [fontContainer]);
-      
-      // 툴바의 다른 요소 클릭 시 드롭다운 닫기 (fontColor.js와 동일하게 추가)
-      toolbar.addEventListener('mousedown', function(e) {
-        // 현재 버튼이 아닌 다른 툴바 요소 클릭 시 닫기
-        if (e.target !== fontContainer && !fontContainer.contains(e.target)) {
-          if (isDropdownOpen || dropdownMenu.style.display === 'block') {
-            dropdownMenu.style.display = 'none';
-            dropdownMenu.classList.remove('show');
-            arrowIcon.textContent = 'arrow_drop_down';
-            fontContainer.classList.remove('active');
-            isDropdownOpen = false;
-          }
-        }
-      }, true);
       
       return fontContainer;
     }
