@@ -6,6 +6,7 @@
 (function() {
   // 전역 상태 변수 추가
   let savedRange = null;          // 임시로 저장된 선택 영역
+  let isDropdownOpen = false;
   
   // PluginUtil 참조
   const util = window.PluginUtil || {};
@@ -39,7 +40,7 @@
       
       // 드롭다운 생성
       const dropdownMenu = document.createElement('div');
-      dropdownMenu.className = 'lite-editor-heading-dropdown';
+      dropdownMenu.className = 'lite-editor-heading-dropdown lite-editor-dropdown-menu';
       dropdownMenu.style.position = 'absolute';
       dropdownMenu.style.zIndex = '2147483647';
       dropdownMenu.style.backgroundColor = '#fff';
@@ -231,7 +232,9 @@
       // 드롭다운 닫기 함수
       const closeDropdown = () => {
         dropdownMenu.style.display = 'none';
+        dropdownMenu.classList.remove('show');
         document.removeEventListener('click', documentClickHandler);
+        isDropdownOpen = false;
       };
       
       // 문서 클릭 이벤트 핸들러
@@ -253,15 +256,32 @@
         saveSelection();
         
         // 드롭다운 토글
-        if (dropdownMenu.style.display === 'block') {
+        if (isDropdownOpen || dropdownMenu.style.display === 'block') {
           closeDropdown();
           return;
         }
         
-        // 다른 모든 드롭다운 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu.show, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
-          if (menu !== dropdownMenu && menu.style.display === 'block') {
+        // 다른 모든 드롭다운 닫기 (개선된 셀렉터)
+        document.querySelectorAll('.lite-editor-dropdown-menu, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
+          if (menu !== dropdownMenu && (menu.style.display === 'block' || menu.classList.contains('show'))) {
             menu.style.display = 'none';
+            menu.classList.remove('show');
+            
+            // 관련 버튼의 active 클래스 제거
+            const buttons = document.querySelectorAll('.lite-editor-button, .lite-editor-font-button');
+            buttons.forEach(button => {
+              if (button.classList.contains('active')) {
+                button.classList.remove('active');
+              }
+            });
+            
+            // 화살표 아이콘 방향 변경 (fontFamily의 경우)
+            const arrowIcons = document.querySelectorAll('.material-icons');
+            arrowIcons.forEach(icon => {
+              if (icon.textContent === 'arrow_drop_up') {
+                icon.textContent = 'arrow_drop_down';
+              }
+            });
           }
         });
         
@@ -272,6 +292,8 @@
         
         // 드롭다운 표시
         dropdownMenu.style.display = 'block';
+        dropdownMenu.classList.add('show');
+        isDropdownOpen = true;
         
         // 클릭 이벤트 등록
         setTimeout(() => {
@@ -291,6 +313,15 @@
       
       // 버튼을 툴바에 추가
       toolbar.appendChild(headingButton);
+      
+      // 툴바의 다른 요소 클릭 시 드롭다운 닫기 (fontColor.js처럼 추가)
+      toolbar.addEventListener('mousedown', function(e) {
+        // 현재 버튼이 아닌 다른 툴바 요소 클릭 시 닫기
+        if (e.target !== headingButton && !headingButton.contains(e.target)) {
+          closeDropdown();
+        }
+      }, true);
+      
       return headingButton;
     }
   });

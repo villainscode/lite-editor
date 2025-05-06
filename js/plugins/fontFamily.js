@@ -11,6 +11,7 @@
   
   // Global state variables
   let savedRange = null;          // Temporarily saved selection range
+  let isDropdownOpen = false;
   
   // Save selection function (using util)
   function saveSelection() {
@@ -123,7 +124,7 @@
       // 5. Create dropdown menu - handle like align plugin
       const dropdownMenu = util.dom.createElement('div', {
         id: 'font-family-dropdown',
-        className: 'lite-editor-font-dropdown'
+        className: 'lite-editor-font-dropdown lite-editor-dropdown-menu'
       }, {
         position: 'absolute',
         zIndex: '2147483647',
@@ -254,17 +255,22 @@
         // Save current scroll position
         const currentScrollY = window.scrollY;
         
-        // Close dropdown if open (toggle behavior)
-        if (dropdownMenu.style.display === 'block') {
+        // Close dropdown if open (improved toggle behavior)
+        if (isDropdownOpen || dropdownMenu.style.display === 'block') {
           dropdownMenu.style.display = 'none';
+          dropdownMenu.classList.remove('show');
           arrowIcon.textContent = 'arrow_drop_down';
           fontContainer.classList.remove('active');
+          isDropdownOpen = false;
           return;
         }
         
-        // Close all other dropdowns
-        document.querySelectorAll('.lite-editor-dropdown-menu.show, .lite-editor-font-dropdown.show').forEach(menu => {
-          if (menu !== dropdownMenu) menu.style.display = 'none';
+        // Close all other dropdowns (improved selector)
+        document.querySelectorAll('.lite-editor-dropdown-menu, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
+          if (menu !== dropdownMenu && (menu.style.display === 'block' || menu.classList.contains('show'))) {
+            menu.style.display = 'none';
+            menu.classList.remove('show');
+          }
         });
         
         // Save selection
@@ -272,6 +278,8 @@
         
         // Show dropdown
         dropdownMenu.style.display = 'block';
+        dropdownMenu.classList.add('show');
+        isDropdownOpen = true;
         
         // Add active style to button
         fontContainer.classList.add('active');
@@ -299,9 +307,25 @@
       // 8. Close dropdown on body click (updated)
       util.setupOutsideClickHandler(dropdownMenu, () => {
         dropdownMenu.style.display = 'none';
+        dropdownMenu.classList.remove('show');
         arrowIcon.textContent = 'arrow_drop_down';
         fontContainer.classList.remove('active');
+        isDropdownOpen = false;
       }, [fontContainer]);
+      
+      // 툴바의 다른 요소 클릭 시 드롭다운 닫기 (fontColor.js와 동일하게 추가)
+      toolbar.addEventListener('mousedown', function(e) {
+        // 현재 버튼이 아닌 다른 툴바 요소 클릭 시 닫기
+        if (e.target !== fontContainer && !fontContainer.contains(e.target)) {
+          if (isDropdownOpen || dropdownMenu.style.display === 'block') {
+            dropdownMenu.style.display = 'none';
+            dropdownMenu.classList.remove('show');
+            arrowIcon.textContent = 'arrow_drop_down';
+            fontContainer.classList.remove('active');
+            isDropdownOpen = false;
+          }
+        }
+      }, true);
       
       return fontContainer;
     }

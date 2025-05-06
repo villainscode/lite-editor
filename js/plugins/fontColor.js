@@ -45,7 +45,43 @@
       colorGrid.className = 'lite-editor-color-grid';
       dropdownMenu.appendChild(colorGrid);
       
-      // 색상 셀 생성 함수
+      // 중복 이벤트와 충돌을 방지하기 위한 추적 변수
+      let isDropdownOpen = false;
+      let documentClickHandlerAdded = false;
+      
+      // 드롭다운 닫기 함수 - 단일 함수로 정의하고 변경하지 않음
+      const closeDropdown = () => {
+        isDropdownOpen = false;
+        dropdownMenu.classList.remove('show');
+        dropdownMenu.style.display = 'none';
+        
+        // 이벤트 리스너 제거
+        if (documentClickHandlerAdded) {
+          document.removeEventListener('click', documentClickHandler);
+          documentClickHandlerAdded = false;
+        }
+        
+        // 스크롤 이벤트 리스너 제거
+        window.removeEventListener('scroll', updatePosition);
+      };
+      
+      // 스크롤 이벤트 핸들러
+      const updatePosition = () => {
+        if (!isDropdownOpen) return;
+        
+        const newRect = colorContainer.getBoundingClientRect();
+        dropdownMenu.style.top = newRect.bottom + 'px';
+        dropdownMenu.style.left = newRect.left + 'px';
+      };
+      
+      // 문서 클릭 이벤트 핸들러
+      const documentClickHandler = (e) => {
+        if (!dropdownMenu.contains(e.target) && !colorContainer.contains(e.target)) {
+          closeDropdown();
+        }
+      };
+      
+      // 색상 셀 생성
       colors.forEach(color => {
         const colorCell = document.createElement('div');
         colorCell.className = 'lite-editor-color-cell';
@@ -61,9 +97,8 @@
             // 색상 인디케이터 업데이트
             colorIndicator.style.backgroundColor = color;
             
-            // 드롭다운 닫기
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
+            // 드롭다운 닫기 - 명시적으로 함수 호출
+            closeDropdown();
             
             // 포커스 설정 (스크롤 방지)
             try {
@@ -105,7 +140,7 @@
               contentArea.dispatchEvent(new Event('input', { bubbles: true }));
             }
             
-            // 스크롤 복원
+            // 스크롤 위치 복원
             requestAnimationFrame(() => {
               window.scrollTo(window.scrollX, currentScrollY);
             });
@@ -117,26 +152,10 @@
         colorGrid.appendChild(colorCell);
       });
       
-      // 드롭다운을 document.body에 직접 추가
-      document.body.appendChild(dropdownMenu);
-      
       // 드롭다운 내부 클릭 이벤트 버블링 중지
       dropdownMenu.addEventListener('click', function(e) {
         e.stopPropagation();
       });
-      
-      // 드롭다운 닫기 함수
-      const closeDropdown = () => {
-        dropdownMenu.style.display = 'none';
-        document.removeEventListener('click', documentClickHandler);
-      };
-      
-      // 문서 클릭 이벤트 핸들러
-      const documentClickHandler = (e) => {
-        if (!dropdownMenu.contains(e.target) && !colorContainer.contains(e.target)) {
-          closeDropdown();
-        }
-      };
       
       // 클릭 이벤트 처리
       colorContainer.addEventListener('click', (e) => {
@@ -147,27 +166,26 @@
         const currentScrollY = window.scrollY;
         const currentScrollX = window.scrollX;
         
-        // 현재 선택 영역 저장
+        // 선택 영역 저장
         if (window.liteEditorSelection) {
           window.liteEditorSelection.save();
         }
         
         // 드롭다운 토글
-        if (dropdownMenu.style.display === 'block') {
+        if (isDropdownOpen) {
           closeDropdown();
           return;
         }
         
-        // 다른 모든 드롭다운 닫기
+        // 다른 드롭다운 닫기
         document.querySelectorAll('.lite-editor-dropdown-menu.show, .lite-editor-font-dropdown, .lite-editor-heading-dropdown').forEach(menu => {
           if (menu !== dropdownMenu && menu.style.display === 'block') {
             menu.style.display = 'none';
           }
         });
         
-        // 레이어 위치 설정 - 버튼 위치 기준으로 고정 위치 계산
+        // 레이어 위치 설정
         const buttonRect = colorContainer.getBoundingClientRect();
-        // fixed position은 viewport 기준이므로 scrollY를 더하지 않음
         dropdownMenu.style.top = buttonRect.bottom + 'px';
         dropdownMenu.style.left = buttonRect.left + 'px';
         
@@ -180,48 +198,37 @@
         }, 0);
         
         // 드롭다운 표시
+        isDropdownOpen = true;
         dropdownMenu.style.display = 'block';
         dropdownMenu.classList.add('show');
-        
-        // 스크롤 이벤트 핸들러 등록 - 스크롤 시에도 버튼 아래 위치하도록
-        const updatePosition = () => {
-          const newRect = colorContainer.getBoundingClientRect();
-          dropdownMenu.style.top = newRect.bottom + 'px';
-          dropdownMenu.style.left = newRect.left + 'px';
-        };
         
         // 스크롤 이벤트 리스너 추가
         window.addEventListener('scroll', updatePosition);
         
-        // 드롭다운이 닫힐 때 스크롤 이벤트 리스너 제거하는 함수
-        const originalCloseDropdown = closeDropdown;
-        closeDropdown = () => {
-          window.removeEventListener('scroll', updatePosition);
-          originalCloseDropdown();
-        };
+        // 클릭 이벤트 등록 (한 번만 등록되게)
+        if (!documentClickHandlerAdded) {
+          setTimeout(() => {
+            document.addEventListener('click', documentClickHandler);
+            documentClickHandlerAdded = true;
+          }, 0);
+        }
         
-        // 클릭 이벤트 등록
-        setTimeout(() => {
-          document.addEventListener('click', documentClickHandler);
-        }, 0);
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+          window.scrollTo(currentScrollX, currentScrollY);
+        });
       });
       
-      // 바디 클릭 시 드롭다운 닫기 (개선된 버전)
-      const closeColorDropdown = (e) => {
-        // 팔레트 영역이나 컬러 버튼 클릭이 아닌 경우에만 닫기
-        if (!dropdownMenu.contains(e.target) && !colorContainer.contains(e.target)) {
-          if (dropdownMenu.classList.contains('show')) {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            dropdownMenu.style.visibility = 'hidden';
-            dropdownMenu.style.opacity = '0';
-            console.log('Font color dropdown closed by body click');
-          }
-        }
-      };
+      // 드롭다운을 document.body에 직접 추가
+      document.body.appendChild(dropdownMenu);
       
-      // 전역 문서에 이벤트 리스너 추가 (캡처 단계에서)
-      document.addEventListener('click', closeColorDropdown, true);
+      // 툴바의 다른 요소 클릭 시 드롭다운 닫기
+      toolbar.addEventListener('mousedown', function(e) {
+        // 현재 버튼이 아닌 다른 툴바 요소 클릭 시 닫기
+        if (e.target !== colorContainer && !colorContainer.contains(e.target)) {
+          closeDropdown();
+        }
+      }, true);
       
       return colorContainer;
     }
