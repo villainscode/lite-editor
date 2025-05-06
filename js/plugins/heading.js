@@ -4,23 +4,22 @@
  */
 
 (function() {
-  // 전역 상태 변수 추가
+  // PluginUtil 참조
+  const util = window.PluginUtil || {};
+  // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
   let isDropdownOpen = false;
   
-  // PluginUtil 참조
-  const util = window.PluginUtil || {};
-  
-  // 선택 영역 저장 함수
+  // 선택 영역 저장 함수 (util 사용)
   function saveSelection() {
     savedRange = util.selection.saveSelection();
   }
 
-  // 선택 영역 복원 함수
+  // 선택 영역 복원 함수 (util 사용)
   function restoreSelection() {
     if (!savedRange) return false;
     return util.selection.restoreSelection(savedRange);
-  }
+  }  
 
   // 제목 플러그인
   LiteEditor.registerPlugin('heading', {

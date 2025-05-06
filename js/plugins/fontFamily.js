@@ -164,8 +164,8 @@
             }, {
               fontWeight: 'bold',
               padding: '5px 10px',
-              color: '#666',
-              fontSize: '12px',
+              color: '#2f67ff',
+              fontSize: '11px',
               backgroundColor: '#f5f5f5'  // 옅은 회색 배경색 추가
             });
             dropdownMenu.appendChild(header);
@@ -179,7 +179,7 @@
             padding: '5px 10px',
             cursor: 'pointer',
             fontFamily: font.value,
-            fontSize: '12px'  // 글꼴 크기를 12px로 설정
+            fontSize: '13px'  // 글꼴 크기를 12px로 설정
           });
           
           // 호버 이벤트

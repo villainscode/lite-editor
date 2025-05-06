@@ -10,7 +10,7 @@ const PluginUtil = (function() {
         registeredButtons: new Set()  // 등록된 버튼 추적
     };
 
-    // 현재 활성화된 모달/레이어 관리 (단순화)
+    // 현재 활성화된 모달/레이어 관리
     const activeModalManager = {
         activeModals: new Set(),
         
@@ -29,7 +29,7 @@ const PluginUtil = (function() {
             this.activeModals.clear();
         },
         
-        // 버튼 등록 로직 단순화
+        // 버튼 등록 로직
         registerButton(button) {
             if (!button) return;
             
@@ -497,7 +497,7 @@ const PluginUtil = (function() {
         return layer;
     };
 
-    // 바깥 영역 클릭 감지 (단순화)
+    // 바깥 영역 클릭 감지
     const setupOutsideClickHandler = function(element, callback, excludeElements = []) {
         let isJustOpened = true;
         
@@ -526,7 +526,7 @@ const PluginUtil = (function() {
         return () => document.removeEventListener('click', handler);
     };
 
-    // 툴바 버튼 클릭 이벤트 관리 (단순화)
+    // 툴바 버튼 클릭 이벤트 관리
     const setupToolbarButtonEvents = function(button, dropdown, toolbar) {
         button.addEventListener('click', (e) => {
             e.preventDefault();
@@ -569,7 +569,7 @@ const PluginUtil = (function() {
         });
     };
 
-    // 툴바 레벨 이벤트 핸들러 추가 (단순화)
+    // 툴바 레벨 이벤트 핸들러 추가
     const setupToolbarModalEvents = function(toolbar) {
         if (!toolbar || toolbar._hasModalEvents) return;
         
@@ -588,7 +588,7 @@ const PluginUtil = (function() {
     // 모달 관리 유틸리티
     const modal = {
         /**
-         * 모달의 닫기 이벤트(ESC 키 및 외부 클릭)를 설정 (단순화)
+         * 모달의 닫기 이벤트(ESC 키 및 외부 클릭)를 설정
          */
         setupModalCloseEvents(modalElement, closeCallback, excludeElements = []) {
             if (!modalElement || !closeCallback) return () => {};
@@ -619,22 +619,73 @@ const PluginUtil = (function() {
         }
     };
 
-    // FIX core.js에 있는 registerPlugin 함수를 따로 분리하여 util을 호출하는 구조로 변경해야 함 
     const registerPlugin = function(id, plugin) {
         if (window.LiteEditor) {
           LiteEditor.registerPlugin(id, plugin);
         } else {
           console.warn(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`);
         }
-      };
+    };
 
-    // 레이어 관리 유틸리티
-    const layerManager = {
-        createLayer(options) { /* ... */ },
-        toggleLayer(layer, button) { /* ... */ },
-        showLayer(layer, button) { /* ... */ },
-        hideLayer(layer) { /* ... */ },
-        setupLayerEvents(layer, closeCallback, excludeElements) { /* ... */ }
+    // 데이터 로드 유틸리티 추가
+    const dataLoader = {
+        /**
+         * 외부 데이터 스크립트 로드 함수
+         * @param {string} scriptPath - 스크립트 경로
+         * @param {string} dataNamespace - 로드된 데이터가 저장될 전역 네임스페이스
+         * @param {Function} callback - 로드 후 실행할 콜백 함수
+         */
+        loadExternalScript(scriptPath, dataNamespace, callback) {
+            // 이미 로드된 경우 콜백 즉시 실행
+            if (window[dataNamespace]) {
+                if (callback) callback();
+                return;
+            }
+            
+            // 스크립트 로드
+            const script = document.createElement('script');
+            script.src = scriptPath;
+            script.onload = function() {
+                if (callback) callback();
+            };
+            script.onerror = function() {
+                console.error(`${scriptPath} 데이터 파일을 로드할 수 없습니다.`);
+                if (callback) callback();
+            };
+            
+            document.head.appendChild(script);
+        },
+        
+        /**
+         * 색상 데이터 로드 함수
+         * @param {string} colorType - 색상 타입 ('font', 'highlight' 등)
+         * @param {Array} fallbackColors - 데이터 파일이 없을 경우 사용할 기본 색상 목록
+         * @returns {Array} 색상 목록 배열
+         */
+        loadColorData(colorType, fallbackColors) {
+            let getterFunction;
+            
+            switch (colorType) {
+                case 'font':
+                    getterFunction = 'getFontColors';
+                    break;
+                case 'highlight':
+                    getterFunction = 'getHighlightColors';
+                    break;
+                default:
+                    getterFunction = 'getFontColors';
+            }
+            
+            // 외부 데이터 파일이 로드되었는지 확인
+            if (window.LiteEditorColorData && typeof window.LiteEditorColorData[getterFunction] === 'function') {
+                // 외부 데이터 파일에서 색상 목록 가져오기
+                return window.LiteEditorColorData[getterFunction]();
+            } else {
+                // 대체: 데이터 파일이 로드되지 않은 경우 기본 색상 목록 반환
+                console.warn(`색상 데이터 파일을 찾을 수 없습니다. 기본 ${colorType} 색상 목록을 사용합니다.`);
+                return fallbackColors;
+            }
+        }
     };
 
     // 공개 API
@@ -656,7 +707,7 @@ const PluginUtil = (function() {
         setupToolbarModalEvents,
         activeModalManager,
         modal,
-        layerManager
+        dataLoader
     };
 })();
 
@@ -700,16 +751,3 @@ function toggleLinkModal(button, contentArea) {
         });
     }, 100);
 }
-
-// plugin-util.js에 추가할 코드 구조
-const ui = {
-    createStyledDropdown(label, options, defaultValue, width) { /* ... */ },
-    createFormGroup(label, input) { /* ... */ },
-    createButton(options) { /* ... */ },
-    createIconButton(icon, title, onClick) { /* ... */ }
-};
-
-const gridComponents = {
-    createGrid(rows, cols, options) { /* ... */ },
-    createSelectableGrid(size, selectionCallback) { /* ... */ }
-};
