@@ -78,7 +78,7 @@
       
       return window.SpeedHighlight;
     } catch (error) {
-      console.error('Speed Highlight 로드 실패:', error);
+      errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.LOAD, error);
       return null;
     }
   }
@@ -401,7 +401,7 @@
         contentArea.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } catch (error) {
-      console.error('코드 블록 삽입 오류:', error);
+      errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.INSERT, error);
       alert('코드 블록을 삽입하는 중 오류가 발생했습니다.');
     } finally {
       // 레이어 닫기 및 선택 영역 초기화

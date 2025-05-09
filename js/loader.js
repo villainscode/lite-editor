@@ -10,14 +10,15 @@
     // 로드할 스크립트 파일 목록 (순서 중요)
     const scripts = [
         // 1. 코어 라이브러리
+        'js/error-handler.js',
         'js/core.js',
         
         // 1.5 보안 관리자 (코어 이후 바로 로드)
         'js/security-manager.js',
         
-        // 2. 디버그 유틸리티 (코어 이후, 플러그인 이전에 로드)
-        'js/debug-utils.js',
+        // 2. 플러그인 유틸리티를 디버그 유틸리티보다 먼저 로드
         'js/plugins/plugin-util.js',
+        'js/debug-utils.js',
         
         // 3. 유틸리티 및 기본 기능
         'js/plugins/history.js',
@@ -78,8 +79,12 @@
             loadScripts(scriptList, index + 1);
         };
         
-        script.onerror = function() {
-            console.error('스크립트 로드 실패:', scriptList[index]);
+        script.onerror = function(error) {
+            if (window.errorHandler) {
+                errorHandler.logError('Loader', errorHandler.codes.COMMON.SCRIPT_LOAD, error);
+            } else {
+                console.error(`[Loader] 스크립트 로드 실패: ${scriptList[index]}`, error);
+            }
             // 오류 발생해도 다음 스크립트 로드 시도
             loadScripts(scriptList, index + 1);
         };

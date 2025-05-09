@@ -124,8 +124,6 @@
               container = container.parentNode;
             }
             
-            console.log('현재 컨테이너:', container.nodeName);
-            
             // 헤딩 또는 단락 태그 가져오기 (업데이트된 로직)
             let headingElement = null;
             
@@ -151,8 +149,6 @@
               else if (closestP) headingElement = closestP;
             }
             
-            console.log('현재 태그 요소:', headingElement ? headingElement.nodeName : '없음');
-            
             // 기존 헤딩 태그가 있는 경우 처리
             if (headingElement) {
               // 1. 현재 태그와 동일한 태그를 적용하려는 경우 (토글)
@@ -164,7 +160,6 @@
                 
                 // 기존 헤딩 태그를 새 p 태그로 교체
                 headingElement.parentNode.replaceChild(p, headingElement);
-                console.log('동일한 태그 토글:', headingElement.nodeName, '->', 'P');
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -181,7 +176,6 @@
                 
                 // 기존 헤딩 태그를 새 p 태그로 교체
                 headingElement.parentNode.replaceChild(p, headingElement);
-                console.log('헤딩에서 단락으로 변경:', headingElement.nodeName, '->', 'P');
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -198,7 +192,6 @@
                 
                 // 기존 헤딩 태그를 새 헤딩 태그로 교체
                 headingElement.parentNode.replaceChild(newHeading, headingElement);
-                console.log('헤딩 변경:', headingElement.nodeName, '->', level.tag.toUpperCase());
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -215,14 +208,12 @@
               
               // 새 요소를 DOM에 삽입
               range.insertNode(heading);
-              
-              console.log('새 헤딩 적용:', level.tag.toUpperCase());
             }
             
             // 에디터 상태 업데이트
             contentArea.dispatchEvent(new Event('input', { bubbles: true }));
           } else {
-            console.log('선택된 범위가 없습니다.');
+            errorHandler.logError('HeadingPlugin', errorHandler.codes.COMMON.SELECTION_GET, e);
           }
           
           // 스크롤 위치 복원 (애니메이션 프레임 사용)

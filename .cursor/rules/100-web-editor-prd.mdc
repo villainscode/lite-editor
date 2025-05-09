@@ -75,68 +75,221 @@ alwaysApply: true
 
 ## 6. 구현 현황 (JavaScript 파일 및 기능)
 
-현재까지 구현된 주요 JavaScript 파일과 해당 기능은 다음과 같습니다. (파일 이름 및 PRD 기반 추정)
+### 6.1 코어 파일
+* **`js/core.js`** (814 lines)
+  * 에디터 초기화 및 기본 설정
+  * `contenteditable` 영역 관리
+  * 플러그인 로딩/관리 인터페이스
+  * 에디터 상태 관리
 
-*   **`js/core.js`**:
-    *   에디터 초기화 및 기본 설정 
-    *   `contenteditable` 영역 관리, 기본 이벤트 처리
-    *   플러그인 로딩/관리 인터페이스 
-    *   에디터 상태 관리 (선택 영역 추적 등)
-*   **`js/loader.js`**:
-    *   에디터, 스크립트, 플러그인 로딩 및 초기화 
-*   **`js/modal.js`**:
-    *   설정 레이어/모달 UI 생성 및 관리 
-*   **`js/plugins/history.js`**:
-    *   실행 취소/재실행 (Undo/Redo) 기능 
-*   **`js/plugins/bold.js`**:
-    *   볼드 서식 적용/제거 
-*   **`js/plugins/italic.js`**:
-    *   이탤릭 서식 적용/제거 
-*   **`js/plugins/underline.js`**:
-    *   밑줄 서식 적용/제거 
-*   **`js/plugins/strike.js`**:
-    *   취소선 서식 적용/제거
-*   **`js/plugins/heading.js`**:
-    *   제목(H1-H6) 서식 적용/제거, 설정 레이어 연동
-*   **`js/plugins/checkList.js`**:
-*   **`js/plugins/bulletkList.js`**:
-*   **`js/plugins/numberedList.js`**:
-    *   순서 없는/있는 목록 생성 및 관리 
-*   **`js/plugins/blockquote.js`**:
-    *   인용구 서식 적용/제거 
-*   **`js/plugins/code.js`**:
-    *   인라인 코드 서식 적용/제거
-*   **`js/plugins/codeBlock.js`**:
-    *   코드 블록 생성 및 관리 
-*   **`js/plugins/align.js`**:
-    *   텍스트 정렬 적용, 설정 레이어 연동 
-*   **`js/plugins/line.js`**:
-    *   수평선 삽입 기능 
-*   **`js/plugins/link.js`**:
-    *   하이퍼링크 삽입/수정/제거, 설정 레이어 연동 
-*   **`js/plugins/imageUpload.js`**:
-    *   이미지 업로드 및 삽입 
-*   **`js/plugins/table.js`**:
-    *   테이블 생성 및 편집 
-*   **`js/plugins/fontFamily.js`**:
-    *   폰트 종류 변경, 설정 레이어 연동 
-*   **`js/plugins/fontColor.js`**:
-    *   텍스트 색상 변경, 설정 레이어 연동 
-*   **`js/plugins/emphasis.js`**:
-    *   텍스트 배경색 변경, 설정 레이어 연동 
-*   **`js/plugins/reset.js`**:
-    *   서식 제거 기능 
-*   **`js/plugins/formatIndent.js`**:
-    *   들여쓰기/내어쓰기 기능
-*   **`js/plugins/format.js`**:
-    *   포맷 관련 기본 기능/유틸리티 
-*   **`js/plugins/plugin-util.js`**:
-    *   플러그인 공통 유틸리티 
-    *   텍스트 서식 관련 공통 유틸리티
-*   **`js/plugins/format-utils.js`**:
-*   **`js/debug-utils.js`**:
-    *   개발/디버깅용 유틸리티
+* **`js/loader.js`** (95 lines)
+  * 에디터, 스크립트, 플러그인 로딩 및 초기화
 
-**참고:** 단축키 지원은 개별 플러그인 또는 `core.js`에 구현되었을 수 있으며, PRD에 명시되지 않은 기능(수평선, 이미지, 테이블, 들여쓰기 등)도 포함되어 있습니다.
+* **`js/modal.js`** (154 lines)
+  * 설정 레이어/모달 UI 생성 및 관리
+
+* **`js/security-manager.js`** (205 lines)
+  * 보안 관련 기능 관리
+
+* **`js/debug-utils.js`** (119 lines)
+  * 개발/디버깅용 유틸리티
+
+### 6.2 플러그인 파일
+
+#### 6.2.1 기본 서식 플러그인
+* **`js/plugins/bold.js`** (13 lines)
+  * 볼드 서식 적용/제거
+
+* **`js/plugins/italic.js`** (13 lines)
+  * 이탤릭 서식 적용/제거
+
+* **`js/plugins/underline.js`** (13 lines)
+  * 밑줄 서식 적용/제거
+
+* **`js/plugins/strike.js`** (13 lines)
+  * 취소선 서식 적용/제거
+
+#### 6.2.2 블록 레벨 서식 플러그인
+* **`js/plugins/heading.js`** (316 lines)
+  * 제목(H1-H6) 서식 적용/제거
+  * 설정 레이어 연동
+
+* **`js/plugins/blockquote.js`** (75 lines)
+  * 인용구 서식 적용/제거
+
+* **`js/plugins/codeBlock.js`** (493 lines)
+  * 코드 블록 생성 및 관리
+  * 구문 강조 기능
+
+#### 6.2.3 목록 관련 플러그인
+* **`js/plugins/bulletList.js`** (477 lines)
+  * 순서 없는 목록 생성 및 관리
+
+* **`js/plugins/numberedList.js`** (438 lines)
+  * 순서 있는 목록 생성 및 관리
+
+* **`js/plugins/checkList.js`** (431 lines)
+  * 체크리스트 생성 및 관리
+
+#### 6.2.4 정렬 및 들여쓰기
+* **`js/plugins/align.js`** (350 lines)
+  * 텍스트 정렬 적용
+  * 설정 레이어 연동
+
+* **`js/plugins/formatIndent.js`** (130 lines)
+  * 들여쓰기/내어쓰기 기능
+
+#### 6.2.5 미디어 관련 플러그인
+* **`js/plugins/imageUpload.js`** (560 lines)
+  * 이미지 업로드 및 삽입
+  * 이미지 크기 조정
+  * 이미지 정렬
+
+* **`js/plugins/media.js`** (411 lines)
+  * 미디어 파일 관리
+  * 미디어 플레이어 통합
+
+* **`js/plugins/table.js`** (1088 lines)
+  * 테이블 생성 및 편집
+  * 셀 병합/분할
+  * 행/열 추가/삭제
+
+#### 6.2.6 스타일 관련 플러그인
+* **`js/plugins/fontFamily.js`** (328 lines)
+  * 폰트 종류 변경
+  * 설정 레이어 연동
+
+* **`js/plugins/fontColor.js`** (281 lines)
+  * 텍스트 색상 변경
+  * 설정 레이어 연동
+
+* **`js/plugins/emphasis.js`** (286 lines)
+  * 텍스트 배경색 변경
+  * 설정 레이어 연동
+
+#### 6.2.7 기타 플러그인
+* **`js/plugins/link.js`** (328 lines)
+  * 하이퍼링크 삽입/수정/제거
+  * 설정 레이어 연동
+
+* **`js/plugins/line.js`** (199 lines)
+  * 수평선 삽입 기능
+
+* **`js/plugins/reset.js`** (329 lines)
+  * 서식 제거 기능
+
+* **`js/plugins/code.js`** (27 lines)
+  * 인라인 코드 서식 적용/제거
+
+#### 6.2.8 유틸리티 플러그인
+* **`js/plugins/plugin-util.js`** (999 lines)
+  * 플러그인 공통 유틸리티
+  * 텍스트 서식 관련 공통 유틸리티
+
+* **`js/plugins/format-utils.js`** (439 lines)
+  * 포맷 관련 유틸리티 함수
+
+* **`js/plugins/format.js`** (62 lines)
+  * 포맷 관련 기본 기능
+
+* **`js/plugins/history.js`** (202 lines)
+  * 실행 취소/재실행 (Undo/Redo) 기능
+
+### 6.3 구현 상태 요약
+- 총 31개의 JavaScript 파일 구현 완료
+- 코어 기능: 5개 파일
+- 플러그인: 26개 파일
+- 가장 복잡한 기능: 테이블(1088 lines), 플러그인 유틸리티(999 lines)
+- 가장 단순한 기능: 기본 서식(bold, italic, underline, strike)
+
+### 6.4 주요 개선사항
+1. 보안 관리자(`security-manager.js`) 추가
+2. 미디어 플러그인(`media.js`) 추가
+3. 코드 블록 기능 강화
+4. 테이블 기능 확장
+5. 이미지 업로드 기능 개선
+
+## 6.5 현재 개발 상태 및 향후 개발 사항
+
+### 6.5.1 최근 개선된 사항
+1. **레이어 관리 시스템 개선** (2025.05.07)
+   - plugin-dropdown-util.js 의존성 제거
+   - 통합된 activeModalManager 도입
+   - 모든 플러그인에 일관된 레이어 동작 적용
+   - 레이어 위치 자동 조정 기능 추가
+
+2. **UI/UX 개선** (2025.05.01)
+   - 툴바 레이아웃 최적화
+   - 콘텐츠 영역 스크롤 기능 개선
+   - 체크리스트 UI 버그 수정
+   - 반응형 디자인 개선
+
+### 6.5.2 현재 개발 중인 기능
+1. **성능 최적화**
+   - 레이어 전환 시 렌더링 성능 개선
+   - 대용량 콘텐츠 처리 최적화
+   - 메모리 사용량 최적화
+
+2. **접근성 개선**
+   - 키보드 네비게이션 강화
+   - 스크린 리더 지원 개선
+   - ARIA 속성 추가
+
+### 6.5.3 알려진 버그
+1. **UI 관련**
+   - [ ] 툴바 아이콘 간격이 일관되지 않은 경우 발생
+   - [ ] 특정 브라우저에서 레이어 위치 계산 오류
+   - [ ] 모바일 환경에서 터치 이벤트 처리 불안정
+
+2. **기능 관련**
+   - [ ] 체크리스트 항목 삭제 시 포맷팅 깨짐
+   - [ ] 테이블 셀 병합 후 스타일 적용 오류
+   - [ ] 이미지 업로드 시 일부 형식 지원 문제
+
+3. **성능 관련**
+   - [ ] 대용량 텍스트 붙여넣기 시 지연 현상
+   - [ ] 복잡한 테이블 편집 시 렌더링 지연
+   - [ ] 미디어 파일 삽입 시 메모리 사용량 증가
+
+### 6.5.4 향후 개발 계획
+1. **핵심 기능 개선**
+   - [ ] 실시간 협업 기능 추가
+   - [ ] 버전 관리 시스템 통합
+   - [ ] 자동 저장 기능 구현
+   - [ ] HTML 모드, Rich 모드 선택 탭 구현
+   - [ ] HTML Export, Markdown Export 추가, Import 추가 
+
+2. **플러그인 확장**
+   - [ ] 수학 수식 편집기 추가
+   - [ ] 차트 생성 도구 추가
+   - [ ] 코드 하이라이팅 개선
+
+3. **보안 강화**
+   - [ ] XSS 방지 강화
+   - [ ] 입력 데이터 검증 강화
+   - [ ] 파일 업로드 보안 강화
+
+4. **테스트 강화**
+   - [ ] 단위 테스트 커버리지 확대
+   - [ ] E2E 테스트 시나리오 추가
+   - [ ] 성능 테스트 자동화
+
+### 6.5.5 기술 부채
+1. **코드 구조**
+   - [ ] 플러그인 간 의존성 정리
+   - [ ] 공통 유틸리티 모듈화
+   - [ ] 타입 정의 개선
+
+2. **문서화**
+   - [ ] API 문서 업데이트
+   - [ ] 개발 가이드라인 보완
+   - [ ] 사용자 매뉴얼 작성
+
+3. **빌드 시스템**
+   - [ ] 번들 크기 최적화
+   - [ ] 트리 쉐이킹 개선
+   - [ ] 빌드 프로세스 자동화
+
+
 
 

@@ -128,12 +128,14 @@
         }, 50);
       });
     } catch (e) {
-      console.error('정렬 적용 중 오류:', e);
+      errorHandler.logError('AlignPlugin', errorHandler.codes.PLUGINS.ALIGN.APPLY, e);
     }
   }
   
   // 정렬 플러그인 등록
   LiteEditor.registerPlugin('align', {
+    title: 'Alignment',
+    icon: 'format_align_justify',
     customRender: function(toolbar, contentArea) {
       // 1. 정렬 버튼 생성
       const alignButton = util.dom.createElement('div', {
@@ -144,7 +146,7 @@
       // 2. 버튼 아이콘 추가
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
-        textContent: 'format_align_left'
+        textContent: 'format_align_justify'
       });
       alignButton.appendChild(icon);
       

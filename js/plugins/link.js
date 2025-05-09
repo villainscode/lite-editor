@@ -18,11 +18,7 @@
 
     // link.js 파일 상단에 디버깅 유틸리티 추가
     function debugLog(action, data) {
-        console.log(
-            `%c[LINK MODAL] ${action}`,
-            'color:#e91e63;font-weight:bold;',
-            data
-        );
+        errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.DEBUG, { action, data });
     }
 
     /**
@@ -120,7 +116,7 @@
                 }, 50);
             });
         } catch (e) {
-            console.error('링크 적용 실패:', e);
+            errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.APPLY, e);
         }
     }
 

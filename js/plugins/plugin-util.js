@@ -6,7 +6,6 @@
 const PluginUtil = (function() {
     // 활성화된 레이어/모달 관리를 위한 내부 상태
     const state = {
-        activeModals: new Set(),  // 현재 활성화된 모달/레이어 추적
         registeredButtons: new Set()  // 등록된 버튼 추적
     };
 
@@ -63,7 +62,7 @@ const PluginUtil = (function() {
         },
         
         // 레이어 토글
-        toggleLayer(layer, button, params = {}) {
+        toggle(layer, button, params = {}) {
             const isOpen = layer.classList.contains('show');
             
             // 다른 레이어 닫기
@@ -95,32 +94,25 @@ const PluginUtil = (function() {
         }
     };
 
-    // 현재 활성화된 모달/레이어 관리
+    // 현재 활성화된 모달/레이어 관리 (layerManager 위임)
     const activeModalManager = {
-        activeModals: new Set(),
-        
+        // layerManager 위임
         register(modal) {
-            if (modal) this.activeModals.add(modal);
+            layerManager.register(modal);
         },
         
         unregister(modal) {
-            if (modal) this.activeModals.delete(modal);
+            layerManager.unregister(modal);
         },
         
         closeAll() {
-            this.activeModals.forEach(modal => {
-                if (modal.closeCallback) modal.closeCallback();
-            });
-            this.activeModals.clear();
+            layerManager.closeAll();
         },
         
-        // 버튼 등록 로직
+        // 모달 전용 기능
         registerButton(button) {
             if (!button) return;
-            
-            // 한 번만 등록하도록
             if (button._hasClickHandler) return;
-            
             button._hasClickHandler = true;
         }
     };
@@ -308,6 +300,33 @@ const PluginUtil = (function() {
                 
                 range.setStart(node, offset);
                 range.collapse(true);
+                
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {
+                console.warn('커서 이동 중 오류:', e);
+            }
+        },
+        
+        moveCursorToEnd(element) {
+            if (!element) return;
+            
+            try {
+                const sel = this.getSafeSelection();
+                if (!sel) return;
+                
+                const range = document.createRange();
+                
+                // 요소의 맨 끝으로 커서 이동
+                if (element.nodeType === Node.TEXT_NODE) {
+                    // 텍스트 노드인 경우 텍스트 길이만큼 오프셋 설정
+                    range.setStart(element, element.length);
+                    range.setEnd(element, element.length);
+                } else {
+                    // 요소 노드인 경우 마지막 자식 위치로 설정
+                    range.selectNodeContents(element);
+                    range.collapse(false); // false = 끝으로 접기
+                }
                 
                 sel.removeAllRanges();
                 sel.addRange(range);
@@ -768,7 +787,7 @@ const PluginUtil = (function() {
         if (window.LiteEditor) {
           LiteEditor.registerPlugin(id, plugin);
         } else {
-          console.warn(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`);
+          errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.REGISTER, new Error(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`));
         }
     };
 
@@ -794,7 +813,7 @@ const PluginUtil = (function() {
                 if (callback) callback();
             };
             script.onerror = function() {
-                console.error(`${scriptPath} 데이터 파일을 로드할 수 없습니다.`);
+                errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.DATA_LOAD, new Error(`${scriptPath} 데이터 파일을 로드할 수 없습니다.`));
                 if (callback) callback();
             };
             
@@ -827,7 +846,7 @@ const PluginUtil = (function() {
                 return window.LiteEditorColorData[getterFunction]();
             } else {
                 // 대체: 데이터 파일이 로드되지 않은 경우 기본 색상 목록 반환
-                console.warn(`색상 데이터 파일을 찾을 수 없습니다. 기본 ${colorType} 색상 목록을 사용합니다.`);
+                errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.COLOR.LOAD, new Error(`색상 데이터 파일을 찾을 수 없습니다. 기본 ${colorType} 색상 목록을 사용합니다.`));
                 return fallbackColors;
             }
         }
@@ -922,6 +941,9 @@ const PluginUtil = (function() {
 
 // 전역 스코프에 노출
 window.PluginUtil = PluginUtil;
+
+// errorHandler는 이제 error-handler.js에서 전역으로 노출됨
+// window.errorHandler = PluginUtil.errorHandler; 행 제거
 
 // 더 단순한 토글 구현
 let isModalOpen = false;

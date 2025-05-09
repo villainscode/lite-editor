@@ -66,8 +66,15 @@
                 const p = createEmptyParagraph();
                 contentArea.insertBefore(p, block);
                 
-                // 커서를 빈 단락으로 이동 - PluginUtil 사용
-                util.selection.moveCursorTo(p, 0);
+                // 커서를 빈 단락으로 이동 - 개선된 방식
+                setTimeout(() => {
+                    try {
+                        util.selection.moveCursorTo(p, 0);
+                        p.focus(); // 명시적 포커스 추가
+                    } catch (e) {
+                        errorHandler.logError('LinePlugin', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
+                    }
+                }, 0);
             } else {
                 // 블록 중간이나 끝인 경우 현재 블록을 분할
                 splitBlockAndInsertHR(contentArea, block, range);
@@ -94,7 +101,8 @@
      */
     function createEmptyParagraph() {
         return util.dom.createElement('p', {
-            innerHTML: '<br>'
+            innerHTML: '<br>',
+            'data-editor-element': 'true'
         }, {
             margin: '0'
         });
@@ -113,8 +121,15 @@
         const p = createEmptyParagraph();
         contentArea.appendChild(p);
         
-        // 커서를 빈 단락으로 이동 - PluginUtil 사용
-        util.selection.moveCursorTo(p, 0);
+        // 커서를 빈 단락으로 이동 - 개선된 방식
+        setTimeout(() => {
+            try {
+                util.selection.moveCursorTo(p, 0);
+                p.focus(); // 명시적 포커스 추가
+            } catch (e) {
+                errorHandler.logError('LinePlugin', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
+            }
+        }, 0);
     }
     
     /**
@@ -192,7 +207,11 @@
     LiteEditor.registerPlugin('line', {
         title: 'Insert Line',
         icon: 'horizontal_rule', 
-        customRender: renderLineButton
+        customRender: renderLineButton,
+        init: function(editor) {
+            // 에디터 영역에 속성 추가하여 자동완성 기능과의 충돌 방지
+            editor.contentArea.setAttribute('data-no-completion', 'true');
+        }
     });
 })();
 

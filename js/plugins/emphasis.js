@@ -111,7 +111,7 @@
         }, 50);
       });
     } catch (e) {
-      console.error('하이라이트 색상 적용 중 오류:', e);
+      errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
     }
   }
   

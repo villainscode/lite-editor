@@ -19,11 +19,7 @@
 
     // 디버깅 유틸리티
     function debugLog(action, data) {
-        console.log(
-            `%c[IMAGE MODAL] ${action}`,
-            'color:#4285f4;font-weight:bold;',
-            data
-        );
+        errorHandler.logError('ImageUploadPlugin', errorHandler.codes.PLUGINS.IMAGE.DEBUG, { action, data });
     }
 
     /**
@@ -57,7 +53,7 @@
         
         const editor = document.querySelector('#lite-editor');
         if (!editor) {
-            console.error('Editor element not found!');
+            errorHandler.logError('ImageUploadPlugin', errorHandler.codes.PLUGINS.IMAGE.EDITOR_NOT_FOUND, new Error('Editor element not found!'));
             return;
         }
         

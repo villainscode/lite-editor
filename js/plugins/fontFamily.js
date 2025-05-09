@@ -43,7 +43,7 @@
       return window.LiteEditorFontData.getFonts();
     } else {
       // 대체: 데이터 파일이 로드되지 않은 경우 기본 글꼴 목록 반환
-      console.warn('글꼴 데이터 파일을 찾을 수 없습니다. 기본 글꼴 목록을 사용합니다.');
+      errorHandler.logError('FontFamilyPlugin', errorHandler.codes.PLUGINS.FONT.LOAD, e);
       return [
         { type: 'group_header', name: '기본 글꼴' },
         { type: 'divider' },
@@ -74,7 +74,7 @@
       if (callback) callback();
     };
     script.onerror = function() {
-      console.error('글꼴 데이터 파일 로드 실패');
+      errorHandler.logError('FontFamilyPlugin', errorHandler.codes.PLUGINS.FONT.LOAD, e);
       if (callback) callback();
     };
     
@@ -198,9 +198,8 @@
           // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
           fontItem.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();
-            
-            console.log('글꼴 선택:', font.name, font.value);
+            e.stopPropagation();            
+            errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
             
             // 현재 스크롤 위치 저장
             const currentScrollY = window.scrollY;
@@ -226,9 +225,8 @@
             injectFontFamilyStyles();
             
             // 글꼴 적용
-            console.log(`글꼴 적용 중: ${font.name} 값: ${font.value}`);
+            errorHandler.logInfo('FontFamilyPlugin', `글꼴 적용 중: ${font.name} 값: ${font.value}`);
             document.execCommand('fontName', false, font.value);
-            console.log(`일반 글꼴 '${font.name}' 적용됨`);
             
             // UI 업데이트
             fontText.textContent = font.name;

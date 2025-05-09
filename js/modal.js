@@ -102,7 +102,7 @@
           const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
           closeModal(cb);
         } else {
-          console.log('e.key', e.key);
+          errorHandler.logError('Modal', errorHandler.codes.COMMON.KEY_EVENT, e);
         }
       }
       document.addEventListener('keydown', handleKey);

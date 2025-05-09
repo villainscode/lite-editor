@@ -41,7 +41,7 @@ const LiteEditorSecurity = (function() {
                domain.endsWith('.' + allowedDomain);
       });
     } catch (e) {
-      console.warn('URL 파싱 오류:', e);
+      errorHandler.logError('SecurityManager', errorHandler.codes.SECURITY.URL_PARSE, e);
       return false;
     }
   }
@@ -132,7 +132,7 @@ const LiteEditorSecurity = (function() {
   function createSafeIframe(url, options = {}) {
     // 도메인 확인
     if (!isDomainAllowed(url)) {
-      console.warn(`보안 정책: 허용되지 않은 도메인 - ${url}`);
+      errorHandler.logError('SecurityManager', errorHandler.codes.SECURITY.DOMAIN_NOT_ALLOWED, url);      
       return null;
     }
     

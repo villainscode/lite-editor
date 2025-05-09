@@ -9,7 +9,7 @@
     try {
       return window.getSelection();
     } catch (error) {
-      console.warn('Error getting selection:', error);
+      errorHandler.logError('FormatUtils', errorHandler.codes.COMMON.SELECTION_GET, error);
       return null;
     }
   }
@@ -92,16 +92,16 @@
                 
                 // 15. 처리 상태 플래그 제거
                 buttonElement.removeAttribute('data-processing');
-                console.log(commandName + ' 서식 적용 완료');
+                errorHandler.logInfo('FormatUtils', '서식 적용 완료');
               }, 10);
             } catch (innerError) {
-              console.error(commandName + ' 서식 명령 실행 오류:', innerError);
+              errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.EXECUTE, innerError);
               buttonElement.removeAttribute('data-processing');
             }
           }, 20); // 명령 실행 전 지연
         }
       } catch (outerError) {
-        console.error(commandName + ' 서식 적용 중 오류:', outerError);
+        errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.APPLY, outerError);
         buttonElement.removeAttribute('data-processing');
       }
     }, 50); // 주요 실행 지연
@@ -267,16 +267,16 @@
                 
                 // 17. 처리 상태 플래그 제거
                 buttonElement.removeAttribute('data-processing');
-                console.log('Code 서식 적용 완료');
+                errorHandler.logInfo('FormatUtils', '코드 서식 적용 완료');
               }, 10);
             } catch (innerError) {
-              console.error('Code 서식 명령 실행 오류:', innerError);
+              errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, innerError);
               buttonElement.removeAttribute('data-processing');
             }
           }, 20); // 명령 실행 전 지연
         }
       } catch (outerError) {
-        console.error('Code 서식 적용 중 오류:', outerError);
+        errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, outerError);
         buttonElement.removeAttribute('data-processing');
       }
     }, 50); // 주요 실행 지연
@@ -360,7 +360,7 @@
     // 선택 영역 확인
     const selection = getSafeSelection();
     if (!selection || selection.rangeCount === 0) {
-      console.log('유효한 선택 영역이 없습니다.');
+      errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.NO_SELECTION, e);
       return;
     }
     
@@ -389,7 +389,7 @@
           }
         }, 10);
       } catch (e) {
-        console.error('서식 적용 중 오류:', e);
+        errorHandler.logInfo('FormatUtils', '서식 적용 완료');
       }
     }, 10);
   };

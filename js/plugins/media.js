@@ -117,7 +117,7 @@
         
         // 도메인 허용 여부 확인
         if (!LiteEditorSecurity.isDomainAllowed(youtubeUrl)) {
-          console.warn(`보안 정책: YouTube 도메인이 허용 목록에 없습니다.`);
+          errorHandler.logError('MediaPlugin', errorHandler.codes.SECURITY.DOMAIN_NOT_ALLOWED, e);
           return;
         }
       }
@@ -168,7 +168,7 @@
       });
       
     } catch (error) {
-      console.error('동영상 삽입 중 오류 발생:', error);
+      errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
     }
   }
   

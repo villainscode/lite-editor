@@ -107,7 +107,7 @@
         }, 50);
       });
     } catch (e) {
-      console.error('색상 적용 중 오류:', e);
+      errorHandler.logError('FontColorPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
     }
   }
   

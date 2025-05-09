@@ -188,8 +188,6 @@
     if (!targetOl || targetOl.nodeName !== 'OL') return;
     
     try {
-      console.log('🎨 순번 스타일 적용 시작:', targetOl);
-      
       // 스타일 우선 적용 (CSS 클래스 활용)
       ensureNumberedListStyles();
       
@@ -210,10 +208,8 @@
         const childDepth = getOlDepth(childOl);
         applyStyleByDepth(childOl, childDepth);
       });
-      
-      console.log('✅ 순번 스타일 적용 완료');
     } catch (e) {
-      console.error('❌ 순번 스타일 적용 중 오류:', e);
+      errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.APPLY, e);
     }
   }
   
@@ -256,7 +252,7 @@
       // 이전 형제 LI 찾기 (반드시 있어야 들여쓰기 가능)
       const prevLi = li.previousElementSibling;
       if (!prevLi || prevLi.nodeName !== 'LI') {
-        console.log('⚠️ 들여쓰기 불가: 이전 LI 없음');
+        errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.INDENT, e);
         return;
       }
       
@@ -279,7 +275,7 @@
       // 포커스 유지
       maintainFocus(li);
     } catch (e) {
-      console.error('❌ 들여쓰기 중 오류:', e);
+      errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.INDENT, e);
     }
   }
   
@@ -297,7 +293,7 @@
       // 부모 OL의 부모가 LI인지 확인 (중첩 리스트인 경우만 내어쓰기 가능)
       const parentLi = parentOl.parentNode;
       if (!parentLi || parentLi.nodeName !== 'LI') {
-        console.log('⚠️ 내어쓰기 불가: 이미 최상위 수준');
+        errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.OUTDENT, e);
         return;
       }
       
@@ -326,7 +322,7 @@
       // 포커스 유지
       maintainFocus(li);
     } catch (e) {
-      console.error('❌ 내어쓰기 중 오류:', e);
+      errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.OUTDENT, e);
     }
   }
   
@@ -351,7 +347,7 @@
       // PluginUtil.selection으로 포커스 설정
       PluginUtil.selection.moveCursorTo(textNode, textNode.length);
     } catch (e) {
-      console.warn('포커스 유지 중 오류:', e);
+      errorHandler.logError('NumberedListPlugin', errorHandler.codes.COMMON.FOCUS, e);
     }
   }
   

@@ -1,168 +1,202 @@
 /**
- * Jest 테스트 설정 파일
- * 
- * 모든 테스트가 실행되기 전에 로드됩니다.
- * 전역 모의(mock) 객체 및 설정을 여기에 정의합니다.
+ * Jest 테스트 환경 설정 후 실행될 설정
  */
 
-// TextEncoder 및 TextDecoder가 Node.js 환경에서 정의되지 않은 경우를 대비한 폴리필
-const util = require('util');
-global.TextEncoder = util.TextEncoder;
-global.TextDecoder = util.TextDecoder;
+// JSDOM 환경에서 필요한 추가 설정
+require('@testing-library/jest-dom');
 
-// JSDOM에서 console이 정의되지 않은 문제 해결을 위한 모의 구현
+// TextEncoder/TextDecoder polyfill 추가
+const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
+// JSDOM 환경 설정
+const { JSDOM } = require('jsdom');
+
+// 전역 DOM 환경 설정
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+  url: 'http://localhost/',
+  pretendToBeVisual: true,
+  runScripts: 'dangerously'
+});
+
+global.document = dom.window.document;
+global.window = dom.window;
+global.navigator = dom.window.navigator;
+
+// window.getSelection 모의 함수 설정
+global.window.getSelection = jest.fn().mockReturnValue({
+  removeAllRanges: jest.fn(),
+  addRange: jest.fn(),
+  getRangeAt: jest.fn().mockReturnValue({
+    cloneContents: jest.fn().mockReturnValue(document.createDocumentFragment()),
+    deleteContents: jest.fn(),
+    insertNode: jest.fn(),
+    setStart: jest.fn(),
+    setEnd: jest.fn(),
+    startContainer: document.body,
+    endContainer: document.body,
+    startOffset: 0,
+    endOffset: 0
+  }),
+  rangeCount: 1
+});
+
+// console 메서드 모킹
 global.console = {
-  log: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
+  log: jest.fn(),
   info: jest.fn(),
-  debug: jest.fn(),
-  trace: jest.fn()
+  debug: jest.fn()
 };
 
-// 기본 액션 함수들을 Jest 모의 함수로 정의
-global.resetAction = jest.fn();
-global.codeAction = jest.fn();
-global.blockquoteAction = jest.fn();
-global.boldAction = jest.fn();
-global.italicAction = jest.fn();
-global.underlineAction = jest.fn();
-global.increaseIndentAction = jest.fn();
-global.decreaseIndentAction = jest.fn();
-
-// LiteEditor 전역 객체 모의 구현
-global.LiteEditor = {
+// 테스트에 필요한 전역 객체 설정
+global.PluginUtil = {
   registerPlugin: jest.fn(),
-  getPlugins: jest.fn(() => ({})),
-  actions: {
+  styles: {
+    addInlineStyle: jest.fn()
+  },
+  dom: {
+    createElement: jest.fn((tag, attributes, styles) => {
+      const element = document.createElement(tag);
+      if (attributes) {
+        Object.entries(attributes).forEach(([key, value]) => {
+          if (key === 'className') {
+            element.className = value;
+          } else if (key === 'textContent') {
+            element.textContent = value;
+          } else {
+            element.setAttribute(key, value);
+          }
+        });
+      }
+      if (styles) {
+        Object.entries(styles).forEach(([key, value]) => {
+          element.style[key] = value;
+        });
+      }
+      return element;
+    })
+  },
+  selection: {
     saveSelection: jest.fn(),
-    restoreSelection: jest.fn(),
-    getSelection: jest.fn(() => ({
-      range: createMockRange(),
-      text: 'test'
-    })),
-    isSelectionActive: jest.fn(() => true),
+    restoreSelection: jest.fn()
+  },
+  editor: {
+    dispatchEditorEvent: jest.fn()
   }
 };
 
-// LiteEditorUtils 전역 객체 모의 구현
-global.LiteEditorUtils = {
-  applyInlineFormat: jest.fn(),
-  applyCodeFormat: jest.fn(),
-  isSelectionWithinTag: jest.fn(() => false),
+// Event 관련 모킹
+global.Event = class Event {
+  constructor(type, options) {
+    this.type = type;
+    this.bubbles = options?.bubbles || false;
+    this.cancelable = options?.cancelable || false;
+    this.composed = options?.composed || false;
+  }
 };
 
-// 선택 관련 모의 객체
-global.liteEditorSelection = {
-  save: jest.fn(),
-  restore: jest.fn()
-};
-
-// document.execCommand 모의 구현
+// document.execCommand 모킹
 document.execCommand = jest.fn().mockReturnValue(true);
 
-// Range 객체 모의 구현을 위한 헬퍼 함수
-global.createMockRange = (content = '') => ({
-  collapsed: false,
-  commonAncestorContainer: document.createElement('div'),
-  startContainer: document.createElement('div'),
-  endContainer: document.createElement('div'),
-  startOffset: 0,
-  endOffset: content.length,
-  selectNodeContents: jest.fn(),
-  setStart: jest.fn(),
-  setEnd: jest.fn(),
-  selectNode: jest.fn(),
-  cloneContents: jest.fn(() => {
-    const fragment = document.createDocumentFragment();
-    const div = document.createElement('div');
-    div.innerHTML = content;
-    fragment.appendChild(div);
-    return fragment;
-  }),
-  extractContents: jest.fn(),
-  toString: jest.fn(() => content),
-  deleteContents: jest.fn(),
-  insertNode: jest.fn(),
-  cloneRange: jest.fn(function() { return this; })
-});
-
-// 선택 객체 모의 구현을 위한 헬퍼 함수
-global.createMockSelection = (content = '') => {
-  const range = global.createMockRange(content);
-  return {
-    rangeCount: 1,
-    isCollapsed: false,
-    getRangeAt: jest.fn().mockReturnValue(range),
-    removeAllRanges: jest.fn(),
-    addRange: jest.fn(),
-    anchorNode: document.createTextNode(content),
-    focusNode: document.createTextNode(content),
-    anchorOffset: 0,
-    focusOffset: content.length,
-    toString: jest.fn(() => content)
-  };
+// errorHandler 모킹 추가
+global.errorHandler = {
+  logError: jest.fn(),
+  codes: {
+    PLUGINS: {
+      RESET: {
+        NO_SELECTION: 'RESET_NO_SELECTION',
+        NO_TEXT: 'RESET_NO_TEXT',
+        FORMAT: 'RESET_FORMAT'
+      }
+    }
+  }
 };
 
-// window.getSelection 모의 구현
-global.getSelection = jest.fn().mockImplementation(() => global.createMockSelection());
-
-// getSafeSelection 모의 구현
-global.getSafeSelection = jest.fn(() => global.getSelection());
-
-// window 객체에 MouseEvent 클래스 추가
-global.window = {
-  ...global.window,
-  MouseEvent: jest.requireActual('jsdom').MouseEvent,
-  getSelection: global.getSelection,
-  getSafeSelection: global.getSafeSelection
-};
-
-// JSDOM VirtualConsole 설정 헬퍼 함수 추가
-global.setupVirtualConsole = () => {
-  const { VirtualConsole } = require('jsdom');
-  const virtualConsole = new VirtualConsole();
-  // 콘솔로 메시지 전달 (에러 무시 옵션 포함)
-  virtualConsole.on('error', () => { /* 에러 무시 */ });
-  virtualConsole.on('warn', () => { /* 경고 무시 */ });
-  virtualConsole.on('info', () => { /* 정보 무시 */ });
-  virtualConsole.on('dir', () => { /* 디렉토리 무시 */ });
-  return virtualConsole;
-};
-
-// window 객체에 함수 추가
-Object.defineProperty(window, 'LiteEditor', {
-  value: global.LiteEditor,
-  writable: true
-});
-
-Object.defineProperty(window, 'LiteEditorUtils', {
-  value: global.LiteEditorUtils,
-  writable: true
-});
-
-// LiteEditor 객체에 getSafeSelection 함수 추가
-if (global.LiteEditor) {
-  global.LiteEditor.getSafeSelection = global.getSafeSelection;
-}
-
-// JSDOM 환경에서 모의 객체를 쉽게 설정할 수 있는 헬퍼 함수
-global.setupJSDOM = (dom) => {
-  const window = dom.window;
-  const document = window.document;
+// 테스트 전에 모든 모의 함수 초기화
+beforeEach(() => {
+  // DOM 초기화
+  document.body.innerHTML = '<div id="editor-content"></div>';
   
-  // getSafeSelection 구현
-  window.getSafeSelection = jest.fn(() => window.getSelection());
+  // 모킹 초기화
+  jest.clearAllMocks();
   
-  // LiteEditor 초기화
-  if (!window.LiteEditor && global.LiteEditor) {
-    window.LiteEditor = {
-      ...global.LiteEditor,
-      getSafeSelection: window.getSafeSelection
-    };
-  } else if (window.LiteEditor) {
-    window.LiteEditor.getSafeSelection = window.getSafeSelection;
+  // 전역 객체 초기화
+  if (global.LiteEditor) {
+    global.LiteEditor.plugins = {};
   }
   
-  return { window, document };
-};
+  // 이미 존재하는 mocks만 clear (try-catch로 방어)
+  try {
+    if (global.PluginUtil && global.PluginUtil.selection) {
+      if (global.PluginUtil.selection.saveSelection) 
+        global.PluginUtil.selection.saveSelection.mockClear();
+      if (global.PluginUtil.selection.restoreSelection) 
+        global.PluginUtil.selection.restoreSelection.mockClear();
+    }
+    
+    if (global.PluginUtil && global.PluginUtil.editor) {
+      if (global.PluginUtil.editor.dispatchEditorEvent) 
+        global.PluginUtil.editor.dispatchEditorEvent.mockClear();
+    }
+    
+    if (global.PluginUtil && global.PluginUtil.dom) {
+      if (global.PluginUtil.dom.createElement) 
+        global.PluginUtil.dom.createElement.mockClear();
+    }
+    
+    if (global.PluginUtil && global.PluginUtil.layerManager) {
+      if (global.PluginUtil.layerManager.register) 
+        global.PluginUtil.layerManager.register.mockClear();
+      if (global.PluginUtil.layerManager.unregister) 
+        global.PluginUtil.layerManager.unregister.mockClear();
+      if (global.PluginUtil.layerManager.closeAll) 
+        global.PluginUtil.layerManager.closeAll.mockClear();
+      if (global.PluginUtil.layerManager.toggle) 
+        global.PluginUtil.layerManager.toggle.mockClear();
+    }
+    
+    if (global.PluginUtil && global.PluginUtil.activeModalManager) {
+      if (global.PluginUtil.activeModalManager.register) 
+        global.PluginUtil.activeModalManager.register.mockClear();
+      if (global.PluginUtil.activeModalManager.unregister) 
+        global.PluginUtil.activeModalManager.unregister.mockClear();
+      if (global.PluginUtil.activeModalManager.closeAll) 
+        global.PluginUtil.activeModalManager.closeAll.mockClear();
+      if (global.PluginUtil.activeModalManager.registerButton) 
+        global.PluginUtil.activeModalManager.registerButton.mockClear();
+    }
+    
+    if (global.PluginUtil && global.PluginUtil.setupOutsideClickHandler) {
+      global.PluginUtil.setupOutsideClickHandler.mockClear();
+    }
+  } catch (e) {
+    console.error('테스트 설정 중 오류 발생:', e);
+  }
+  
+  // console 메서드 초기화
+  if (console.error) console.error.mockClear();
+  if (console.warn) console.warn.mockClear();
+  if (console.log) console.log.mockClear();
+});
+
+// 테스트 후 정리
+afterEach(() => {
+  // DOM 정리
+  document.body.innerHTML = '';
+  
+  // 모킹 초기화
+  jest.clearAllMocks();
+  
+  // 이벤트 리스너 정리 (추가된 경우)
+  try {
+    const oldListeners = window._eventListeners || [];
+    oldListeners.forEach(({ type, listener }) => {
+      document.removeEventListener(type, listener);
+    });
+  } catch (e) {
+    // 이벤트 리스너 정리 중 에러는 무시
+  }
+}); 

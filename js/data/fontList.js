@@ -11,6 +11,7 @@ window.LiteEditorFontData = {
       const lang = navigator.language || navigator.userLanguage;
       return lang.substring(0, 2); // Extract language code (e.g., 'ko-KR' → 'ko')
     } catch (e) {
+      errorHandler.logError('FontList', errorHandler.codes.PLUGINS.FONT.LOAD, e);
       return 'ko'; // Default to Korean on error
     }
   },

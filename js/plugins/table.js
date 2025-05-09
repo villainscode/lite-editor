@@ -263,7 +263,7 @@
     
     // 그리드 레이어 관리
     const gridLayerManager = {
-        toggleGridLayer(buttonElement) {
+        toggle(tableButton) {
             // 현재 스크롤 위치 저장
             const currentScrollY = window.scrollY;
             
@@ -272,7 +272,7 @@
                 return;
             }
             
-            this.showGridLayer(buttonElement);
+            this.showGridLayer(tableButton);
             
             // 스크롤 위치 복원
             requestAnimationFrame(() => {
@@ -1040,7 +1040,7 @@
             tableButton.addEventListener('click', e => {
                 e.preventDefault();
                 e.stopPropagation();
-                gridLayerManager.toggleGridLayer(tableButton);
+                gridLayerManager.toggle(tableButton);
             });
             
             // 에디터 로드 후 기존 테이블 리사이저 초기화
