@@ -9,23 +9,21 @@
     
     // 로드할 스크립트 파일 목록 (순서 중요)
     const scripts = [
-        // 1. 코어 라이브러리
+        // 코어 라이브러리
         'js/error-handler.js',
         'js/core.js',
-        
-        // 1.5 보안 관리자 (코어 이후 바로 로드)
         'js/security-manager.js',
         
-        // 2. 플러그인 유틸리티를 디버그 유틸리티보다 먼저 로드
+        // 먼저 플러그인 유틸리티를 로드
         'js/plugins/plugin-util.js',
         'js/debug-utils.js',
         
-        // 3. 유틸리티 및 기본 기능
+        // 유틸리티 및 기본 기능
         'js/plugins/history.js',
         'js/plugins/format-utils.js',
         'js/plugins/reset.js',
         
-        // 4. 텍스트 서식 관련 플러그인
+        // 텍스트 서식 관련 플러그인
         'js/plugins/bold.js',
         'js/plugins/italic.js',
         'js/plugins/underline.js',
@@ -33,32 +31,32 @@
         'js/plugins/code.js',
         'js/plugins/blockquote.js',
         
-        // 5. 코드 블록 플러그인
+        // 코드 블록 플러그인
         'js/plugins/codeBlock.js',
         
-        // 6. 폰트 및 색상 관련 플러그인
+        // 폰트 및 색상 관련 플러그인
         'js/plugins/fontFamily.js',
         'js/plugins/fontColor.js',
         'js/plugins/emphasis.js',
         'js/plugins/heading.js',
         
-        // 7. 구조 및 정렬 관련 플러그인
+        // 구조 및 정렬 관련 플러그인
         'js/plugins/align.js',
         'js/plugins/formatIndent.js',
         
-        // 8. 삽입 관련 플러그인
+        // 삽입 관련 플러그인
         'js/plugins/link.js',
         'js/plugins/imageUpload.js',
         'js/plugins/table.js',
         'js/plugins/media.js',
         'js/plugins/line.js',
         
-        // 9. 체크리스트 플러그인
+        // 체크리스트 플러그인
         'js/plugins/checkList.js',
         'js/plugins/bulletList.js',
         'js/plugins/numberedList.js',
 
-        // 10. 기타 플러그인
+        // 모달 플러그인
         'js/modal.js',
     ];
     
