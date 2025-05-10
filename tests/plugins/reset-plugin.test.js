@@ -1,5 +1,5 @@
 /**
- * Unit Tests for Reset Plugin (Format Clearing)
+ * 서식 초기화 플러그인 유닛 테스트
  */
 
 const jsdom = require('jsdom');
@@ -7,12 +7,12 @@ const { JSDOM } = jsdom;
 const path = require('path');
 const fs = require('fs');
 
-describe('Reset Plugin', () => {
+describe('서식 초기화 플러그인 테스트', () => {
   let window, document, contentArea, mockExecCommand;
   let resetPlugin; // 플러그인 객체를 저장할 변수
 
   beforeEach(() => {
-    // Set up our document body
+    // 문서 본문 설정
     const dom = new JSDOM(`
       <html>
         <body>
@@ -29,11 +29,11 @@ describe('Reset Plugin', () => {
     document = window.document;
     contentArea = document.getElementById('editor');
 
-    // Mock the document.execCommand
+    // document.execCommand 모킹
     mockExecCommand = jest.fn().mockReturnValue(true);
     document.execCommand = mockExecCommand;
 
-    // Create range and selection mocks
+    // 범위와 선택 객체 모킹
     const mockRange = {
       collapsed: false,
       commonAncestorContainer: contentArea,
@@ -83,7 +83,7 @@ describe('Reset Plugin', () => {
       })
     };
 
-    // Reset 플러그인 파일 직접 로드
+    // 서식 초기화 플러그인 파일 직접 로드
     const resetJsPath = path.resolve(__dirname, '../../js/plugins/reset.js');
     const resetJsContent = fs.readFileSync(resetJsPath, 'utf8');
     
@@ -123,7 +123,7 @@ describe('Reset Plugin', () => {
     jest.restoreAllMocks();
   });
 
-  test('should register the plugin with LiteEditor', () => {
+  test('LiteEditor에 플러그인이 올바르게 등록되는지 테스트', () => {
     // 플러그인 등록 여부 확인
     expect(window.LiteEditor.registerPlugin).toHaveBeenCalledWith('reset', expect.objectContaining({
       title: 'Clear Formatting',
@@ -135,7 +135,7 @@ describe('Reset Plugin', () => {
     expect(resetPlugin).toBeDefined();
   });
 
-  test('should handle case where there is no selection', () => {
+  test('선택 영역이 없을 때 정상적으로 처리되는지 테스트', () => {
     // 빈 선택 객체 모킹
     window.getSelection = jest.fn().mockReturnValue({
       rangeCount: 0,

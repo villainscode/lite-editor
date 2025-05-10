@@ -69,7 +69,7 @@
                 // 커서를 빈 단락으로 이동 - 개선된 방식
                 setTimeout(() => {
                     try {
-                        util.selection.moveCursorTo(p, 0);
+                util.selection.moveCursorTo(p, 0);
                         p.focus(); // 명시적 포커스 추가
                     } catch (e) {
                         errorHandler.logError('LinePlugin', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
@@ -124,7 +124,7 @@
         // 커서를 빈 단락으로 이동 - 개선된 방식
         setTimeout(() => {
             try {
-                util.selection.moveCursorTo(p, 0);
+        util.selection.moveCursorTo(p, 0);
                 p.focus(); // 명시적 포커스 추가
             } catch (e) {
                 errorHandler.logError('LinePlugin', errorHandler.codes.COMMON.SELECTION_RESTORE, e);

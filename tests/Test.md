@@ -163,5 +163,5 @@ npm test -- tests/plugins/align-plugin.test.js
 ## 7. 추가 리소스
 
 - [Jest 문서](https://jestjs.io/docs/getting-started)
-- [JSDOM 문서](https://github.com/jsdom/jsdom)
+- [JSDOM 문서](https://github.com/jsdom/jsdom) 
 - [Testing Library 문서](https://testing-library.com/docs/) 

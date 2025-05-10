@@ -1,11 +1,11 @@
 /**
- * Unit Tests for Code Plugin
+ * 코드 플러그인 유닛 테스트
  */
 
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
 
-describe('Code Plugin', () => {
+describe('코드 플러그인 테스트', () => {
   let window, document, contentArea, plugin;
   let originalLiteEditor, originalLiteEditorUtils;
 
@@ -19,7 +19,7 @@ describe('Code Plugin', () => {
       global.setupVirtualConsole() : 
       new jsdom.VirtualConsole().on('error', () => {});
     
-    // Set up our document body
+    // 문서 본문 설정
     const dom = new JSDOM(`
       <html>
         <body>
@@ -41,7 +41,7 @@ describe('Code Plugin', () => {
     global.window = window;
     global.document = document;
 
-    // Mock LiteEditorUtils - 먼저 전역 객체 설정
+    // LiteEditorUtils 모킹 - 전역 객체 설정
     global.LiteEditorUtils = {
       applyCodeFormat: jest.fn()
     };
@@ -49,7 +49,7 @@ describe('Code Plugin', () => {
     // window 객체에도 설정
     window.LiteEditorUtils = global.LiteEditorUtils;
 
-    // Mock LiteEditor - 먼저 전역 객체 설정
+    // LiteEditor 모킹 - 전역 객체 설정
     global.LiteEditor = {
       registerPlugin: jest.fn((name, pluginObj) => {
         if (name === 'code') {
@@ -83,7 +83,7 @@ describe('Code Plugin', () => {
     jest.restoreAllMocks();
   });
 
-  test('should register the plugin with LiteEditor', () => {
+  test('LiteEditor에 플러그인이 올바르게 등록되는지 테스트', () => {
     expect(global.LiteEditor.registerPlugin).toHaveBeenCalledWith('code', expect.objectContaining({
       title: 'Code',
       icon: 'code',
@@ -91,26 +91,26 @@ describe('Code Plugin', () => {
     }));
   });
 
-  test('should call LiteEditorUtils.applyCodeFormat when action is triggered', () => {
-    // Get the plugin configuration
+  test('action이 트리거될 때 LiteEditorUtils.applyCodeFormat이 호출되는지 테스트', () => {
+    // 플러그인 설정 가져오기
     const pluginConfig = global.LiteEditor.registerPlugin.mock.calls[0][1];
     
-    // Get the action function
+    // action 함수 가져오기
     const action = pluginConfig.action;
     
-    // Create a mock button element
+    // 모의 버튼 요소 생성
     const mockButton = document.createElement('button');
     
-    // Create a mock event
+    // 모의 이벤트 생성
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Call the action function
+    // action 함수 호출
     action(contentArea, mockButton, mockEvent);
     
-    // Check that applyCodeFormat was called with the right arguments
+    // applyCodeFormat이 올바른 인자와 함께 호출되었는지 확인
     expect(global.LiteEditorUtils.applyCodeFormat).toHaveBeenCalledWith(
       contentArea,
       mockButton,

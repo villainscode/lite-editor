@@ -1,8 +1,8 @@
 /**
- * Unit Tests for Blockquote Plugin
+ * 인용구 플러그인 유닛 테스트
  */
 
-describe('Blockquote Plugin', () => {
+describe('인용구 플러그인 테스트', () => {
   let contentArea;
   
   // 테스트에 필요한 모의 함수 및 객체 설정
@@ -76,7 +76,7 @@ describe('Blockquote Plugin', () => {
     // jest.resetAllMocks(); // 이 줄을 제거 또는 주석 처리
   });
 
-  test('should register the plugin with PluginUtil', () => {
+  test('PluginUtil에 플러그인이 올바르게 등록되는지 테스트', () => {
     // 플러그인이 등록되었는지 확인
     expect(window.PluginUtil.registerBlockFormatPlugin).toHaveBeenCalled();
     
@@ -92,7 +92,7 @@ describe('Blockquote Plugin', () => {
     expect(args[4]).toBe(null);
   });
 
-  test('should apply blockquote format when button is clicked', () => {
+  test('버튼 클릭 시 인용구 서식이 적용되는지 테스트', () => {
     // 두 번째 테스트는 첫 번째 테스트의 모킹 정보가 유지되는지 의존하지 않고 독립적으로 검증
     
     // 직접 document.execCommand 호출하여 기능 테스트
@@ -102,7 +102,7 @@ describe('Blockquote Plugin', () => {
     expect(document.execCommand).toHaveBeenCalledWith('formatBlock', false, 'blockquote');
   });
 
-  test('should handle Enter key in blockquote', () => {
+  test('인용구 내에서 Enter 키가 정상적으로 처리되는지 테스트', () => {
     // Create a blockquote element
     const blockquote = document.createElement('blockquote');
     blockquote.innerHTML = '<p>인용구 내부 텍스트</p>';
@@ -117,7 +117,7 @@ describe('Blockquote Plugin', () => {
     expect(contentArea.querySelector('blockquote + p')).toBeTruthy();
   });
 
-  test('should not handle Enter key outside blockquote', () => {
+  test('인용구 외부에서 Enter 키가 처리되지 않는지 테스트', () => {
     // Simulate Enter key press outside blockquote
     const enterEvent = new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -132,7 +132,7 @@ describe('Blockquote Plugin', () => {
     expect(contentArea.querySelectorAll('p').length).toBe(1);
   });
 
-  test('should handle Shift+Enter in blockquote', () => {
+  test('인용구 내에서 Shift+Enter가 정상적으로 처리되는지 테스트', () => {
     // Create a blockquote element
     const blockquote = document.createElement('blockquote');
     blockquote.innerHTML = '<p>인용구 내부 텍스트</p>';

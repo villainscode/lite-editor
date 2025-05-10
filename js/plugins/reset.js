@@ -16,66 +16,66 @@
     icon: 'format_clear',
     action: function(contentArea) {
       try {
-        // 현재 선택 상태 저장
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) {
+      // 현재 선택 상태 저장
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
           errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
-          return false;
-        }
+        return false;
+      }
 
-        const selectedText = selection.toString();
-        if (!selectedText.trim()) {
+      const selectedText = selection.toString();
+      if (!selectedText.trim()) {
           errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
-          return false;
-        }
+        return false;
+      }
 
-        // 선택 범위 복제
-        const range = selection.getRangeAt(0).cloneRange();
-        const startContainer = range.startContainer;
-        const startOffset = range.startOffset;
-        const endContainer = range.endContainer;
-        const endOffset = range.endOffset;
+      // 선택 범위 복제
+      const range = selection.getRangeAt(0).cloneRange();
+      const startContainer = range.startContainer;
+      const startOffset = range.startOffset;
+      const endContainer = range.endContainer;
+      const endOffset = range.endOffset;
 
-        // 주변 컨텍스트 포착
-        let startNode = startContainer;
-        let endNode = endContainer;
+      // 주변 컨텍스트 포착
+      let startNode = startContainer;
+      let endNode = endContainer;
+      
+      // 텍스트 노드가 아닌 경우 처리
+      if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
+        startNode = getTextNodeAtPosition(startContainer, startOffset);
+      }
+      
+      if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
+        endNode = getTextNodeAtPosition(endContainer, endOffset);
+      }
+      
+      // 주변 요소의 참조 저장
+      const startParent = startNode.parentNode;
+      const endParent = endNode.parentNode;
+      const commonAncestor = range.commonAncestorContainer;
+      
+      // 서식 제거 수행
+      try {
+        // 1. 블록 태그 처리 - 개선된 방식으로 처리
+        const hadBlockChanges = handleBlockElements(contentArea, range, startNode, endNode);
         
-        // 텍스트 노드가 아닌 경우 처리
-        if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
-          startNode = getTextNodeAtPosition(startContainer, startOffset);
-        }
+        // 2. 기본 서식 제거 명령 실행 (인라인 태그 제거)
+        document.execCommand('removeFormat', false, null);
+        document.execCommand('unlink', false, null); // 링크 제거
         
-        if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
-          endNode = getTextNodeAtPosition(endContainer, endOffset);
-        }
-        
-        // 주변 요소의 참조 저장
-        const startParent = startNode.parentNode;
-        const endParent = endNode.parentNode;
-        const commonAncestor = range.commonAncestorContainer;
-        
-        // 서식 제거 수행
-        try {
-          // 1. 블록 태그 처리 - 개선된 방식으로 처리
-          const hadBlockChanges = handleBlockElements(contentArea, range, startNode, endNode);
-          
-          // 2. 기본 서식 제거 명령 실행 (인라인 태그 제거)
-          document.execCommand('removeFormat', false, null);
-          document.execCommand('unlink', false, null); // 링크 제거
-          
-          // 포커스 및 선택 복원 - 타이밍 문제 해결을 위해 지연 실행
-          setTimeout(() => {
-            try {
-              // 먼저 편집 영역에 포커스
-              contentArea.focus();
-              
-              // 선택 복원 시도
-              restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
-            } catch (e) {
+        // 포커스 및 선택 복원 - 타이밍 문제 해결을 위해 지연 실행
+        setTimeout(() => {
+          try {
+            // 먼저 편집 영역에 포커스
+            contentArea.focus();
+            
+            // 선택 복원 시도
+            restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
+          } catch (e) {
               errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.CURSOR, e);
-              setCursorToEnd(contentArea);
-            }
-          }, 10);
+            setCursorToEnd(contentArea);
+          }
+        }, 10);
         } catch (error) {
           errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
           contentArea.focus();
