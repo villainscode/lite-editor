@@ -1,114 +1,81 @@
 /**
  * LiteEditor 서식 초기화 플러그인
  * 선택된 텍스트의 모든 서식(인라인 및 블록 레벨)을 제거합니다.
- * @version 1.0.1
- * @author LiteEditor Team
  */
 (function() {
-  /**
-   * 제거할 인라인 태그 목록
-   * 텍스트 서식 및 인라인 요소를 정의합니다.
-   * @type {string[]}
-   */
+  // 제거할 인라인 태그 목록
   const INLINE_TAGS = ['B', 'I', 'U', 'STRONG', 'EM', 'MARK', 'SMALL', 'DEL', 'INS', 'SUB', 'SUP', 
                       'STRIKE', 'CODE', 'FONT', 'A', 'SPAN'];
   
-  /**
-   * 제거할 블록 태그 목록
-   * 문단 레벨 서식을 정의합니다.
-   * @type {string[]}
-   */
+  // 제거할 블록 태그 목록
   const BLOCK_TAGS = ['BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE'];
 
-  /**
-   * 서식 초기화 플러그인 등록
-   * LiteEditor에 'reset' 플러그인을 등록하고 기능을 구현합니다.
-   */
+  // 서식 초기화 플러그인 등록
   LiteEditor.registerPlugin('reset', {
     title: 'Clear Formatting',
     icon: 'format_clear',
-    /**
-     * 서식 초기화 실행 함수
-     * 선택된 텍스트에서 모든 서식을 제거합니다.
-     * 
-     * @param {HTMLElement} contentArea - 에디터의 contenteditable 영역
-     * @returns {boolean} 서식 초기화 성공 여부
-     */
     action: function(contentArea) {
       try {
-        /**
-         * 1단계: 선택 영역 유효성 검사
-         */
-        
-        // 현재 선택 상태 저장
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) {
-            errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
-          return false;
-        }
+      // 현재 선택 상태 저장
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
+        return false;
+      }
 
-        const selectedText = selection.toString();
-        if (!selectedText.trim()) {
-            errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
-          return false;
-        }
+      const selectedText = selection.toString();
+      if (!selectedText.trim()) {
+          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
+        return false;
+      }
 
-        /**
-         * 2단계: 선택 범위 및 컨텍스트 정보 저장
-         */
-        
-        // 선택 범위 복제
-        const range = selection.getRangeAt(0).cloneRange();
-        const startContainer = range.startContainer;
-        const startOffset = range.startOffset;
-        const endContainer = range.endContainer;
-        const endOffset = range.endOffset;
+      // 선택 범위 복제
+      const range = selection.getRangeAt(0).cloneRange();
+      const startContainer = range.startContainer;
+      const startOffset = range.startOffset;
+      const endContainer = range.endContainer;
+      const endOffset = range.endOffset;
 
-        // 주변 컨텍스트 포착
-        let startNode = startContainer;
-        let endNode = endContainer;
+      // 주변 컨텍스트 포착
+      let startNode = startContainer;
+      let endNode = endContainer;
+      
+      // 텍스트 노드가 아닌 경우 처리
+      if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
+        startNode = getTextNodeAtPosition(startContainer, startOffset);
+      }
+      
+      if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
+        endNode = getTextNodeAtPosition(endContainer, endOffset);
+      }
+      
+      // 주변 요소의 참조 저장
+      const startParent = startNode.parentNode;
+      const endParent = endNode.parentNode;
+      const commonAncestor = range.commonAncestorContainer;
+      
+      // 서식 제거 수행
+      try {
+        // 1. 블록 태그 처리 - 개선된 방식으로 처리
+        const hadBlockChanges = handleBlockElements(contentArea, range, startNode, endNode);
         
-        // 텍스트 노드가 아닌 경우 처리
-        if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
-          startNode = getTextNodeAtPosition(startContainer, startOffset);
-        }
+        // 2. 기본 서식 제거 명령 실행 (인라인 태그 제거)
+        document.execCommand('removeFormat', false, null);
+        document.execCommand('unlink', false, null); // 링크 제거
         
-        if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
-          endNode = getTextNodeAtPosition(endContainer, endOffset);
-        }
-        
-        // 주변 요소의 참조 저장
-        const startParent = startNode.parentNode;
-        const endParent = endNode.parentNode;
-        const commonAncestor = range.commonAncestorContainer;
-        
-        /**
-         * 3단계: 서식 제거 실행
-         */
-        try {
-          // 1. 블록 태그 처리 - 개선된 방식으로 처리
-          const hadBlockChanges = handleBlockElements(contentArea, range, startNode, endNode);
-          
-          // 2. 기본 서식 제거 명령 실행 (인라인 태그 제거)
-          document.execCommand('removeFormat', false, null);
-          document.execCommand('unlink', false, null); // 링크 제거
-          
-          /**
-           * 4단계: 포커스 및 선택 복원
-           * 타이밍 문제 해결을 위해 지연 실행
-           */
-          setTimeout(() => {
-            try {
-              // 먼저 편집 영역에 포커스
-              contentArea.focus();
-              
-              // 선택 복원 시도
-              restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
-            } catch (e) {
-                errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.CURSOR, e);
-              setCursorToEnd(contentArea);
-            }
-          }, 10);
+        // 포커스 및 선택 복원 - 타이밍 문제 해결을 위해 지연 실행
+        setTimeout(() => {
+          try {
+            // 먼저 편집 영역에 포커스
+            contentArea.focus();
+            
+            // 선택 복원 시도
+            restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
+          } catch (e) {
+              errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.CURSOR, e);
+            setCursorToEnd(contentArea);
+          }
+        }, 10);
         } catch (error) {
           errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
           contentArea.focus();
@@ -126,26 +93,17 @@
 
   /**
    * 위치에 해당하는 텍스트 노드 찾기
-   * Element와 offset 위치를 기반으로 해당 위치의 실제 텍스트 노드를 찾습니다.
-   * 
-   * @param {Node} element - 검색을 시작할 요소 노드
-   * @param {number} offset - 요소 내 위치 오프셋
-   * @returns {Node} 찾은 텍스트 노드 또는 최종 노드
    */
   function getTextNodeAtPosition(element, offset) {
-    // 이미 텍스트 노드인 경우 바로 반환
     if (element.nodeType === Node.TEXT_NODE) {
       return element;
     }
     
-    // 자식 노드가 없는 경우 현재 요소 반환
     if (!element.hasChildNodes()) {
       return element;
     }
     
     const childNodes = element.childNodes;
-    
-    // offset이 자식 노드 수보다 크거나 같은 경우, 마지막 자식의 텍스트 노드 반환
     if (offset >= childNodes.length) {
       // 마지막 자식의 텍스트 노드 반환
       const lastChild = childNodes[childNodes.length - 1];
@@ -168,8 +126,6 @@
   
   /**
    * 선택 영역이 있는 블록 태그를 처리하는 함수
-   * 선택 영역 내의 모든 블록 태그를 찾아 p 태그로 변환합니다.
-   * 
    * @param {HTMLElement} contentArea - 편집 영역
    * @param {Range} range - 선택 범위
    * @param {Node} startNode - 시작 노드
@@ -178,20 +134,15 @@
    */
   function handleBlockElements(contentArea, range, startNode, endNode) {
     try {
-      /**
-       * 1단계: 직접 선택된 블록 요소 식별
-       * 선택 범위와 직접 겹치는 모든 블록 요소 수집
-       */
+      // 1. 직접 선택된 블록 요소 처리
       const directBlockElements = Array.from(contentArea.querySelectorAll(BLOCK_TAGS.join(',')))
         .filter(node => range.intersectsNode(node));
       
-      /**
-       * 2단계: 부모 블록 요소 식별
-       * 시작 노드의 부모 중 블록 태그 찾기
-       */
+      // 2. 부모 요소 중 블록 태그 확인 (시작 노드부터 검사)
       let parentBlockElements = [];
       let current = startNode;
       
+      // 시작 노드의 부모 중 블록 태그 찾기
       while (current && current !== contentArea) {
         if (BLOCK_TAGS.includes(current.nodeName)) {
           parentBlockElements.push(current);
@@ -199,10 +150,7 @@
         current = current.parentNode;
       }
       
-      /**
-       * 3단계: 종료 노드 부모 블록 요소 식별
-       * 종료 노드의 부모 중 블록 태그 찾기 (시작과 다른 경우)
-       */
+      // 종료 노드의 부모 중 블록 태그 찾기 (시작과 다른 경우)
       if (startNode !== endNode) {
         current = endNode;
         while (current && current !== contentArea) {
@@ -214,10 +162,7 @@
         }
       }
       
-      /**
-       * 4단계: 공통 조상의 부모 블록 요소 식별
-       * 공통 조상의 부모 중 블록 태그 찾기 (아직 수집되지 않은 요소만)
-       */
+      // 공통 조상의 부모 중 블록 태그 찾기
       current = range.commonAncestorContainer;
       if (current.nodeType === Node.TEXT_NODE) {
         current = current.parentNode;
@@ -232,10 +177,7 @@
         current = current.parentNode;
       }
       
-      /**
-       * 5단계: 모든 블록 요소 처리
-       * 중복 제거 후 모든 블록 요소를 p 태그로 변환
-       */
+      // 모든 블록 요소 합치기 및 중복 제거
       const allBlockElements = [...new Set([...directBlockElements, ...parentBlockElements])];
       
       console.log(`선택 영역 내 블록 요소 수: ${allBlockElements.length}`);
@@ -243,7 +185,6 @@
         console.log('선택 영역 관련 블록 태그:', allBlockElements.map(el => el.nodeName).join(', '));
       }
       
-      // 블록 요소가 없으면 false 반환
       if (allBlockElements.length === 0) {
         return false;
       }
@@ -263,40 +204,22 @@
   }
 
   /**
-   * 노드 참조를 사용하여 선택 복원하는 함수
-   * DOM 변경 후 이전 선택 영역을 최대한 복원하려고 시도합니다.
-   * 
-   * @param {HTMLElement} contentArea - 편집 영역
-   * @param {Node} startParent - 시작 노드의 부모
-   * @param {Node} startNode - 원본 시작 노드
-   * @param {number} startOffset - 시작 오프셋
-   * @param {Node} endParent - 종료 노드의 부모
-   * @param {Node} endNode - 원본 종료 노드
-   * @param {number} endOffset - 종료 오프셋
-   * @returns {boolean} 복원 성공 여부
+   * 노드 참조를 사용하여 선택 복원 
    */
   function restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset) {
     try {
-      /**
-       * 1단계: 참조 노드 유효성 검사
-       * 부모 요소가 여전히 DOM에 있는지 확인
-       */
+      // 부모 요소가 여전히 DOM에 있는지 확인
       if (!contentArea.contains(startParent) || !contentArea.contains(endParent)) {
         console.warn('참조 노드가 DOM에서 제거됨');
         setCursorToEnd(contentArea);
         return false;
       }
       
-      /**
-       * 2단계: 선택 범위 생성
-       */
+      // 새로운 Range 생성
       const selection = window.getSelection();
       const range = document.createRange();
       
-      /**
-       * 3단계: 시작 지점 설정
-       * 부모 요소 내 텍스트 노드를 찾아 시작 지점 설정
-       */
+      // 시작 지점 설정
       try {
         let newStartNode = findNearestTextNode(startParent);
         
@@ -311,10 +234,7 @@
         range.setStart(contentArea, 0);
       }
       
-      /**
-       * 4단계: 종료 지점 설정
-       * 부모 요소 내 텍스트 노드를 찾아 종료 지점 설정
-       */
+      // 종료 지점 설정
       try {
         let newEndNode = findNearestTextNode(endParent);
         
@@ -329,9 +249,7 @@
         range.setEnd(contentArea, contentArea.childNodes.length);
       }
       
-      /**
-       * 5단계: 선택 적용
-       */
+      // 선택 적용
       selection.removeAllRanges();
       selection.addRange(range);
       
@@ -346,21 +264,14 @@
   
   /**
    * 요소 내에서 첫 번째 텍스트 노드 찾기
-   * 주어진 요소 내에서 깊이 우선 탐색으로 텍스트 노드를 찾습니다.
-   * 
-   * @param {Node} element - 검색을 시작할 요소
-   * @returns {Node|null} 찾은 첫 번째 텍스트 노드 또는 null
    */
   function findNearestTextNode(element) {
-    // 요소가 없으면 null 반환
     if (!element) return null;
     
-    // 텍스트 노드인 경우 바로 반환
     if (element.nodeType === Node.TEXT_NODE) {
       return element;
     }
     
-    // 깊이 우선 탐색으로 자식 요소들 확인
     if (element.hasChildNodes()) {
       for (let i = 0; i < element.childNodes.length; i++) {
         const found = findNearestTextNode(element.childNodes[i]);
@@ -368,30 +279,20 @@
       }
     }
     
-    // 텍스트 노드를 찾지 못한 경우
     return null;
   }
 
   /**
    * 커서를 컨텐츠 끝으로 이동하는 헬퍼 함수
-   * 선택 복원 실패 시 폴백 메커니즘으로 사용됩니다.
-   * 
-   * @param {HTMLElement} editableDiv - 편집 가능한 영역
-   * @returns {boolean} 성공 여부
    */
   function setCursorToEnd(editableDiv) {
     try {
-      // 편집 가능 영역이 없으면 실패
       if (!editableDiv) return false;
       
       const selection = window.getSelection();
       const range = document.createRange();
       
-      /**
-       * 컨텐츠 유형에 따라 커서 위치 결정
-       * 1. 자식 노드가 있는 경우 마지막 자식으로 이동
-       * 2. 자식 노드가 없는 경우 요소 자체의 끝으로 이동
-       */
+      // editableDiv의 마지막 자식 노드 확인
       if (editableDiv.childNodes.length > 0) {
         const lastChild = editableDiv.lastChild;
         
@@ -411,7 +312,6 @@
         range.collapse(false);
       }
       
-      // 선택 적용
       selection.removeAllRanges();
       selection.addRange(range);
       console.log('커서를 컨텐츠 끝으로 이동함');

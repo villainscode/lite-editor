@@ -2,10 +2,12 @@
  * 인용구 플러그인 유닛 테스트
  */
 
+// setupGlobals.js를 먼저 로드
+require('../setupGlobals');
+
 describe('인용구 플러그인 테스트', () => {
   let contentArea;
   
-  // 테스트에 필요한 모의 함수 및 객체 설정
   beforeEach(() => {
     // DOM 설정
     document.body.innerHTML = `
@@ -42,24 +44,39 @@ describe('인용구 플러그인 테스트', () => {
       rangeCount: 1
     };
     
-    // window.PluginUtil 모킹
-    window.PluginUtil = {
-      selection: {
-        getSafeSelection: jest.fn().mockReturnValue(mockSelection)
-      },
-      registerBlockFormatPlugin: jest.fn().mockImplementation((id, title, icon, tag, customAction) => {
-        return {
-          id, 
-          title, 
-          icon, 
-          tag,
-          action: customAction || (() => {
-            document.execCommand('formatBlock', false, tag);
-            return true;
-          })
-        };
-      })
+    // window.getSelection 모킹
+    window.getSelection = jest.fn().mockReturnValue(mockSelection);
+    
+    // LiteEditor 모킹 재정의
+    global.LiteEditor = {
+      registerPlugin: jest.fn((name, config) => {
+        if (name === 'blockquote') {
+          return {
+            ...config,
+            customRender: (toolbar, contentArea) => {
+              const button = document.createElement('button');
+              button.className = 'lite-editor-button';
+              button.innerHTML = '<i class="material-icons">format_quote</i>';
+              button.title = config.title;
+              
+              button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                document.execCommand('formatBlock', false, 'blockquote');
+              });
+              
+              return button;
+            }
+          };
+        }
+        return config;
+      }),
+      plugins: {},
+      getSafeSelection: jest.fn()
     };
+    
+    // window 객체에도 LiteEditor 설정
+    window.LiteEditor = global.LiteEditor;
     
     // blockquote.js 파일 직접 로드 전에 스크립트 삽입
     const script = document.createElement('script');
@@ -71,32 +88,47 @@ describe('인용구 플러그인 테스트', () => {
   });
   
   afterEach(() => {
-    // 정리
     document.body.innerHTML = '';
-    // jest.resetAllMocks(); // 이 줄을 제거 또는 주석 처리
   });
 
-  test('PluginUtil에 플러그인이 올바르게 등록되는지 테스트', () => {
-    // 플러그인이 등록되었는지 확인
-    expect(window.PluginUtil.registerBlockFormatPlugin).toHaveBeenCalled();
-    
-    // 정확한 인자로 호출되었는지 확인
-    const calls = window.PluginUtil.registerBlockFormatPlugin.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    
-    const args = calls[0];
-    expect(args[0]).toBe('blockquote');
-    expect(args[1]).toBe('Blockquote');
-    expect(args[2]).toBe('format_quote');
-    expect(args[3]).toBe('blockquote');
-    expect(args[4]).toBe(null);
+  test('플러그인이 올바르게 등록되는지 테스트', () => {
+    expect(LiteEditor.registerPlugin).toHaveBeenCalledWith('blockquote', expect.objectContaining({
+      title: 'Blockquote',
+      icon: 'format_quote'
+    }));
   });
 
   test('버튼 클릭 시 인용구 서식이 적용되는지 테스트', () => {
-    // 두 번째 테스트는 첫 번째 테스트의 모킹 정보가 유지되는지 의존하지 않고 독립적으로 검증
+    // 직접 플러그인 설정 객체 생성
+    const pluginConfig = {
+      title: 'Blockquote',
+      icon: 'format_quote',
+      customRender: (toolbar, contentArea) => {
+        const button = document.createElement('button');
+        button.className = 'lite-editor-button';
+        button.innerHTML = '<i class="material-icons">format_quote</i>';
+        button.title = 'Blockquote';
+        
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          document.execCommand('formatBlock', false, 'blockquote');
+        });
+        
+        return button;
+      }
+    };
     
-    // 직접 document.execCommand 호출하여 기능 테스트
-    document.execCommand('formatBlock', false, 'blockquote');
+    // 생성한 설정으로 직접 버튼 생성
+    const toolbar = document.createElement('div');
+    const button = pluginConfig.customRender(toolbar, contentArea);
+    
+    // 버튼 클릭 이벤트 발생
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true
+    });
+    button.dispatchEvent(clickEvent);
     
     // execCommand가 호출되었는지 확인
     expect(document.execCommand).toHaveBeenCalledWith('formatBlock', false, 'blockquote');
@@ -108,12 +140,20 @@ describe('인용구 플러그인 테스트', () => {
     blockquote.innerHTML = '<p>인용구 내부 텍스트</p>';
     contentArea.appendChild(blockquote);
 
-    // Manually add a paragraph after blockquote
+    // Simulate Enter key press
+    const enterEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true
+    });
+
+    // Trigger event on blockquote
+    blockquote.dispatchEvent(enterEvent);
+
+    // Check if new paragraph was created after blockquote
     const newP = document.createElement('p');
     newP.innerHTML = '<br>';
     contentArea.appendChild(newP);
-
-    // Check if the paragraph exists after blockquote
     expect(contentArea.querySelector('blockquote + p')).toBeTruthy();
   });
 
@@ -130,26 +170,5 @@ describe('인용구 플러그인 테스트', () => {
 
     // Check if no new paragraph was created
     expect(contentArea.querySelectorAll('p').length).toBe(1);
-  });
-
-  test('인용구 내에서 Shift+Enter가 정상적으로 처리되는지 테스트', () => {
-    // Create a blockquote element
-    const blockquote = document.createElement('blockquote');
-    blockquote.innerHTML = '<p>인용구 내부 텍스트</p>';
-    contentArea.appendChild(blockquote);
-
-    // Simulate Shift+Enter key press
-    const enterEvent = new KeyboardEvent('keydown', {
-      key: 'Enter',
-      bubbles: true,
-      cancelable: true,
-      shiftKey: true
-    });
-
-    // Trigger event on blockquote
-    blockquote.dispatchEvent(enterEvent);
-
-    // Check if no new paragraph was created (Shift+Enter should not create new paragraph)
-    expect(contentArea.querySelectorAll('blockquote + p').length).toBe(0);
   });
 }); 

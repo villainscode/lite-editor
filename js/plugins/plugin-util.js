@@ -333,6 +333,85 @@ const PluginUtil = (function() {
             } catch (e) {
                 console.warn('커서 이동 중 오류:', e);
             }
+        },
+
+        /**
+         * 선택 영역의 오프셋 계산
+         * @param {HTMLElement} container - 선택 영역을 계산할 컨테이너
+         * @returns {Object|null} {start, end} 오프셋 객체 또는 null
+         */
+        calculateOffsets(container) {
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return null;
+            const range = sel.getRangeAt(0);
+
+            let charIndex = 0, startOffset = -1, endOffset = -1;
+            const treeWalker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            while (treeWalker.nextNode()) {
+                const node = treeWalker.currentNode;
+                if (node === range.startContainer) {
+                    startOffset = charIndex + range.startOffset;
+                }
+                if (node === range.endContainer) {
+                    endOffset = charIndex + range.endOffset;
+                    break;
+                }
+                charIndex += node.textContent.length;
+            }
+
+            if (startOffset >= 0 && endOffset < 0) {
+                endOffset = startOffset;
+            }
+            return startOffset >= 0 ? { start: startOffset, end: endOffset } : null;
+        },
+
+        /**
+         * 저장된 오프셋으로 선택 영역 복원
+         * @param {HTMLElement} container - 선택 영역을 복원할 컨테이너
+         * @param {Object} offsets - {start, end} 오프셋 객체
+         * @returns {boolean} 복원 성공 여부
+         */
+        restoreFromOffsets(container, offsets) {
+            if (!offsets) return false;
+
+            const range = document.createRange();
+            let charIndex = 0;
+            const treeWalker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            while (treeWalker.nextNode()) {
+                const node = treeWalker.currentNode;
+                const nodeLength = node.textContent.length;
+
+                if (charIndex <= offsets.start && offsets.start <= charIndex + nodeLength) {
+                    range.setStart(node, offsets.start - charIndex);
+                }
+                if (charIndex <= offsets.end && offsets.end <= charIndex + nodeLength) {
+                    range.setEnd(node, offsets.end - charIndex);
+                    break;
+                }
+                charIndex += nodeLength;
+            }
+
+            try {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                return true;
+            } catch (e) {
+                console.error('선택 영역 복원 실패:', e);
+                return false;
+            }
         }
     };
 
@@ -561,23 +640,6 @@ const PluginUtil = (function() {
                 action: function(contentArea, buttonElement, event) {
                     if (window.LiteEditorUtils) {
                         LiteEditorUtils.applyInlineFormat(contentArea, buttonElement, command || id, event);
-                    }
-                }
-            });
-        }
-    };
-
-    // 블록 서식 플러그인 등록 헬퍼
-    const registerBlockFormatPlugin = function(id, title, icon, tag, customAction) {
-        if (window.LiteEditor) {
-            LiteEditor.registerPlugin(id, {
-                title: title,
-                icon: icon,
-                action: function(contentArea, buttonElement, event) {
-                    if (customAction) {
-                        customAction(contentArea, buttonElement, event);
-                    } else {
-                        document.execCommand('formatBlock', false, `<${tag || id}>`);
                     }
                 }
             });
@@ -926,7 +988,6 @@ const PluginUtil = (function() {
         layerManager,
         registerPlugin,
         registerInlineFormatPlugin,
-        registerBlockFormatPlugin,
         createDropdown,
         createPopupLayer,
         setupOutsideClickHandler,

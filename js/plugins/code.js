@@ -4,24 +4,48 @@
  */
 
 (function() {
-  /**
-   * 코드 플러그인 (PluginUtil 유틸리티 활용)
-   * 2025-03-30 리팩토링: PluginUtil.registerBlockFormatPlugin 활용
-   */
+  const util = window.PluginUtil;
   
-  // 코드 서식 적용을 위한 커스텀 액션
-  const applyCodeStyles = function(contentArea, buttonElement, event) {
-    // 특별한 코드 처리 함수 사용
-    LiteEditorUtils.applyCodeFormat(contentArea, buttonElement, event);
-  };
-  
-  // PluginUtil을 사용하여 플러그인 등록
-  PluginUtil.registerBlockFormatPlugin(
-    'code',     // id
-    'Code',     // title
-    'code',     // icon
-    'code',     // tag (실제 적용은 applyCodeFormat에서 처리)
-    applyCodeStyles  // customAction
-  );
+  LiteEditor.registerPlugin('code', {
+    title: 'Code',
+    icon: 'code',
+    customRender: function(toolbar, contentArea) {
+      const button = util.dom.createElement('button', {
+        className: 'lite-editor-button',
+        title: 'Code'
+      });
+
+      const icon = util.dom.createElement('i', {
+        className: 'material-icons',
+        textContent: 'code'
+      });
+      button.appendChild(icon);
+
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 선택 영역이 있는 경우에만 처리
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          if (!range.collapsed) {
+            // 선택 영역의 오프셋 저장
+            const offsets = util.selection.calculateOffsets(contentArea);
+            
+            // 선택된 텍스트를 code 태그로 감싸기
+            document.execCommand('insertHTML', false, '<code>' + range.toString() + '</code>');
+            
+            // 선택 영역 복구
+            setTimeout(() => {
+              util.selection.restoreFromOffsets(contentArea, offsets);
+              contentArea.focus();
+            }, 10);
+          }
+        }
+      });
+
+      return button;
+    }
+  });
 })();
-  

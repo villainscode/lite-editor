@@ -14,14 +14,12 @@ global.URLSearchParams = URLSearchParams;
 
 // 전역 LiteEditor 객체 모의 구현
 global.LiteEditor = {
-  registerPlugin: jest.fn((id, config) => {
-    return config;
-  }),
+  registerPlugin: jest.fn(),
   plugins: {},
   getSafeSelection: jest.fn()
 };
 
-// 전역 window 객체에 LiteEditor 추가
+// window 객체에도 LiteEditor 추가
 window.LiteEditor = global.LiteEditor;
 
 // 전역 window 객체에 필요한 속성 추가
@@ -37,8 +35,6 @@ Object.defineProperty(document, 'execCommand', {
 // 전역 PluginUtil 객체 모의 구현
 const mockPluginUtil = {
   selection: {
-    saveSelection: jest.fn(),
-    restoreSelection: jest.fn(),
     getSafeSelection: jest.fn(() => {
       return {
         getRangeAt: jest.fn(() => ({
@@ -52,74 +48,18 @@ const mockPluginUtil = {
         rangeCount: 1,
         toString: jest.fn().mockReturnValue('테스트 텍스트')
       };
-    }),
-    moveCursorTo: jest.fn(),
-    moveCursorToEnd: jest.fn(),
-    isAtStartOfBlock: jest.fn()
-  },
-  editor: {
-    dispatchEditorEvent: jest.fn(),
-    getSelectedText: jest.fn().mockReturnValue('테스트 텍스트')
+    })
   },
   dom: {
-    createElement: jest.fn((tag, attrs, styles) => {
+    createElement: jest.fn((tag, attrs) => {
       const element = document.createElement(tag);
       if (attrs) Object.assign(element, attrs);
-      if (styles) Object.assign(element.style, styles);
       return element;
-    }),
-    findClosestBlock: jest.fn(),
-    isBlockElement: jest.fn()
-  },
-  layerManager: {
-    register: jest.fn(),
-    unregister: jest.fn(),
-    closeAll: jest.fn(),
-    toggle: jest.fn()
-  },
-  activeModalManager: {
-    register: jest.fn(),
-    unregister: jest.fn(),
-    closeAll: jest.fn(),
-    registerButton: jest.fn()
-  },
-  setupOutsideClickHandler: jest.fn(),
-  
-  // 블록 포맷 플러그인 등록 함수 추가 - 목킹으로 action 함수 반환하도록 설정
-  registerBlockFormatPlugin: jest.fn((id, title, icon, tag, customAction) => {
-    const action = customAction || ((contentArea) => {
-      document.execCommand('formatBlock', false, tag);
-    });
-    
-    return LiteEditor.registerPlugin(id, {
-      title: title,
-      icon: icon,
-      tag: tag,
-      action: action
-    });
-  }),
-  
-  // 인라인 포맷 플러그인 등록 함수 추가
-  registerInlineFormatPlugin: jest.fn((id, title, icon, command) => {
-    return LiteEditor.registerPlugin(id, {
-      title: title,
-      icon: icon,
-      action: jest.fn(() => {
-        document.execCommand(command, false, null);
-      })
-    });
-  }),
-  
-  // 기타 유틸리티 함수들 추가
-  createDropdown: jest.fn(),
-  createPopupLayer: jest.fn(),
-  setupToolbarButtonEvents: jest.fn(),
-  setupToolbarModalEvents: jest.fn(),
-  setLayerPosition: jest.fn(),
-  setupDropdownButton: jest.fn()
+    })
+  }
 };
 
-// window 전역 객체에도 PluginUtil 설정 (중요!)
+// window 전역 객체에도 PluginUtil 설정
 window.PluginUtil = mockPluginUtil;
 
 // errorHandler 모의 구현
