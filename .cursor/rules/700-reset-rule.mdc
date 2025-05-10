@@ -3,111 +3,234 @@ description:
 globs: 
 alwaysApply: false
 ---
-# Reset Plugin 규칙
+# Reset Plugin 상세 구현 명세서
 
-## 1. 핵심 기능 요구사항
+## 1. 기능 개요
+서식 초기화 플러그인은 선택된 텍스트 영역의 모든 서식(인라인 및 블록 레벨)을 제거하는 기능을 제공합니다.
 
-### 1.1 기본 서식 초기화
-- 선택된 텍스트의 모든 서식(인라인 및 블록 레벨) 제거
-- 인라인 태그 제거 (B, I, U, STRONG, EM, MARK, SMALL, DEL, INS, SUB, SUP, STRIKE, CODE, FONT, A, SPAN)
-- 블록 태그 변환 (BLOCKQUOTE, H1-H6, PRE → P)
-- 스타일 속성 제거 (text-align, margin, padding, border, background, color, font-family, font-size, font-weight, font-style, text-decoration, display, position)
+## 2. 핵심 구성요소
 
-### 1.2 리스트 처리
-- 순서 있는/없는 리스트 항목을 일반 텍스트로 변환
-- 체크박스 리스트의 체크 상태 유지 (☑/☐)
-- 리스트 항목 간 줄바꿈 유지
-- 빈 리스트 자동 제거
+### 2.1 상수 정의
+```javascript
+const INLINE_TAGS = ['B', 'I', 'U', 'STRONG', 'EM', 'STRIKE', 'S', 'SUB', 'SUP', 'MARK', 'SPAN', 'FONT', 'A'];
+const BLOCK_TAGS = ['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE', 'BLOCKQUOTE'];
+const LIST_TAGS = ['UL', 'OL', 'LI'];
+const CODE_TAGS = ['CODE', 'PRE'];
+```
 
-### 1.3 선택 영역 관리
-- 선택 영역 저장 및 복원
-- 더블클릭 선택 정규화
-- 커서 위치 유지
-- 스크롤 위치 유지
+### 2.2 핵심 기능 구현
 
-## 2. 에러 처리
+#### 2.2.1 선택 영역 마커 시스템
+```javascript
+// 선택 영역 표시 마커 생성
+function createSelectionMarker(selection) {
+  const range = selection.getRangeAt(0);
+  const markerElement = document.createElement('p');
+  markerElement.id = `reset-selection-${Date.now()}`;
+  markerElement.setAttribute('data-reset-marker', 'true');
+  markerElement.style.whiteSpace = 'pre-wrap !important';
+  
+  // 선택 영역 내용을 마커로 대체
+  range.deleteContents();
+  range.insertNode(markerElement);
+  
+  // 선택 영역 내용 복원
+  markerElement.innerHTML = getSelectedHTML();
+  
+  return markerElement;
+}
 
-### 2.1 에러 코드
-- NO_SELECTION: 선택 영역 없음
-- NO_TEXT: 선택된 텍스트 없음
-- FORMAT: 서식 제거 실패
-- BLOCK: 블록 요소 처리 실패
-- CURSOR: 커서 위치 설정 실패
+// 마커 기반으로 선택 영역 복원
+function restoreSelection(markerElement) {
+  if (!markerElement) return false;
+  
+  const newRange = document.createRange();
+  newRange.selectNodeContents(markerElement);
+  
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  
+  return true;
+}
+```
 
-### 2.2 에러 처리 규칙
-- 모든 에러는 errorHandler를 통해 로깅
-- 사용자에게 적절한 피드백 제공
-- 에러 발생 시 원래 상태로 복원 시도
+#### 2.2.2 인라인 서식 제거
+```javascript
+function removeInlineFormatting(element) {
+  // 텍스트 내용 추출
+  const textContent = element.textContent;
+  
+  // 새 텍스트 노드 생성
+  const textNode = document.createTextNode(textContent);
+  
+  // 기존 내용 제거하고 텍스트 노드 삽입
+  element.innerHTML = '';
+  element.appendChild(textNode);
+}
+```
 
-## 3. 잠재적 버그 및 주의사항
+#### 2.2.3 블록 요소 처리
+```javascript
+function processBlockElements(markerElement) {
+  // 선택 영역 내 블록 요소 찾기
+  const blockElements = Array.from(markerElement.querySelectorAll(BLOCK_TAGS.join(',')));
+  
+  // 각 블록 요소 처리
+  blockElements.forEach(block => {
+    // 텍스트 내용 추출 (줄바꿈 유지)
+    const textContent = block.textContent;
+    
+    // 부모 요소에 텍스트 노드로 대체
+    const textNode = document.createTextNode(textContent + '\n');
+    block.parentNode.replaceChild(textNode, block);
+  });
+}
+```
 
-### 3.1 선택 영역 관련
-- 중첩된 선택 영역 처리
-- 부분 선택된 리스트 항목 처리
-- 빈 선택 영역 처리
-- 선택 영역 복원 실패 시 대체 동작
+#### 2.2.4 리스트 요소 처리
+```javascript
+function processListElements(markerElement) {
+  // ul, ol 요소 찾기
+  const listElements = Array.from(markerElement.querySelectorAll('ul, ol'));
+  
+  listElements.forEach(list => {
+    const listItems = Array.from(list.querySelectorAll('li'));
+    
+    // 각 리스트 아이템을 텍스트로 변환하고 줄바꿈 추가
+    const textContent = listItems.map(item => item.textContent).join('\n');
+    const textNode = document.createTextNode(textContent + '\n');
+    
+    // 원래 리스트 대체
+    list.parentNode.replaceChild(textNode, list);
+  });
+}
+```
 
-### 3.2 서식 제거 관련
-- 중첩된 서식 태그 처리
-- 스타일 속성 충돌
-- 특수 문자 처리
-- 이미지/미디어 요소 처리
+#### 2.2.5 코드 블록 처리
+```javascript
+function processCodeElements(markerElement) {
+  // 코드 블록 요소 찾기
+  const codeElements = Array.from(markerElement.querySelectorAll('pre, code'));
+  
+  codeElements.forEach(code => {
+    // 코드 내용 추출 (공백과 줄바꿈 유지)
+    const textContent = code.textContent;
+    const textNode = document.createTextNode(textContent);
+    
+    // 원래 코드 블록 대체
+    code.parentNode.replaceChild(textNode, code);
+  });
+}
+```
 
-### 3.3 성능 관련
-- 대용량 텍스트 처리
-- 복잡한 DOM 구조 처리
-- 메모리 누수 방지
+#### 2.2.6 체크리스트 처리
+```javascript
+function processChecklistElements(markerElement) {
+  // 체크리스트 요소 찾기 (div[data-checkbox-item] 또는 li.todo-list__item)
+  const checklistItems = Array.from(markerElement.querySelectorAll('div[data-checkbox-item], li.todo-list__item'));
+  
+  checklistItems.forEach(item => {
+    // 체크리스트 텍스트 추출
+    const textContent = item.textContent;
+    const textNode = document.createTextNode(textContent + '\n');
+    
+    // 원래 체크리스트 아이템 대체
+    item.parentNode.replaceChild(textNode, item);
+  });
+}
+```
 
-## 4. 확장 고려사항
+### 2.3 메인 실행 함수
+```javascript
+function resetFormatting() {
+  try {
+    // 1. 현재 선택 영역 가져오기
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return false;
+    
+    // 2. 선택 영역 마커 생성
+    const markerElement = createSelectionMarker(selection);
+    
+    // 3. 서식 제거 처리
+    // 3.1 인라인 서식 제거
+    removeInlineFormatting(markerElement);
+    
+    // 3.2 블록 요소 처리
+    processBlockElements(markerElement);
+    
+    // 3.3 리스트 처리
+    processListElements(markerElement);
+    
+    // 3.4 코드 블록 처리
+    processCodeElements(markerElement);
+    
+    // 3.5 체크리스트 처리
+    processChecklistElements(markerElement);
+    
+    // 4. 선택 영역 복원
+    restoreSelection(markerElement);
+    
+    // 5. 마커 요소 제거, 내용만 남기기
+    const parent = markerElement.parentNode;
+    while (markerElement.firstChild) {
+      parent.insertBefore(markerElement.firstChild, markerElement);
+    }
+    parent.removeChild(markerElement);
+    
+    return true;
+  } catch (error) {
+    console.error('[ResetPlugin] 서식 초기화 실패', error);
+    return false;
+  }
+}
+```
 
-### 4.1 기능 확장
-- 선택적 서식 제거 (부분 초기화)
-- 서식 제거 히스토리
-- 서식 제거 단축키
-- 서식 제거 범위 설정
+## 3. 구현 주의사항
 
-### 4.2 UI/UX 개선
-- 서식 제거 진행 상태 표시
-- 서식 제거 미리보기
-- 서식 제거 취소 기능
-- 서식 제거 단축키 커스터마이징
+### 3.1 선택 영역 처리
+- 선택 영역이 없을 경우 조기 반환
+- 선택 영역이 여러 블록 요소에 걸쳐 있는 경우 모든 요소 처리
+- 텍스트 노드만 선택된 경우 부모 블록 요소 확인 후 처리
 
-### 4.3 성능 최적화
-- 대용량 텍스트 처리 최적화
-- DOM 조작 최소화
-- 메모리 사용량 최적화
-- 비동기 처리 도입
+### 3.2 줄바꿈 보존
+- 블록 요소, 리스트, 코드 블록 처리 시 원래 요소 간 줄바꿈 유지
+- white-space: pre-wrap을 사용하여 줄바꿈 시각적 표현 보존
 
-## 5. 테스트 요구사항
+### 3.3 예외 처리
+- DOM 조작 중 발생할 수 있는 모든 예외 처리
+- 빈 선택 영역, 유효하지 않은 선택 영역에 대한 방어 코드 포함
 
-### 5.1 단위 테스트
-- 기본 서식 제거 테스트
-- 리스트 처리 테스트
-- 선택 영역 관리 테스트
-- 에러 처리 테스트
+### 3.4 복잡한 구조 처리
+- 중첩된 리스트 (UL 안의 OL, 또는 그 반대)
+- 체크리스트 내 서브아이템
+- 코드 블록 내 다른 서식 요소
 
-### 5.2 통합 테스트
-- 다른 플러그인과의 상호작용
-- 복잡한 DOM 구조에서의 동작
-- 대용량 텍스트 처리
-- 에러 복구 테스트
+## 4. 테스트 케이스
 
-### 5.3 성능 테스트
-- 대용량 텍스트 처리 시간
-- 메모리 사용량
-- DOM 조작 횟수
-- 응답 시간
+### 4.1 인라인 서식 테스트
+- Bold, Italic, Underline 등이 혼합된 텍스트
+- 링크가 포함된 텍스트
+- 색상이 적용된 텍스트
 
-## 6. 문서화 요구사항
+### 4.2 블록 요소 테스트
+- 여러 단락에 걸친 선택
+- 제목(H1-H6)과 단락 혼합 선택
 
-### 6.1 코드 문서화
-- 함수 설명 및 파라미터
-- 에러 코드 및 메시지
-- 성능 고려사항
-- 확장 포인트
+### 4.3 리스트 테스트
+- 순서 있는 리스트
+- 순서 없는 리스트
+- 중첩 리스트
 
-### 6.2 사용자 문서화
-- 기능 설명
-- 사용 방법
-- 제한사항
-- 문제 해결 가이드
+### 4.4 코드 블록 테스트
+- 코드 블록 내 서식 있는 텍스트
+- 들여쓰기와 공백이 있는 코드
+
+### 4.5 체크리스트 테스트
+- 체크된 항목과 체크되지 않은 항목 혼합
+- 중첩된 체크리스트 항목
+
+## 5. 성능 최적화
+- 불필요한 DOM 조작 최소화
+- 반복문에서 NodeList 대신 Array.from 사용
+- 큰 문서에서도 효율적으로 동작하도록 최적화
