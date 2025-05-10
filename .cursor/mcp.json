@@ -8,6 +8,11 @@
         "-y",
         "tavily-mcp@0.1.3"
       ]
+    }, 
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
     }
   }
+  
 }

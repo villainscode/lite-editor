@@ -2,17 +2,6 @@
 .lite-editor-content .font-family-applied {
     font-family: var(--applied-font) !important;
   }
-  
-  /* 코딩 폰트를 위한 특별 스타일 */
-  .lite-editor-content .lite-editor-coding-font {
-    font-family: inherit;
-    white-space: pre;
-    display: inline-block;
-    border: 1px dashed #0066cc;
-    border-radius: 3px;
-    padding: 0 2px;
-    background-color: rgba(0, 102, 204, 0.05);
-  }
 
   /* 도현체와 Black Han Sans 관련 코드 */
   .lite-editor-content span[style*="Do Hyeon"] { font-family: "Do Hyeon", sans-serif !important; }

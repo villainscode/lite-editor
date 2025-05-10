@@ -50,7 +50,7 @@ const LiteEditor = (function() {
     try {
       return window.getSelection();
     } catch (e) {
-      console.warn('Selection 객체를 가져오는 중 오류 발생:', e);
+      errorHandler.logError('Core', errorHandler.codes.COMMON.SELECTION_GET, e);
       return null;
     }
   }
@@ -67,7 +67,7 @@ const LiteEditor = (function() {
       : selector;
     
     if (!target) {
-      console.error('LiteEditor: 대상 요소를 찾을 수 없습니다');
+      errorHandler.logError('LiteEditor', errorHandler.codes.COMMON.ELEMENT_NOT_FOUND, error);
       return null;
     }
     
@@ -434,7 +434,7 @@ const LiteEditor = (function() {
               document.execCommand('removeFormat', false, null);
             } else {
               // 기본 기능이 없는 경우, 아직 구현되지 않았음을 알림
-              console.log(`플러그인 ${pluginName}은 `);
+              errorHandler.logError('Core', errorHandler.codes.PLUGINS.REGISTER, e);
             }
           }
         };
@@ -448,7 +448,9 @@ const LiteEditor = (function() {
         const customElement = currentPlugin.customRender(toolbar, contentArea);
         if (customElement) {
           // 커스텀 요소의 디스플레이 스타일 확인
-          if (customElement.tagName === 'BUTTON' && !customElement.querySelector('.material-icons')) {
+          if (customElement.tagName === 'BUTTON' && 
+              !customElement.querySelector('.material-icons') && 
+              !customElement.querySelector('.material-symbols-outlined')) {
             // 버튼이고 아이콘이 없으면 아이콘 추가
             if (currentPlugin.icon) {
               const iconElement = document.createElement('span');
@@ -507,7 +509,7 @@ const LiteEditor = (function() {
           
           // 이미 처리 중인 버튼인지 확인
           if (buttonElement.hasAttribute('data-processing')) {
-            console.log('이미 처리 중인 작업이 있음');
+            errorHandler.logError('Core', errorHandler.codes.COMMON.OPERATION_IN_PROGRESS, e);
             return;
           }
           
@@ -613,9 +615,9 @@ const LiteEditor = (function() {
           return true;
         }
       } catch (e) {
-        console.error('선택 영역 저장 중 오류:', e);
+        errorHandler.logError('Core', errorHandler.codes.COMMON.SELECTION_GET, e);
+        return false;
       }
-      return false;
     };
     
     // 선택 영역 복원 함수 (MDN Selection API 기반 개선)
@@ -628,7 +630,7 @@ const LiteEditor = (function() {
       try {
         // 저장된 Range가 유효한지 확인
         if (!savedSelection.startContainer || !savedSelection.endContainer) {
-          console.warn('유효하지 않은 저장된 Range 객체');
+          errorHandler.logError('Core', errorHandler.codes.COMMON.INVALID_RANGE, new Error('유효하지 않은 Range 객체'));
           return false;
         }
         
@@ -650,7 +652,7 @@ const LiteEditor = (function() {
             // Selection 오브젝트 가져오기
             const sel = getSafeSelection();
             if (!sel) {
-              console.warn('Selection 객체를 가져올 수 없음');
+              errorHandler.logError('Core', errorHandler.codes.COMMON.SELECTION_GET, new Error('Selection 객체를 가져올 수 없음'));
               return false;
             }
             
@@ -661,10 +663,10 @@ const LiteEditor = (function() {
             
             // 개선된 선택 상태 확인
             const currentState = !sel.isCollapsed;
-            console.log('선택 영역 복원됨:', currentState);
+            errorHandler.logInfo('Core', `선택 영역 복원됨: ${currentState}`);
             return currentState;
           } catch (e) {
-            console.error('선택 영역 적용 중 오류:', e);
+            errorHandler.logError('Core', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
             return false;
           }
         }
@@ -672,7 +674,7 @@ const LiteEditor = (function() {
         // 즉시 실행 (모바일이 아닐 경우)
         return applySelection();
       } catch (e) {
-        console.error('선택 영역 복원 중 오류:', e);
+        errorHandler.logError('Core', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
         return false;
       }
     };
@@ -738,7 +740,7 @@ const LiteEditor = (function() {
           range.insertNode(document.createTextNode(text));
         }
       } catch (e) {
-        console.warn('붙여넣기 중 오류:', e);
+        errorHandler.logError('Core', errorHandler.codes.COMMON.PASTE, e);
         // 대체 방법으로 삽입
         contentArea.textContent += text;
       }

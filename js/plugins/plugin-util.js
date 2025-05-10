@@ -6,36 +6,113 @@
 const PluginUtil = (function() {
     // 활성화된 레이어/모달 관리를 위한 내부 상태
     const state = {
-        activeModals: new Set(),  // 현재 활성화된 모달/레이어 추적
         registeredButtons: new Set()  // 등록된 버튼 추적
     };
 
-    // 현재 활성화된 모달/레이어 관리 (단순화)
-    const activeModalManager = {
-        activeModals: new Set(),
+    // 통합된 레이어 관리 시스템
+    const layerManager = {
+        activeLayers: new Set(),  // 모든 활성 레이어 추적 (드롭다운, 모달 등)
         
+        // 레이어 등록
+        register(layer, button) {
+            if (layer) {
+                this.activeLayers.add({
+                    element: layer,
+                    button: button,
+                    type: button ? 'dropdown' : 'modal'
+                });
+            }
+        },
+        
+        // 레이어 등록 해제
+        unregister(layer) {
+            if (!layer) return;
+            
+            // Set에서 해당 레이어 항목 찾아 제거
+            this.activeLayers.forEach(item => {
+                if (item.element === layer) {
+                    this.activeLayers.delete(item);
+                }
+            });
+        },
+        
+        // 모든 레이어 닫기 (특정 레이어 제외 가능)
+        closeAll(exceptLayer) {
+            this.activeLayers.forEach(item => {
+                if (item.element !== exceptLayer) {
+                    if (item.type === 'dropdown') {
+                        // 드롭다운 닫기
+                        item.element.classList.remove('show');
+                        if (item.button) item.button.classList.remove('active');
+                    } else {
+                        // 모달 닫기
+                        if (item.element.closeCallback) {
+                            item.element.closeCallback();
+                        }
+                    }
+                }
+            });
+            
+            // 제외된 레이어 외에는 모두 제거
+            this.activeLayers.forEach(item => {
+                if (item.element !== exceptLayer) {
+                    this.activeLayers.delete(item);
+                }
+            });
+        },
+        
+        // 레이어 토글
+        toggle(layer, button, params = {}) {
+            const isOpen = layer.classList.contains('show');
+            
+            // 다른 레이어 닫기
+            if (params.closeOthers !== false) {
+                this.closeAll(isOpen ? null : layer);
+            }
+            
+            // 레이어 토글
+            if (isOpen) {
+                // 닫기
+                layer.classList.remove('show');
+                if (button) button.classList.remove('active');
+                this.unregister(layer);
+            } else {
+                // 열기
+                layer.classList.add('show');
+                if (button) button.classList.add('active');
+                
+                // 위치 설정
+                if (button && params.position !== false) {
+                    layer.setLayerPosition(layer, button, params);
+                }
+                
+                // 레이어 등록
+                this.register(layer, button);
+            }
+            
+            return !isOpen;
+        }
+    };
+
+    // 현재 활성화된 모달/레이어 관리 (layerManager 위임)
+    const activeModalManager = {
+        // layerManager 위임
         register(modal) {
-            if (modal) this.activeModals.add(modal);
+            layerManager.register(modal);
         },
         
         unregister(modal) {
-            if (modal) this.activeModals.delete(modal);
+            layerManager.unregister(modal);
         },
         
         closeAll() {
-            this.activeModals.forEach(modal => {
-                if (modal.closeCallback) modal.closeCallback();
-            });
-            this.activeModals.clear();
+            layerManager.closeAll();
         },
         
-        // 버튼 등록 로직 단순화
+        // 모달 전용 기능
         registerButton(button) {
             if (!button) return;
-            
-            // 한 번만 등록하도록
             if (button._hasClickHandler) return;
-            
             button._hasClickHandler = true;
         }
     };
@@ -229,6 +306,33 @@ const PluginUtil = (function() {
             } catch (e) {
                 console.warn('커서 이동 중 오류:', e);
             }
+        },
+        
+        moveCursorToEnd(element) {
+            if (!element) return;
+            
+            try {
+                const sel = this.getSafeSelection();
+                if (!sel) return;
+                
+                const range = document.createRange();
+                
+                // 요소의 맨 끝으로 커서 이동
+                if (element.nodeType === Node.TEXT_NODE) {
+                    // 텍스트 노드인 경우 텍스트 길이만큼 오프셋 설정
+                    range.setStart(element, element.length);
+                    range.setEnd(element, element.length);
+                } else {
+                    // 요소 노드인 경우 마지막 자식 위치로 설정
+                    range.selectNodeContents(element);
+                    range.collapse(false); // false = 끝으로 접기
+                }
+                
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {
+                console.warn('커서 이동 중 오류:', e);
+            }
         }
     };
 
@@ -366,25 +470,85 @@ const PluginUtil = (function() {
     // 레이어 위치 관리 유틸리티
     const layer = {
         /**
-         * 레이어 위치 설정
-         * @param {HTMLElement} layerElement - 레이어 요소
-         * @param {HTMLElement} targetElement - 기준 요소
+         * 드롭다운 생성 함수
+         * @param {Object} options - 드롭다운 옵션
+         * @returns {HTMLElement} 생성된 드롭다운 요소
+         */
+        createDropdown(options = {}) {
+            const dropdown = dom.createElement('div', {
+                className: `lite-editor-dropdown-menu ${options.className || ''}`,
+                id: options.id || `dropdown-${Math.random().toString(36).substr(2, 9)}`
+            }, {
+                position: 'absolute',
+                zIndex: '99999',
+                display: 'none',
+                backgroundColor: '#fff',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                padding: '8px 0',
+                minWidth: options.minWidth || '120px',
+                ...options.style
+            });
+            
+            // ESC 키로 닫기 기능 추가
+            const keyHandler = (e) => {
+                if (e.key === 'Escape' && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                    layerManager.unregister(dropdown);
+                    if (options.onClose) options.onClose();
+                }
+            };
+            document.addEventListener('keydown', keyHandler);
+            
+            // 외부 클릭으로 닫기 기능 추가
+            setupOutsideClickHandler(dropdown, () => {
+                dropdown.classList.remove('show');
+                layerManager.unregister(dropdown);
+                if (options.onClose) options.onClose();
+            }, options.excludeElements || []);
+            
+            // DOM에 추가
+            if (options.appendTo) {
+                options.appendTo.appendChild(dropdown);
+            } else {
+                document.body.appendChild(dropdown);
+            }
+            
+            return dropdown;
+        },
+        
+        /**
+         * 레이어 위치 설정 함수
+         * @param {HTMLElement} layer - 위치시킬 레이어 요소
+         * @param {HTMLElement} reference - 기준 요소
          * @param {Object} options - 위치 옵션
          */
-        setLayerPosition(layerElement, targetElement, options = {}) {
-            const targetRect = targetElement.getBoundingClientRect();
-            const { offsetX = 0, offsetY = 0 } = options;
+        setLayerPosition(layer, reference, options = {}) {
+            const refRect = reference.getBoundingClientRect();
             
-            layerElement.style.top = (targetRect.bottom + window.scrollY + offsetY) + 'px';
-            layerElement.style.left = (targetRect.left + window.scrollX + offsetX) + 'px';
+            // 기본 위치: 참조 요소 아래
+            layer.style.top = (refRect.bottom + window.scrollY) + 'px';
+            layer.style.left = refRect.left + 'px';
             
-            // 화면 경계 체크
-            setTimeout(() => {
-                const layerRect = layerElement.getBoundingClientRect();
-                if (layerRect.right > window.innerWidth) {
-                    layerElement.style.left = (window.innerWidth - layerRect.width - 10) + 'px';
-                }
-            }, 0);
+            // 추가 위치 조정
+            if (options.offsetY) layer.style.top = `${parseInt(layer.style.top) + options.offsetY}px`;
+            if (options.offsetX) layer.style.left = `${parseInt(layer.style.left) + options.offsetX}px`;
+            
+            // 뷰포트 경계 확인
+            const layerRect = layer.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // 오른쪽 경계 초과 시 조정
+            if (layerRect.right > viewportWidth) {
+                layer.style.left = (viewportWidth - layerRect.width - 10) + 'px';
+            }
+            
+            // 하단 경계 초과 시 조정
+            if (layerRect.bottom > viewportHeight) {
+                layer.style.top = (refRect.top + window.scrollY - layerRect.height) + 'px';
+            }
         }
     };
 
@@ -497,7 +661,7 @@ const PluginUtil = (function() {
         return layer;
     };
 
-    // 바깥 영역 클릭 감지 (단순화)
+    // 바깥 영역 클릭 감지
     const setupOutsideClickHandler = function(element, callback, excludeElements = []) {
         let isJustOpened = true;
         
@@ -526,7 +690,7 @@ const PluginUtil = (function() {
         return () => document.removeEventListener('click', handler);
     };
 
-    // 툴바 버튼 클릭 이벤트 관리 (단순화)
+    // 툴바 버튼 클릭 이벤트 관리
     const setupToolbarButtonEvents = function(button, dropdown, toolbar) {
         button.addEventListener('click', (e) => {
             e.preventDefault();
@@ -569,7 +733,7 @@ const PluginUtil = (function() {
         });
     };
 
-    // 툴바 레벨 이벤트 핸들러 추가 (단순화)
+    // 툴바 레벨 이벤트 핸들러 추가
     const setupToolbarModalEvents = function(toolbar) {
         if (!toolbar || toolbar._hasModalEvents) return;
         
@@ -588,7 +752,7 @@ const PluginUtil = (function() {
     // 모달 관리 유틸리티
     const modal = {
         /**
-         * 모달의 닫기 이벤트(ESC 키 및 외부 클릭)를 설정 (단순화)
+         * 모달의 닫기 이벤트(ESC 키 및 외부 클릭)를 설정
          */
         setupModalCloseEvents(modalElement, closeCallback, excludeElements = []) {
             if (!modalElement || !closeCallback) return () => {};
@@ -619,22 +783,135 @@ const PluginUtil = (function() {
         }
     };
 
-    // FIX core.js에 있는 registerPlugin 함수를 따로 분리하여 util을 호출하는 구조로 변경해야 함 
     const registerPlugin = function(id, plugin) {
         if (window.LiteEditor) {
           LiteEditor.registerPlugin(id, plugin);
         } else {
-          console.warn(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`);
+          errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.REGISTER, new Error(`플러그인 "${id}" 등록 실패 - LiteEditor를 찾을 수 없습니다`));
         }
-      };
+    };
 
-    // 레이어 관리 유틸리티
-    const layerManager = {
-        createLayer(options) { /* ... */ },
-        toggleLayer(layer, button) { /* ... */ },
-        showLayer(layer, button) { /* ... */ },
-        hideLayer(layer) { /* ... */ },
-        setupLayerEvents(layer, closeCallback, excludeElements) { /* ... */ }
+    // 데이터 로드 유틸리티 추가
+    const dataLoader = {
+        /**
+         * 외부 데이터 스크립트 로드 함수
+         * @param {string} scriptPath - 스크립트 경로
+         * @param {string} dataNamespace - 로드된 데이터가 저장될 전역 네임스페이스
+         * @param {Function} callback - 로드 후 실행할 콜백 함수
+         */
+        loadExternalScript(scriptPath, dataNamespace, callback) {
+            // 이미 로드된 경우 콜백 즉시 실행
+            if (window[dataNamespace]) {
+                if (callback) callback();
+                return;
+            }
+            
+            // 스크립트 로드
+            const script = document.createElement('script');
+            script.src = scriptPath;
+            script.onload = function() {
+                if (callback) callback();
+            };
+            script.onerror = function() {
+                errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.DATA_LOAD, new Error(`${scriptPath} 데이터 파일을 로드할 수 없습니다.`));
+                if (callback) callback();
+            };
+            
+            document.head.appendChild(script);
+        },
+        
+        /**
+         * 색상 데이터 로드 함수
+         * @param {string} colorType - 색상 타입 ('font', 'highlight' 등)
+         * @param {Array} fallbackColors - 데이터 파일이 없을 경우 사용할 기본 색상 목록
+         * @returns {Array} 색상 목록 배열
+         */
+        loadColorData(colorType, fallbackColors) {
+            let getterFunction;
+            
+            switch (colorType) {
+                case 'font':
+                    getterFunction = 'getFontColors';
+                    break;
+                case 'highlight':
+                    getterFunction = 'getHighlightColors';
+                    break;
+                default:
+                    getterFunction = 'getFontColors';
+            }
+            
+            // 외부 데이터 파일이 로드되었는지 확인
+            if (window.LiteEditorColorData && typeof window.LiteEditorColorData[getterFunction] === 'function') {
+                // 외부 데이터 파일에서 색상 목록 가져오기
+                return window.LiteEditorColorData[getterFunction]();
+            } else {
+                // 대체: 데이터 파일이 로드되지 않은 경우 기본 색상 목록 반환
+                errorHandler.logError('PluginUtil', errorHandler.codes.PLUGINS.COLOR.LOAD, new Error(`색상 데이터 파일을 찾을 수 없습니다. 기본 ${colorType} 색상 목록을 사용합니다.`));
+                return fallbackColors;
+            }
+        }
+    };
+
+    // setupDropdownButton 함수 정의
+    const setupDropdownButton = function(button, dropdown, options = {}) {
+        // 이미 설정된 버튼이면 스킵
+        if (button._hasDropdownHandler) return;
+        
+        button._hasDropdownHandler = true;
+        
+        // 클릭 이벤트 핸들러
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 현재 스크롤 위치 저장
+            const currentScrollY = window.scrollY;
+            
+            // 선택 영역 저장 (옵션으로 제공된 경우)
+            if (options.saveSelection) {
+                options.saveSelection();
+            }
+            
+            // 드롭다운 토글 (layerManager가 아직 직접 접근 가능하지 않으면 PluginUtil.layerManager 사용)
+            let isOpen = false;
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                button.classList.remove('active');
+                isOpen = false;
+            } else {
+                // 다른 모든 드롭다운 닫기
+                if (options.closeOthers !== false) {
+                    activeModalManager.closeAll();
+                }
+                
+                dropdown.classList.add('show');
+                button.classList.add('active');
+                isOpen = true;
+                
+                // 위치 설정
+                if (options.position !== false) {
+                    layer.setLayerPosition(dropdown, button);
+                }
+            }
+            
+            // 콜백 실행
+            if (isOpen) {
+                if (options.onOpen) options.onOpen();
+            } else {
+                if (options.onClose) options.onClose();
+            }
+            
+            // 스크롤 위치 복원
+            if (options.preserveScroll !== false) {
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        window.scrollTo(window.scrollX, currentScrollY);
+                    }, 10);
+                });
+            }
+        });
+        
+        return button;
     };
 
     // 공개 API
@@ -646,6 +923,7 @@ const PluginUtil = (function() {
         styles,
         editor,
         layer,
+        layerManager,
         registerPlugin,
         registerInlineFormatPlugin,
         registerBlockFormatPlugin,
@@ -656,12 +934,16 @@ const PluginUtil = (function() {
         setupToolbarModalEvents,
         activeModalManager,
         modal,
-        layerManager
+        dataLoader,
+        setupDropdownButton
     };
 })();
 
 // 전역 스코프에 노출
 window.PluginUtil = PluginUtil;
+
+// errorHandler는 이제 error-handler.js에서 전역으로 노출됨
+// window.errorHandler = PluginUtil.errorHandler; 행 제거
 
 // 더 단순한 토글 구현
 let isModalOpen = false;
@@ -701,15 +983,38 @@ function toggleLinkModal(button, contentArea) {
     }, 100);
 }
 
-// plugin-util.js에 추가할 코드 구조
-const ui = {
-    createStyledDropdown(label, options, defaultValue, width) { /* ... */ },
-    createFormGroup(label, input) { /* ... */ },
-    createButton(options) { /* ... */ },
-    createIconButton(icon, title, onClick) { /* ... */ }
-};
+// js/plugins/plugin-util.js에 통합된 버튼 클릭 핸들러
+document.addEventListener('click', (e) => {
+    // 에디터 툴바 버튼 클릭 시에는 드롭다운 닫기 지연
+    const isToolbarButtonClick = !!e.target.closest('.lite-editor-button, .lite-editor-font-button');
+    
+    // 드롭다운 내부 클릭 시에는 드롭다운 유지
+    const isDropdownClick = !!e.target.closest('.lite-editor-dropdown-menu');
+    
+    // 모달 내부 클릭 시에도 모달 유지
+    const isModalClick = !!e.target.closest('.lite-editor-modal');
+    
+    // 에디터 툴바 버튼이나 드롭다운/모달 내부 클릭이 아닌 경우에만 모든 레이어 닫기
+    if (!isToolbarButtonClick && !isDropdownClick && !isModalClick) {
+        PluginUtil.layerManager.closeAll();
+    }
+});
 
-const gridComponents = {
-    createGrid(rows, cols, options) { /* ... */ },
-    createSelectableGrid(size, selectionCallback) { /* ... */ }
+// ESC 키 누를 때 모든 레이어 닫기
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        PluginUtil.layerManager.closeAll();
+    }
+});
+
+// dropdown 네임스페이스 유지 (호환성)
+PluginUtil.dropdown = {
+  setupDropdown: function(button, dropdownMenu, params = {}) {
+    // 기존 plugin-dropdown-util.js의 setupDropdown 구현 이동
+    // ...
+  },
+  
+  closeAllDropdowns: function() {
+    PluginUtil.layerManager.closeAll();
+  }
 };

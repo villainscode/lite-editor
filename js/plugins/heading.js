@@ -4,15 +4,22 @@
  */
 
 (function() {
-  // 안전하게 Selection 객체를 가져오는 함수
-  function getSafeSelection() {
-    try {
-      return window.getSelection();
-    } catch (e) {
-      console.warn('Error getting selection:', e);
-      return null;
-    }
+  // PluginUtil 참조
+  const util = window.PluginUtil || {};
+  // 전역 상태 변수
+  let savedRange = null;          // 임시로 저장된 선택 영역
+  let isDropdownOpen = false;     // 드롭다운 상태 추적
+  
+  // 선택 영역 저장 함수 (util 사용)
+  function saveSelection() {
+    savedRange = util.selection.saveSelection();
   }
+
+  // 선택 영역 복원 함수 (util 사용)
+  function restoreSelection() {
+    if (!savedRange) return false;
+    return util.selection.restoreSelection(savedRange);
+  }  
 
   // 제목 플러그인
   LiteEditor.registerPlugin('heading', {
@@ -20,25 +27,31 @@
     icon: 'title',
     customRender: function(toolbar, contentArea) {
       // 제목 버튼 생성
-      const headingButton = document.createElement('button');
-      headingButton.className = 'lite-editor-button lite-editor-heading-button';
-      headingButton.setAttribute('title', 'Heading');
+      const headingButton = util.dom.createElement('button', {
+        className: 'lite-editor-button lite-editor-heading-button',
+        title: 'Heading'
+      });
       
       // 아이콘 추가
-      const icon = document.createElement('i');
-      icon.className = 'material-icons';
-      icon.textContent = 'title';
+      const icon = util.dom.createElement('i', {
+        className: 'material-icons',
+        textContent: 'title'
+      });
       headingButton.appendChild(icon);
       
       // 드롭다운 생성
-      const dropdownMenu = document.createElement('div');
-      dropdownMenu.className = 'lite-editor-dropdown-menu';
-      
-      // 드롭다운 헤더 생성
-      const dropdownHeader = document.createElement('div');
-      dropdownHeader.className = 'lite-editor-dropdown-header';
-      dropdownHeader.textContent = 'Heading';
-      dropdownMenu.appendChild(dropdownHeader);
+      const dropdownMenu = util.dom.createElement('div', {
+        className: 'lite-editor-heading-dropdown lite-editor-dropdown-menu'
+      }, {
+        position: 'absolute',
+        zIndex: '2147483647',
+        backgroundColor: '#fff',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        padding: '8px 0',
+        display: 'none'
+      });
       
       // 제목 레벨 옵션
       const headingLevels = [
@@ -50,18 +63,19 @@
       
       // 각 제목 레벨에 대한 옵션 추가
       headingLevels.forEach(level => {
-        const option = document.createElement('div');
-        option.className = 'lite-editor-dropdown-item lite-editor-heading-' + level.tag;
-        option.textContent = level.text;
+        const option = util.dom.createElement('div', {
+          className: 'lite-editor-heading-option lite-editor-heading-' + level.tag,
+          textContent: level.text
+        });
         
         // 해당 태그에 맞는 스타일 적용
         switch (level.tag) {
           case 'h1':
-            option.style.fontSize = '24px';
+            option.style.fontSize = '28px';
             option.style.fontWeight = 'bold';
             break;
           case 'h2':
-            option.style.fontSize = '20px';
+            option.style.fontSize = '22px';
             option.style.fontWeight = 'bold';
             break;
           case 'h3':
@@ -77,24 +91,29 @@
         // 클릭 이벤트
         option.addEventListener('click', (e) => {
           e.preventDefault();
-          // e.stopPropagation() 제거 - 이벤트 전파 허용
+          e.stopPropagation();
           
-          // 선택 영역 처리
-          if (window.liteEditorSelection) {
-            // 1. 선택 영역 저장
-            window.liteEditorSelection.save();
-            
-            // 2. 에디터 포커스
-            contentArea.focus();
-            
-            // 3. 선택 영역 복원
-            window.liteEditorSelection.restore();
+          // 현재 스크롤 위치 저장
+          const currentScrollY = window.scrollY;
+          
+          // API를 통해 드롭다운 닫기
+          if (headingButton._dropdownAPI) {
+            headingButton._dropdownAPI.close();
           }
           
-          console.log('level : ', level);
+          // 에디터에 포커스 (스크롤 방지 옵션 추가)
+          try {
+            contentArea.focus({ preventScroll: true });
+          } catch (e) {
+            // 일부 구형 브라우저에서는 preventScroll 옵션을 지원하지 않음
+            contentArea.focus();
+          }
+          
+          // 선택 영역 복원
+          restoreSelection();
           
           // Range API를 사용한 heading 적용 (직접 DOM 조작)
-          const selection = getSafeSelection();
+          const selection = util.selection.getSafeSelection();
           if (selection && selection.rangeCount > 0) {
             // 선택한 영역의 범위 가져오기
             const range = selection.getRangeAt(0);
@@ -104,8 +123,6 @@
             if (container.nodeType === 3) { // Text node
               container = container.parentNode;
             }
-            
-            console.log('현재 컨테이너:', container.nodeName);
             
             // 헤딩 또는 단락 태그 가져오기 (업데이트된 로직)
             let headingElement = null;
@@ -132,8 +149,6 @@
               else if (closestP) headingElement = closestP;
             }
             
-            console.log('현재 태그 요소:', headingElement ? headingElement.nodeName : '없음');
-            
             // 기존 헤딩 태그가 있는 경우 처리
             if (headingElement) {
               // 1. 현재 태그와 동일한 태그를 적용하려는 경우 (토글)
@@ -145,7 +160,6 @@
                 
                 // 기존 헤딩 태그를 새 p 태그로 교체
                 headingElement.parentNode.replaceChild(p, headingElement);
-                console.log('동일한 태그 토글:', headingElement.nodeName, '->', 'P');
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -162,7 +176,6 @@
                 
                 // 기존 헤딩 태그를 새 p 태그로 교체
                 headingElement.parentNode.replaceChild(p, headingElement);
-                console.log('헤딩에서 단락으로 변경:', headingElement.nodeName, '->', 'P');
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -179,7 +192,6 @@
                 
                 // 기존 헤딩 태그를 새 헤딩 태그로 교체
                 headingElement.parentNode.replaceChild(newHeading, headingElement);
-                console.log('헤딩 변경:', headingElement.nodeName, '->', level.tag.toUpperCase());
                 
                 // 선택 영역 재설정
                 const newRange = document.createRange();
@@ -188,7 +200,7 @@
                 selection.addRange(newRange);
               }
             } else {
-              // 새 테그 요소 생성 (H1, H2, H3, P)
+              // 새 태그 요소 생성 (H1, H2, H3, P)
               const heading = document.createElement(level.tag.toUpperCase());
               
               // 선택한 내용을 사용하여 새 요소에 추가
@@ -196,96 +208,98 @@
               
               // 새 요소를 DOM에 삽입
               range.insertNode(heading);
-              
-              console.log('새 헤딩 적용:', level.tag.toUpperCase());
             }
             
-            // 선택 영역 정리
-            selection.removeAllRanges();
-            selection.addRange(range);
+            // 에디터 상태 업데이트
+            contentArea.dispatchEvent(new Event('input', { bubbles: true }));
           } else {
-            console.log('선택된 범위가 없습니다.');
+            errorHandler.logError('HeadingPlugin', errorHandler.codes.COMMON.SELECTION_GET, e);
           }
           
-          // 드롭다운 닫기 (클래스만 제거하지 말고 closeDropdown 함수 호출)
-          closeDropdown();
-          
-          // 5. 선택 영역 재저장
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.save();
-          }
+          // 스크롤 위치 복원 (애니메이션 프레임 사용)
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              window.scrollTo(window.scrollX, currentScrollY);
+            }, 50);
+          });
         });
         
         dropdownMenu.appendChild(option);
       });
       
-      // 드롭다운 관리를 위한 변수
-      let documentClickHandler;
+      // 드롭다운을 document.body에 직접 추가
+      document.body.appendChild(dropdownMenu);
       
-      // 드롭다운 닫기 함수
-      const closeDropdown = () => {
-        dropdownMenu.classList.remove('show');
-        // 문서 레벨 클릭 이벤트 리스너 제거
-        if (documentClickHandler) {
-          document.removeEventListener('click', documentClickHandler);
-          documentClickHandler = null;
-        }
-      };
-      
-      // 드롭다운과 버튼 연결
-      headingButton.dropdownMenu = dropdownMenu;
-      
-      // 클릭 이벤트 추가
+      // 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
       headingButton.addEventListener('click', (e) => {
         e.preventDefault();
-        // 이벤트 버블링 방지를 제거하여 전역 이벤트 흐름 유지
+        e.stopPropagation();
+        
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
         
         // 선택 영역 저장
-        if (window.liteEditorSelection) {
-          window.liteEditorSelection.save();
+        saveSelection();
+        
+        // 현재 드롭다운의 상태 확인
+        const isVisible = dropdownMenu.classList.contains('show');
+        
+        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
+        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        if (!isVisible) {
+          util.activeModalManager.closeAll();
         }
         
-        // 다른 모든 드롭다운 먼저 닫기
-        document.querySelectorAll('.lite-editor-dropdown-menu.show').forEach(menu => {
-          if (menu !== headingButton.dropdownMenu) menu.classList.remove('show');
-        });
-        
-        // 이 드롭다운 토글
-        const isShowing = headingButton.dropdownMenu.classList.toggle('show');
-        
-        // 드롭다운 메뉴 위치 조정
-        if (isShowing) {
-          // 드롭다운이 표시되면 body에 추가
-          document.body.appendChild(dropdownMenu);
+        if (isVisible) {
+          // 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          headingButton.classList.remove('active');
+          isDropdownOpen = false;
           
-          const buttonRect = headingButton.getBoundingClientRect();
-          
-          // 절대 위치로 계산
-          headingButton.dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          headingButton.dropdownMenu.style.left = buttonRect.left + 'px';
-          
-          // 문서 레벨 클릭 이벤트 추가 (다음 이벤트 루프에서 등록)
-          setTimeout(() => {
-            documentClickHandler = (evt) => {
-              // 버튼이나 드롭다운 영역 외부 클릭 시 드롭다운 닫기
-              if (!headingButton.contains(evt.target) && !dropdownMenu.contains(evt.target)) {
-                closeDropdown();
-              }
-            };
-            document.addEventListener('click', documentClickHandler);
-          }, 0);
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
         } else {
-          closeDropdown();
+          // 열기
+          dropdownMenu.classList.add('show');
+          dropdownMenu.style.display = 'block';
+          headingButton.classList.add('active');
+          isDropdownOpen = true;
+          
+          // 위치 설정
+          const buttonRect = headingButton.getBoundingClientRect();
+          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+          dropdownMenu.style.left = buttonRect.left + 'px';
+          
+          // 활성 모달 등록 (관리 시스템에 추가)
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            headingButton.classList.remove('active');
+            isDropdownOpen = false;
+          };
+          
+          util.activeModalManager.register(dropdownMenu);
+          
+          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          util.setupOutsideClickHandler(dropdownMenu, () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            headingButton.classList.remove('active');
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          }, [headingButton]);
         }
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo(window.scrollX, currentScrollY);
+          }, 50);
+        });
       });
       
-      // 페이지 unload 시 이벤트 정리
-      window.addEventListener('unload', () => {
-        if (documentClickHandler) {
-          document.removeEventListener('click', documentClickHandler);
-        }
-      });
-      
+      // 버튼 반환
       return headingButton;
     }
   });

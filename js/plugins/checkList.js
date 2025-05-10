@@ -137,7 +137,7 @@
         }
       }, 0);
     } catch (e) {
-      console.warn('포커스 유지 중 오류:', e);
+      errorHandler.logError('CheckListPlugin', errorHandler.codes.COMMON.FOCUS, e);
     }
   }
 

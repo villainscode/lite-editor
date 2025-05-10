@@ -1,51 +1,51 @@
 /**
- * LiteEditor Font Family Plugin
- * Simplified version for displaying font list
- * Modified version - Fixed font application errors
- * Update - Using external data file with i18n support
+ * LiteEditor 글꼴 플러그인
+ * 글꼴 목록 표시를 위한 간소화 버전
+ * 수정 버전 - 글꼴 적용 오류 수정
+ * 업데이트 - 다국어 지원이 포함된 외부 데이터 파일 사용
  */
 
 (function() {
-  // PluginUtil reference
+  // PluginUtil 참조
   const util = window.PluginUtil || {};
+  // 전역 상태 변수
+  let savedRange = null;          // 임시로 저장된 선택 영역
+  let isDropdownOpen = false;
   
-  // Global state variables
-  let savedRange = null;          // Temporarily saved selection range
-  
-  // Save selection function (using util)
+  // 선택 영역 저장 함수 (util 사용)
   function saveSelection() {
     savedRange = util.selection.saveSelection();
   }
 
-  // Restore selection function (using util)
+  // 선택 영역 복원 함수 (util 사용)
   function restoreSelection() {
     if (!savedRange) return false;
     return util.selection.restoreSelection(savedRange);
   }
   
-  // Add font styles 
+  // 글꼴 스타일 추가 
   function injectFontFamilyStyles() {
-    // Load CSS file (if not already added)
+    // CSS 파일 로드 (아직 추가되지 않은 경우)
     if (util.styles && util.styles.loadCssFile) {
       util.styles.loadCssFile('lite-editor-font-styles', 'css/plugins/fontFamily.css');
     }
   }
   
   /**
-   * Font data loading function
-   * Gets font list from external data file with i18n support
-   * @returns {Array} Font list array
+   * 글꼴 데이터 로드 함수
+   * 다국어 지원이 포함된 외부 데이터 파일에서 글꼴 목록 가져오기
+   * @returns {Array} 글꼴 목록 배열
    */
   function loadFontData() {
-    // Check if external data file is loaded
+    // 외부 데이터 파일이 로드되었는지 확인
     if (window.LiteEditorFontData && typeof window.LiteEditorFontData.getFonts === 'function') {
-      // Get font list from external data file
+      // 외부 데이터 파일에서 글꼴 목록 가져오기
       return window.LiteEditorFontData.getFonts();
     } else {
-      // Fallback: Return default font list if data file isn't loaded
-      console.warn('Font data file not found. Using default font list.');
+      // 대체: 데이터 파일이 로드되지 않은 경우 기본 글꼴 목록 반환
+      errorHandler.logError('FontFamilyPlugin', errorHandler.codes.PLUGINS.FONT.LOAD, e);
       return [
-        { type: 'group_header', name: 'Default Fonts' },
+        { type: 'group_header', name: '기본 글꼴' },
         { type: 'divider' },
         { name: 'Arial', value: 'Arial, sans-serif' },
         { name: 'Times New Roman', value: 'Times New Roman, serif' },
@@ -56,35 +56,35 @@
   }
   
   /**
-   * Font data script loading function
-   * Dynamically loads external font data file
-   * @param {Function} callback - Callback function to execute after loading
+   * 글꼴 데이터 스크립트 로드 함수
+   * 외부 글꼴 데이터 파일을 동적으로 로드
+   * @param {Function} callback - 로드 후 실행할 콜백 함수
    */
   function loadFontScript(callback) {
-    // Execute callback immediately if already loaded
+    // 이미 로드된 경우 콜백 즉시 실행
     if (window.LiteEditorFontData) {
       if (callback) callback();
       return;
     }
     
-    // Load script
+    // 스크립트 로드
     const script = document.createElement('script');
     script.src = 'js/data/fontList.js';
     script.onload = function() {
       if (callback) callback();
     };
     script.onerror = function() {
-      console.error('Failed to load font data file');
+      errorHandler.logError('FontFamilyPlugin', errorHandler.codes.PLUGINS.FONT.LOAD, e);
       if (callback) callback();
     };
     
     document.head.appendChild(script);
   }
   
-  // Register font plugin
+  // 글꼴 플러그인 등록
   LiteEditor.registerPlugin('fontFamily', {
     customRender: function(toolbar, contentArea) {
-      // 1. Create font button container (select box style)
+      // 1. 글꼴 버튼 컨테이너 생성 (셀렉트 박스 스타일)
       const fontContainer = util.dom.createElement('div', {
         className: 'lite-editor-font-button',
         title: 'Font Family'
@@ -92,7 +92,7 @@
         position: 'relative'
       });
       
-      // 2. Add button icon
+      // 2. 버튼 아이콘 추가
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
         textContent: 'font_download'
@@ -102,7 +102,7 @@
       });
       fontContainer.appendChild(icon);
       
-      // 3. Add font family text
+      // 3. 글꼴 텍스트 추가
       const fontText = util.dom.createElement('span', {
         textContent: 'Font Family'
       }, {
@@ -110,20 +110,25 @@
       });
       fontContainer.appendChild(fontText);
       
-      // 4. Add dropdown arrow
+      // 4. 드롭다운 화살표 추가 - 오른쪽에 표시되도록 수정
       const arrowIcon = util.dom.createElement('i', {
-        className: 'material-icons',
-        textContent: 'arrow_drop_down'
+        className: 'material-icons arrow-icon', // 특별한 클래스 추가
+        textContent: 'expand_more'
       }, {
-        fontSize: '18px',
-        marginLeft: '5px'
+        fontSize: '20px',
+        fontWeight: 'bold',
+        position: 'absolute',
+        right: '1px', // 오른쪽에 배치
+        top: '50%', 
+        transform: 'translateY(-50%)', // 수직 중앙 정렬
+        left: 'auto' // 왼쪽 위치 속성 제거
       });
       fontContainer.appendChild(arrowIcon);
       
-      // 5. Create dropdown menu - handle like align plugin
+      // 5. 드롭다운 메뉴 생성 - 정렬 플러그인처럼 처리
       const dropdownMenu = util.dom.createElement('div', {
         id: 'font-family-dropdown',
-        className: 'lite-editor-font-dropdown'
+        className: 'lite-editor-font-dropdown lite-editor-dropdown-menu'
       }, {
         position: 'absolute',
         zIndex: '2147483647',
@@ -138,49 +143,50 @@
         display: 'none'
       });
       
-      // Load external font data file and build dropdown menu
+      // 외부 글꼴 데이터 파일을 로드하고 드롭다운 메뉴 구성
       loadFontScript(function() {
-        // Get font list with i18n support
+        // 다국어 지원이 포함된 글꼴 목록 가져오기
         const fonts = loadFontData();
         
-        // Add font list to dropdown
+        // 드롭다운에 글꼴 목록 추가
         fonts.forEach(font => {
-          // Handle divider
+          // 구분선 처리
           if (font.type === 'divider') {
             const divider = util.dom.createElement('hr', {
               className: 'lite-editor-font-divider'
             }, {
-              margin: '5px 0'
+              margin: '0'
             });
             dropdownMenu.appendChild(divider);
             return;
           }
           
-          // Handle group header
+          // 그룹 헤더 처리
           if (font.type === 'group_header') {
             const header = util.dom.createElement('div', {
               textContent: font.name
             }, {
               fontWeight: 'bold',
               padding: '5px 10px',
-              color: '#666',
-              fontSize: '12px'
+              color: '#2f67ff',
+              fontSize: '11px',
+              backgroundColor: '#f5f5f5'  // 옅은 회색 배경색 추가
             });
             dropdownMenu.appendChild(header);
             return;
           }
           
-          // Add font item
+          // 글꼴 항목 추가
           const fontItem = util.dom.createElement('div', {
             textContent: font.name
           }, {
             padding: '5px 10px',
             cursor: 'pointer',
             fontFamily: font.value,
-            fontSize: '12px'  // Font size set to 12px
+            fontSize: '13px'  // 글꼴 크기를 12px로 설정
           });
           
-          // Hover events
+          // 호버 이벤트
           fontItem.addEventListener('mouseover', () => {
             fontItem.style.backgroundColor = '#e9e9e9';
           });
@@ -189,77 +195,44 @@
             fontItem.style.backgroundColor = '';
           });
           
-          // Click event - Apply font (modified version)
+          // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
           fontItem.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation();            
+            errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
             
-            console.log('Font selected:', font.name, font.value);
-            
-            // Save current scroll position
+            // 현재 스크롤 위치 저장
             const currentScrollY = window.scrollY;
             
-            // Close dropdown
+            // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
-            arrowIcon.textContent = 'arrow_drop_down';
+            dropdownMenu.classList.remove('show');
+            arrowIcon.textContent = 'expand_more';
             fontContainer.classList.remove('active');
+            isDropdownOpen = false;
             
-            // Focus editor (with scroll prevention option)
+            // 에디터에 포커스 (스크롤 방지 옵션 추가)
             try {
               contentArea.focus({ preventScroll: true });
             } catch (e) {
-              // Some older browsers don't support preventScroll option
               contentArea.focus();
             }
             
-            // Restore selection
+            // 선택 영역 복원 - 반드시 execCommand 전에 해야 함
             restoreSelection();
             
-            // Inject styles for font application
+            // 글꼴 적용을 위한 스타일 주입
             injectFontFamilyStyles();
             
-            // Apply font
-            console.log(`Applying font: ${font.name} with value: ${font.value}`);
+            // 글꼴 적용
+            errorHandler.logInfo('FontFamilyPlugin', `글꼴 적용 중: ${font.name} 값: ${font.value}`);
+            document.execCommand('fontName', false, font.value);
             
-            // Special handling for coding fonts
-            if (font.name.includes('Mono') || font.name.includes('Code') || font.name.includes('Hack')) {
-              const selection = util.selection.getSafeSelection();
-              if (selection && selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                
-                // Create span to wrap selected text
-                const span = util.dom.createElement('span', {
-                  className: 'lite-editor-coding-font'
-                }, {
-                  fontFamily: font.value
-                });
-                
-                // Put selected text into span
-                const fragment = range.extractContents();
-                span.appendChild(fragment);
-                range.insertNode(span);
-                
-                // Update selection
-                selection.removeAllRanges();
-                const newRange = document.createRange();
-                newRange.selectNode(span);
-                selection.addRange(newRange);
-                
-                console.log(`Coding font '${font.name}' applied`);
-              }
-            } else {
-              // Regular fonts use default execCommand
-              document.execCommand('fontName', false, font.value);
-              console.log(`Regular font '${font.name}' applied`);
-            }
-            
-            // Update UI
+            // UI 업데이트
             fontText.textContent = font.name;
             
-            // Restore scroll position (enhanced method)
-            // Use requestAnimationFrame to restore scroll in next render cycle
+            // 스크롤 위치 복원
             requestAnimationFrame(() => {
-              // Apply longer delay (50ms)
               setTimeout(() => {
                 window.scrollTo(window.scrollX, currentScrollY);
               }, 50);
@@ -270,65 +243,81 @@
         });
       });
       
-      // 6. Add dropdown to document.body directly (same as align plugin)
+      // 6. 드롭다운을 document.body에 직접 추가 (정렬 플러그인과 동일)
       document.body.appendChild(dropdownMenu);
       
-      // 7. Button click event - Toggle dropdown (updated)
+      // 7. 직접 구현한 드롭다운 토글 로직
       fontContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // Save current scroll position
+        // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
         
-        // Close dropdown if open (toggle behavior)
-        if (dropdownMenu.style.display === 'block') {
-          dropdownMenu.style.display = 'none';
-          arrowIcon.textContent = 'arrow_drop_down';
-          fontContainer.classList.remove('active');
-          return;
-        }
-        
-        // Close all other dropdowns
-        document.querySelectorAll('.lite-editor-dropdown-menu.show, .lite-editor-font-dropdown.show').forEach(menu => {
-          if (menu !== dropdownMenu) menu.style.display = 'none';
-        });
-        
-        // Save selection
+        // 선택 영역 저장
         saveSelection();
         
-        // Show dropdown
-        dropdownMenu.style.display = 'block';
+        // 현재 드롭다운의 상태 확인
+        const isVisible = dropdownMenu.classList.contains('show');
         
-        // Add active style to button
-        fontContainer.classList.add('active');
+        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
+        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        if (!isVisible) {
+          util.activeModalManager.closeAll();
+        }
         
-        // Set layer position
-        if (util.layer && util.layer.setLayerPosition) {
-          util.layer.setLayerPosition(dropdownMenu, fontContainer);
+        if (isVisible) {
+          // 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          fontContainer.classList.remove('active');
+          arrowIcon.textContent = 'expand_more';
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
         } else {
+          // 열기
+          dropdownMenu.classList.add('show');
+          dropdownMenu.style.display = 'block';
+          fontContainer.classList.add('active');
+          arrowIcon.textContent = 'expand_less';
+          isDropdownOpen = true;
+          
+          // 위치 설정
           const buttonRect = fontContainer.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = buttonRect.left + 'px';
+          
+          // 활성 모달 등록 (관리 시스템에 추가)
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            fontContainer.classList.remove('active');
+            arrowIcon.textContent = 'expand_more';
+            isDropdownOpen = false;
+          };
+          
+          util.activeModalManager.register(dropdownMenu);
+          
+          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          util.setupOutsideClickHandler(dropdownMenu, () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            fontContainer.classList.remove('active');
+            arrowIcon.textContent = 'expand_more';
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          }, [fontContainer]);
         }
         
-        // Change arrow
-        arrowIcon.textContent = 'arrow_drop_up';
-        
-        // Restore scroll position (enhanced method)
+        // 스크롤 위치 복원
         requestAnimationFrame(() => {
           setTimeout(() => {
             window.scrollTo(window.scrollX, currentScrollY);
           }, 50);
         });
       });
-      
-      // 8. Close dropdown on body click (updated)
-      util.setupOutsideClickHandler(dropdownMenu, () => {
-        dropdownMenu.style.display = 'none';
-        arrowIcon.textContent = 'arrow_drop_down';
-        fontContainer.classList.remove('active');
-      }, [fontContainer]);
       
       return fontContainer;
     }
