@@ -49,6 +49,12 @@
       range = selection.getRangeAt(0);
     }
     
+    // 선택 영역의 내용을 복제하여 처리 (원본 range를 변경하지 않음)
+    const clonedRange = range.cloneRange();
+    
+    // 선택 영역의 오프셋 저장 (복원을 위해)
+    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
+    
     // 선택 영역의 콘텐츠 추출
     const fragment = range.extractContents();
     
@@ -56,6 +62,7 @@
     const ul = document.createElement('ul');
     ul.className = 'bullet-depth-1'; // 기본 깊이 클래스
     ul.setAttribute('data-lite-editor-bullet', 'true'); // 고유 식별자 추가
+    ul.setAttribute('data-selection-marker', 'true'); // 선택 영역 복원을 위한 마커
     
     // 선택 영역의 텍스트 줄을 LI로 변환
     const tempDiv = document.createElement('div');
@@ -67,6 +74,9 @@
     // div, p 태그를 줄바꿈으로 처리
     content = content.replace(/<\/(div|p)>/gi, '<br>');
     content = content.replace(/<(div|p)[^>]*>/gi, '');
+    
+    // 마지막 불필요한 줄바꿈 제거
+    content = content.replace(/(<br\s*\/?>)+$/, '');
     
     // 줄바꿈으로 분리
     const lines = content.split(/<br\s*\/?>/i);
@@ -93,11 +103,29 @@
     // 스타일 적용
     applyStyleToSingleUl(ul);
     
-    // 커서 위치 조정 - 마지막 LI의 끝으로 이동
-    const lastLi = ul.lastElementChild;
-    if (lastLi) {
-      PluginUtil.selection.moveCursorToEnd(lastLi);
-    }
+    // 선택 영역 복원 - 마커를 찾아서 복원
+    setTimeout(() => {
+      const markerElement = contentArea.querySelector('ul[data-selection-marker="true"]');
+      
+      if (markerElement) {
+        // 마커 속성 제거
+        markerElement.removeAttribute('data-selection-marker');
+        
+        // ul 태그를 선택하도록 설정
+        const range = document.createRange();
+        range.selectNode(markerElement);
+        
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        contentArea.focus();
+      } else {
+        // 마커를 찾지 못한 경우 오프셋 기반 복원 사용
+        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+        contentArea.focus();
+      }
+    }, 10);
     
     return ul;
   }
@@ -107,6 +135,17 @@
    */
   function unwrapBulletList(ul, range) {
     if (!ul || ul.nodeName !== 'UL') return;
+    
+    // 선택 영역 정보 저장 (복원을 위한 준비)
+    const contentArea = ul.closest('[contenteditable="true"]');
+    
+    // 선택 영역의 오프셋 저장
+    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
+    
+    // 변환할 위치에 임시 마커 생성
+    const marker = document.createElement('span');
+    marker.setAttribute('data-unwrap-marker', 'true');
+    ul.parentNode.insertBefore(marker, ul);
     
     // 리스트 아이템들을 일반 텍스트로 변환
     const fragment = document.createDocumentFragment();
@@ -125,52 +164,47 @@
     ul.parentNode.insertBefore(fragment, ul);
     ul.parentNode.removeChild(ul);
     
-    // 커서 위치 조정
-    if (range) {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
+    // 선택 영역 복원 (마커 기반)
+    setTimeout(() => {
+      const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
+      const paragraphs = [];
+      
+      if (marker) {
+        // 마커 다음에 있는 모든 p 태그 수집
+        let nextSibling = marker.nextSibling;
+        while (nextSibling && nextSibling.nodeName === 'P' && paragraphs.length < items.length) {
+          paragraphs.push(nextSibling);
+          nextSibling = nextSibling.nextSibling;
+        }
+        
+        // 마커 제거
+        marker.parentNode.removeChild(marker);
+        
+        if (paragraphs.length > 0) {
+          // 모든 변환된 단락을 선택
+          const range = document.createRange();
+          range.setStartBefore(paragraphs[0]);
+          range.setEndAfter(paragraphs[paragraphs.length - 1]);
+          
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          contentArea.focus();
+        } else {
+          // 복원 실패 시 오프셋 기반 복원
+          PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+          contentArea.focus();
+        }
+      } else {
+        // 마커를 찾지 못한 경우 오프셋 기반 복원
+        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+        contentArea.focus();
+      }
+    }, 10);
   }
   
-  /**
-   * 선택된 요소의 깊이를 기반으로 적절한 UL 요소를 찾는 함수
-   */
-  function findUlBySelection(contentArea) {
-    const selection = PluginUtil.selection.getSafeSelection();
-    if (!selection || !selection.rangeCount) return null;
-    
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    
-    // 컨테이너가 직접 UL인 경우
-    if (container.nodeName === 'UL') {
-      return container;
-    }
-    
-    // 부모 중 UL 찾기
-    let parent = container;
-    while (parent && parent !== contentArea) {
-      if (parent.nodeName === 'UL') {
-        return parent;
-      }
-      if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'UL') {
-        return parent.parentNode;
-      }
-      parent = parent.parentNode;
-    }
-    
-    // 선택된 LI의 부모 UL 찾기
-    const closestLi = container.nodeType === Node.TEXT_NODE ? 
-                      container.parentNode.closest('li') : 
-                      container.closest('li');
-    
-    if (closestLi) {
-      return closestLi.closest('ul');
-    }
-    
-    return null;
-  }
+  
   
   /**
    * UL 요소의 중첩 깊이를 계산하는 함수
@@ -203,8 +237,6 @@
     if (!targetUl || targetUl.nodeName !== 'UL') return;
     
     try {
-      errorHandler.logError('ListPlugin', errorHandler.codes.PLUGINS.LIST.APPLY, e);
-      
       // 스타일 우선 적용 (CSS 클래스 활용)
       ensureBulletListStyles();
       
@@ -217,8 +249,6 @@
         const childDepth = getUlDepth(childUl);
         applyStyleByDepth(childUl, childDepth);
       });
-      
-      errorHandler.logError('ListPlugin', errorHandler.codes.PLUGINS.LIST.APPLY, e);
     } catch (e) {
       errorHandler.logError('ListPlugin', errorHandler.codes.PLUGINS.LIST.APPLY, e);
     }
@@ -235,23 +265,6 @@
     
     const depth = getUlDepth(ul);
     applyStyleByDepth(ul, depth);
-  }
-  
-  /**
-   * 요소가 선택 영역 내에 있는지 확인
-   */
-  function isElementInRange(element, range) {
-    if (!element || !range) return false;
-    
-    try {
-      const nodeRange = document.createRange();
-      nodeRange.selectNode(element);
-      
-      return range.intersectsNode(element);
-    } catch (e) {
-      errorHandler.logError('ListPlugin', errorHandler.codes.COMMON.SELECTION_RESTORE, e);
-      return false;
-    }
   }
   
   /**

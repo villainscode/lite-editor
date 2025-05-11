@@ -46,6 +46,32 @@
       range = selection.getRangeAt(0);
     }
     
+    // 선택 영역의 원본 텍스트 확인 (끝부분 공백 제거를 위해)
+    const originalText = range.toString();
+    if (originalText.match(/[\s\n\r]+$/)) {
+      try {
+        // 선택된 텍스트 끝에서 공백과 줄바꿈 수 계산
+        const match = originalText.match(/[\s\n\r]+$/);
+        const extraLength = match ? match[0].length : 0;
+        
+        if (extraLength > 0) {
+          // 원본 range의 끝점 조정
+          const endContainer = range.endContainer;
+          const endOffset = range.endOffset;
+          
+          // 텍스트 노드인 경우만 조정
+          if (endContainer.nodeType === Node.TEXT_NODE) {
+            range.setEnd(endContainer, Math.max(0, endOffset - extraLength));
+          }
+        }
+      } catch (e) {
+        console.log('Range 조정 중 오류:', e);
+      }
+    }
+    
+    // 선택 영역의 오프셋 저장 (복원을 위해)
+    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
+    
     // 선택 영역의 콘텐츠 추출
     const fragment = range.extractContents();
     
@@ -53,40 +79,72 @@
     const ol = document.createElement('ol');
     ol.className = 'number-depth-1'; // 기본 깊이 클래스
     ol.setAttribute('data-lite-editor-numbered', 'true'); // 고유 식별자 추가
+    ol.setAttribute('data-selection-marker', 'true'); // 선택 영역 복원을 위한 마커
     
     // 선택 영역의 텍스트 줄을 LI로 변환
     const tempDiv = document.createElement('div');
     tempDiv.appendChild(fragment);
     
     // 텍스트 줄 분리
-    const content = tempDiv.innerHTML;
+    let content = tempDiv.innerHTML;
+    
+    // div, p 태그를 줄바꿈으로 처리
+    content = content.replace(/<\/(div|p)>/gi, '<br>');
+    content = content.replace(/<(div|p)[^>]*>/gi, '');
+    
+    // 마지막 불필요한 줄바꿈 제거
+    content = content.replace(/(<br\s*\/?>)+$/, '');
+    content = content.replace(/[\s\n\r]+$/, ''); // 추가: 모든 종류의 공백 제거
+    
     const lines = content.split(/<br\s*\/?>/i);
     
-    // 비어있지 않은 줄만 처리
-    const nonEmptyLines = lines.filter(line => line.trim() !== '');
+    // 빈 줄 제거 및 각 줄을 LI로 변환
+    const nonEmptyLines = lines.filter(line => line.trim());
     
-    // 줄이 없으면 빈 줄 추가
     if (nonEmptyLines.length === 0) {
-      nonEmptyLines.push('&nbsp;');
+      // 선택된 텍스트가 없는 경우 빈 리스트 아이템 생성
+      const li = document.createElement('li');
+      li.innerHTML = '&nbsp;'; // 빈 리스트 아이템에 공백 추가
+      ol.appendChild(li);
+    } else {
+      nonEmptyLines.forEach(line => {
+        const li = document.createElement('li');
+        li.innerHTML = line.trim() || '&nbsp;';
+        ol.appendChild(li);
+      });
     }
     
-    // 각 줄을 LI로 변환
-    nonEmptyLines.forEach(line => {
-      const li = document.createElement('li');
-      li.innerHTML = line.trim() || '&nbsp;';
-      ol.appendChild(li);
-    });
-    
-    // 생성된 OL을 선택 영역에 삽입
+    // 생성된 OL을 선택 위치에 삽입
     range.insertNode(ol);
     
     // 리스트 스타일 적용
     applyNumberedStyles(ol);
     
-    // 첫 번째 LI에 커서 위치
-    if (ol.firstChild) {
-      maintainFocus(ol.firstChild);
-    }
+    // 선택 영역 복원 - 마커를 찾아서 복원
+    setTimeout(() => {
+      const markerElement = contentArea.querySelector('ol[data-selection-marker="true"]');
+      
+      if (markerElement) {
+        // 마커 속성 제거
+        markerElement.removeAttribute('data-selection-marker');
+        
+        // ol 태그를 선택하도록 설정 (전체 리스트 선택)
+        const range = document.createRange();
+        range.selectNode(markerElement);
+        
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        contentArea.focus({ preventScroll: true }); // 추가: 스크롤 방지 옵션 추가
+      } else {
+        // 마커를 찾지 못한 경우 오프셋 기반 복원 사용
+        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+        contentArea.focus({ preventScroll: true });
+      }
+    }, 10);
+    
+    return ol;
   }
   
   /**
@@ -94,6 +152,17 @@
    */
   function unwrapNumberedList(ol, range) {
     if (!ol || ol.nodeName !== 'OL') return;
+    
+    // 선택 영역 정보 저장 (복원을 위한 준비)
+    const contentArea = ol.closest('[contenteditable="true"]');
+    
+    // 선택 영역의 오프셋 저장
+    const offsets = contentArea ? PluginUtil.selection.calculateOffsets(contentArea) : null;
+    
+    // 변환할 위치에 임시 마커 생성
+    const marker = document.createElement('span');
+    marker.setAttribute('data-unwrap-marker', 'true');
+    ol.parentNode.insertBefore(marker, ol);
     
     // 리스트 아이템 가져오기
     const items = Array.from(ol.children);
@@ -103,7 +172,8 @@
     items.forEach(item => {
       if (item.nodeName === 'LI') {
         const p = document.createElement('p');
-        p.innerHTML = item.innerHTML;
+        // 리스트 내용 복사 전 불필요한 공백 처리
+        p.innerHTML = item.innerHTML.trim() || '&nbsp;';
         fragment.appendChild(p);
       }
     });
@@ -112,10 +182,46 @@
     ol.parentNode.insertBefore(fragment, ol);
     ol.parentNode.removeChild(ol);
     
-    // 첫 번째 단락에 커서 위치
-    if (fragment.firstChild) {
-      PluginUtil.selection.moveCursorToEnd(fragment.firstChild);
-    }
+    // 선택 영역 복원 (마커 기반)
+    setTimeout(() => {
+      if (!contentArea) return;
+      
+      const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
+      const paragraphs = [];
+      
+      if (marker) {
+        // 마커 다음에 있는 모든 p 태그 수집
+        let nextSibling = marker.nextSibling;
+        while (nextSibling && nextSibling.nodeName === 'P' && paragraphs.length < items.length) {
+          paragraphs.push(nextSibling);
+          nextSibling = nextSibling.nextSibling;
+        }
+        
+        // 마커 제거
+        marker.parentNode.removeChild(marker);
+        
+        if (paragraphs.length > 0) {
+          // 모든 변환된 단락을 선택
+          const range = document.createRange();
+          range.setStartBefore(paragraphs[0]);
+          range.setEndAfter(paragraphs[paragraphs.length - 1]);
+          
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          contentArea.focus({ preventScroll: true }); // 추가: 스크롤 방지 옵션 추가
+        } else if (offsets) {
+          // 복원 실패 시 오프셋 기반 복원
+          PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+          contentArea.focus({ preventScroll: true });
+        }
+      } else if (offsets) {
+        // 마커를 찾지 못한 경우 오프셋 기반 복원
+        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
+        contentArea.focus({ preventScroll: true });
+      }
+    }, 10);
   }
   
   /**
@@ -209,6 +315,7 @@
         applyStyleByDepth(childOl, childDepth);
       });
     } catch (e) {
+      // 오류 발생 시 로그 출력
       errorHandler.logError('NumberedListPlugin', errorHandler.codes.PLUGINS.LIST.APPLY, e);
     }
   }

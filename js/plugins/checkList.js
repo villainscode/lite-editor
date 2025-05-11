@@ -27,9 +27,12 @@
     if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
-    const text = range.toString();
+    let text = range.toString();
     if (!text.trim()) return;
 
+    // 선택된 텍스트의 마지막 불필요한 공백과 줄바꿈 제거 (추가된 코드)
+    text = text.replace(/[\s\n\r]+$/, '');
+    
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     range.deleteContents();
     

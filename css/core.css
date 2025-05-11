@@ -141,7 +141,7 @@
 .lite-editor-content ul, 
 .lite-editor-content ol {
   margin-top: 0;
-  margin-bottom: 1em;
+  margin-bottom: 0.2em;
   padding-left: 2em;
 }
 

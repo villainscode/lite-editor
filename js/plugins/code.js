@@ -35,8 +35,13 @@
             const offsets = util.selection.calculateOffsets(contentArea);
             
             // 선택된 텍스트 가져오기
-            const selectedText = range.toString();
-            const selectedLength = selectedText.length;
+            let selectedText = range.toString();
+            
+            // 선택된 텍스트의 줄 수 계산 (공백 제거 후)
+            const trimmedText = selectedText.replace(/[\s\n\r]+$/, '');
+            
+            // 선택된 텍스트의 마지막에 있는 불필요한 줄바꿈 제거
+            selectedText = trimmedText;
             
             // 각 줄의 공백을 정리하면서 HTML 이스케이프 처리
             const formattedText = selectedText
@@ -44,13 +49,17 @@
               .map(line => line.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
               .join('\n');
             
-            // 선택 영역 블록 보존을 위한 마커 추가
-            document.execCommand('insertHTML', false, 
-              `<code data-selection-marker="true">${formattedText}</code>`);
+            // 선택 영역 삭제 후 코드 태그 삽입
+            range.deleteContents();
+            
+            // 코드 요소 생성 및 삽입
+            const codeElement = document.createElement('code');
+            codeElement.setAttribute('data-selection-marker', 'true');
+            codeElement.innerHTML = formattedText;
+            range.insertNode(codeElement);
             
             // 선택 영역 복원 - 마커를 찾아서 복원
             setTimeout(() => {
-              // 마커가 있는 code 태그 찾기
               const markerElement = contentArea.querySelector('code[data-selection-marker="true"]');
               
               if (markerElement) {
@@ -67,7 +76,6 @@
                 
                 contentArea.focus();
               } else {
-                // 마커를 찾지 못한 경우 폴백으로 오프셋 기반 복원 사용
                 util.selection.restoreFromOffsets(contentArea, offsets);
                 contentArea.focus();
               }
