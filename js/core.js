@@ -507,12 +507,6 @@ const LiteEditor = (function() {
           e.preventDefault();
           e.stopPropagation();
           
-          // 토글이 필요한 플러그인만 active 클래스 토글
-          const togglePlugins = ['bold', 'italic', 'underline', 'strike', 'heading', 'fontColor', 'emphasis'];
-          if (togglePlugins.includes(pluginName)) {
-            buttonElement.classList.toggle('active');
-          }
-          
           // 이미 처리 중인 버튼인지 확인
           if (buttonElement.hasAttribute('data-processing')) {
             errorHandler.logError('Core', errorHandler.codes.COMMON.OPERATION_IN_PROGRESS, e);

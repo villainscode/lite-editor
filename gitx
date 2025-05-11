@@ -34,7 +34,7 @@ do_reset() {
   read -p "계속하시겠습니까? (y/N): " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "취소되었습니다."
-    exit 1./햣
+    exit 1
   fi
   git reset --hard
   git clean -fd
