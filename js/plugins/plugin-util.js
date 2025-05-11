@@ -637,6 +637,37 @@ const PluginUtil = (function() {
         setupLayerEvents(layer, closeCallback, excludeElements) { /* ... */ }
     };
 
+    // 포커스 관리 유틸리티
+    const focus = {
+        /**
+         * 요소에 안전하게 포커스 설정
+         * @param {HTMLElement} element - 포커스를 설정할 요소
+         * @param {Object} options - 포커스 옵션
+         */
+        safeFocus(element, options = { preventScroll: true }) {
+            if (!element) return;
+            
+            try {
+                // preventScroll 옵션 지원 여부 확인
+                if (typeof element.focus === 'function') {
+                    if (options.preventScroll) {
+                        element.focus({ preventScroll: true });
+                    } else {
+                        element.focus();
+                    }
+                }
+            } catch (e) {
+                console.warn('포커스 설정 중 오류:', e);
+                // fallback: 기본 포커스 시도
+                try {
+                    element.focus();
+                } catch (e2) {
+                    console.warn('기본 포커스 설정 중 오류:', e2);
+                }
+            }
+        }
+    };
+
     // 공개 API
     return {
         dom,
@@ -646,6 +677,7 @@ const PluginUtil = (function() {
         styles,
         editor,
         layer,
+        focus,
         registerPlugin,
         registerInlineFormatPlugin,
         registerBlockFormatPlugin,

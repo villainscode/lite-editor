@@ -53,7 +53,8 @@
 }
 
 .lite-editor-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
 }
 
 .material-symbols-outlined {
@@ -288,7 +289,8 @@
 }
 
 .lite-editor-font-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
 }
 
 /* 폰트 패밀리 드롭다운 구분선 */
