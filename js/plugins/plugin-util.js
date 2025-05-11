@@ -412,6 +412,30 @@ const PluginUtil = (function() {
                 console.error('선택 영역 복원 실패:', e);
                 return false;
             }
+        },
+
+        // PluginUtil에 복원 함수 추가
+        restoreSelectionByMarker(contentArea, selector, delay = 10) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const markerElement = contentArea.querySelector(selector);
+                    if (markerElement) {
+                        markerElement.removeAttribute('data-selection-marker');
+                        
+                        const range = document.createRange();
+                        range.selectNode(markerElement);
+                        
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        
+                        contentArea.focus({ preventScroll: true });
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                }, delay);
+            });
         }
     };
 
@@ -1067,15 +1091,3 @@ document.addEventListener('keydown', (e) => {
         PluginUtil.layerManager.closeAll();
     }
 });
-
-// dropdown 네임스페이스 유지 (호환성)
-PluginUtil.dropdown = {
-  setupDropdown: function(button, dropdownMenu, params = {}) {
-    // 기존 plugin-dropdown-util.js의 setupDropdown 구현 이동
-    // ...
-  },
-  
-  closeAllDropdowns: function() {
-    PluginUtil.layerManager.closeAll();
-  }
-};

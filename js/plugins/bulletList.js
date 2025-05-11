@@ -49,12 +49,6 @@
       range = selection.getRangeAt(0);
     }
     
-    // 선택 영역의 내용을 복제하여 처리 (원본 range를 변경하지 않음)
-    const clonedRange = range.cloneRange();
-    
-    // 선택 영역의 오프셋 저장 (복원을 위해)
-    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
-    
     // 선택 영역의 콘텐츠 추출
     const fragment = range.extractContents();
     
@@ -103,29 +97,8 @@
     // 스타일 적용
     applyStyleToSingleUl(ul);
     
-    // 선택 영역 복원 - 마커를 찾아서 복원
-    setTimeout(() => {
-      const markerElement = contentArea.querySelector('ul[data-selection-marker="true"]');
-      
-      if (markerElement) {
-        // 마커 속성 제거
-        markerElement.removeAttribute('data-selection-marker');
-        
-        // ul 태그를 선택하도록 설정
-        const range = document.createRange();
-        range.selectNode(markerElement);
-        
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        contentArea.focus();
-      } else {
-        // 마커를 찾지 못한 경우 오프셋 기반 복원 사용
-        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-        contentArea.focus();
-      }
-    }, 10);
+    // 새로운 방식으로 선택 영역 복원
+    PluginUtil.selection.restoreSelectionByMarker(contentArea, 'ul[data-selection-marker="true"]', 100);
     
     return ul;
   }
@@ -139,17 +112,14 @@
     // 선택 영역 정보 저장 (복원을 위한 준비)
     const contentArea = ul.closest('[contenteditable="true"]');
     
-    // 선택 영역의 오프셋 저장
-    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
-    
-    // 변환할 위치에 임시 마커 생성
-    const marker = document.createElement('span');
-    marker.setAttribute('data-unwrap-marker', 'true');
-    ul.parentNode.insertBefore(marker, ul);
-    
     // 리스트 아이템들을 일반 텍스트로 변환
     const fragment = document.createDocumentFragment();
     const items = Array.from(ul.children);
+    
+    // 변환할 위치에 임시 마커 생성 (위치 참조용)
+    const marker = document.createElement('span');
+    marker.setAttribute('data-unwrap-marker', 'true');
+    ul.parentNode.insertBefore(marker, ul);
     
     items.forEach(item => {
       if (item.nodeName === 'LI') {
@@ -191,20 +161,10 @@
           selection.addRange(range);
           
           contentArea.focus();
-        } else {
-          // 복원 실패 시 오프셋 기반 복원
-          PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-          contentArea.focus();
         }
-      } else {
-        // 마커를 찾지 못한 경우 오프셋 기반 복원
-        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-        contentArea.focus();
       }
     }, 10);
   }
-  
-  
   
   /**
    * UL 요소의 중첩 깊이를 계산하는 함수
@@ -400,28 +360,61 @@
   }
   
   /**
-   * 포커스 유지 로직 (PluginUtil.selection 활용)
+   * 포커스 유지 로직 (개선)
    */
   function maintainFocus(li) {
     if (!li) return;
     
     try {
-      // LI 내의 첫 번째 텍스트 노드 찾기
-      let textNode = Array.from(li.childNodes).find(node => 
-        node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== ''
-      );
-      
-      // 텍스트 노드가 없으면 새로운 텍스트 노드 추가
-      if (!textNode) {
-        textNode = document.createTextNode('\u200B'); // 제로 너비 공백
-        li.insertBefore(textNode, li.firstChild);
-      }
-      
-      // PluginUtil.selection으로 포커스 설정
-      PluginUtil.selection.moveCursorTo(textNode, textNode.length);
+      // 지연시간 0으로 설정 - 즉시 실행 (DOM이 이미 준비됨)
+      setTimeout(() => {
+        // LI 내의 첫 번째 텍스트 노드 찾기
+        let textNode = Array.from(li.childNodes).find(node => 
+          node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== ''
+        );
+        
+        // 텍스트 노드가 없으면 첫 번째 자식 요소를 찾거나 새 노드 추가
+        if (!textNode) {
+          // 내부 요소의 첫 번째 텍스트 노드 찾기 시도
+          const firstChild = li.firstChild;
+          if (firstChild && firstChild.nodeType === Node.ELEMENT_NODE) {
+            textNode = findFirstTextNode(firstChild);
+          }
+          
+          // 그래도 없으면 새 텍스트 노드 생성
+          if (!textNode) {
+            textNode = document.createTextNode('\u200B'); // 제로 너비 공백
+            li.insertBefore(textNode, li.firstChild);
+          }
+        }
+        
+        // 텍스트 노드 위치에 커서 설정
+        const textLength = textNode.length || 0;
+        PluginUtil.selection.moveCursorTo(textNode, textLength);
+      }, 0);
     } catch (e) {
       errorHandler.logError('ListPlugin', errorHandler.codes.COMMON.FOCUS, e);
     }
+  }
+  
+  /**
+   * 요소 내 첫 번째 텍스트 노드 찾기 (재귀)
+   */
+  function findFirstTextNode(element) {
+    if (!element) return null;
+    
+    if (element.nodeType === Node.TEXT_NODE && element.textContent.trim()) {
+      return element;
+    }
+    
+    if (element.childNodes && element.childNodes.length > 0) {
+      for (let i = 0; i < element.childNodes.length; i++) {
+        const found = findFirstTextNode(element.childNodes[i]);
+        if (found) return found;
+      }
+    }
+    
+    return null;
   }
   
   /**

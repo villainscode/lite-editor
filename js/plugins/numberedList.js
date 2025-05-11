@@ -120,29 +120,8 @@
     // 리스트 스타일 적용
     applyNumberedStyles(ol);
     
-    // 선택 영역 복원 - 마커를 찾아서 복원
-    setTimeout(() => {
-      const markerElement = contentArea.querySelector('ol[data-selection-marker="true"]');
-      
-      if (markerElement) {
-        // 마커 속성 제거
-        markerElement.removeAttribute('data-selection-marker');
-        
-        // ol 태그를 선택하도록 설정 (전체 리스트 선택)
-        const range = document.createRange();
-        range.selectNode(markerElement);
-        
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        contentArea.focus({ preventScroll: true }); // 추가: 스크롤 방지 옵션 추가
-      } else {
-        // 마커를 찾지 못한 경우 오프셋 기반 복원 사용
-        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-        contentArea.focus({ preventScroll: true });
-      }
-    }, 10);
+    // 새로운 방식으로 선택 영역 복원
+    PluginUtil.selection.restoreSelectionByMarker(contentArea, 'ol[data-selection-marker="true"]', 100);
     
     return ol;
   }

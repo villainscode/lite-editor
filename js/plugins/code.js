@@ -59,27 +59,13 @@
             range.insertNode(codeElement);
             
             // 선택 영역 복원 - 마커를 찾아서 복원
-            setTimeout(() => {
-              const markerElement = contentArea.querySelector('code[data-selection-marker="true"]');
-              
-              if (markerElement) {
-                // 마커 속성 제거
-                markerElement.removeAttribute('data-selection-marker');
-                
-                // code 태그 내부의 텍스트를 선택
-                const range = document.createRange();
-                range.selectNodeContents(markerElement);
-                
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-                
-                contentArea.focus();
-              } else {
-                util.selection.restoreFromOffsets(contentArea, offsets);
-                contentArea.focus();
-              }
-            }, 10);
+            util.selection.restoreSelectionByMarker(contentArea, 'code[data-selection-marker="true"]', 10)
+              .then(success => {
+                if (!success) {
+                  util.selection.restoreFromOffsets(contentArea, offsets);
+                  contentArea.focus();
+                }
+              });
           }
         }
       });
