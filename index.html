@@ -300,6 +300,11 @@
     <script src="js/loader.js"></script>
     
     <script>
+        // 디버그 모드를 명시적으로 활성화
+        window.DEBUG_MODE = true;
+
+        // 직접 콘솔에 로그 출력
+        console.log('[DEBUG] 디버그 모드 활성화됨');
         // 모든 스크립트 로드 완료 후 에디터 초기화
         document.addEventListener('lite-editor-loaded', function() {
             // 기본 에디터 초기화

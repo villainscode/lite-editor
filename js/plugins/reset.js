@@ -19,6 +19,8 @@
     if (window.DebugUtils) {
       window.DebugUtils.debugLog('RESET', message, data);
     }
+    // 직접 콘솔에 로그 출력 (테스트용)
+    console.log(`[RESET] ${message}`, data || '');
   };
 
   /**
