@@ -148,81 +148,96 @@
             <h2>고정형 에디터 예제</h2>
             <div class="editor-container">
                 <div id="lite-editor"  contenteditable="true">
-                <h2>LiteEditor 소개</h2>
+                <h1>LiteEditor 소개, 이 크기는 h1 태그입니다.</h1>
                 <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
 
-                <h2>주요 기능</h2>
-                <ul>
-                    <li><strong>간단한 통합</strong>: 어떤 웹사이트에도 손쉽게 추가할 수 있습니다.</li>
-                    <li><strong>플러그인 구조</strong>: 필요한 기능만 선택하여 사용할 수 있습니다.</li>
-                    <li><strong>웹 표준 준수</strong>: JS와 CSS만으로 구현되어 호환성이 뛰어납니다.</li>
-                    <li><strong>반응형 디자인</strong>: 모든 화면 크기에 맞게 조정됩니다.</li>
-                </ul>
-                <h2>폰트 목록</h2>
-                <br>순서 있는 리스트 1
-                <br>순서 있는 리스트 2
-                <br>순서 있는 리스트 3
-                <br>순서 있는 리스트 4
-                
+                <h2>LiteEditor 기능 테스트용 샘플 텍스트, 이 크기는 h2 태그입니다.</h2>
+
+                <h3>기본 서식 테스트, 이 크기는 h3 태그입니다.</h3>
+                <p>안녕하세요! 이 텍스트는 굵게 서식을 테스트하기 위한 문장입니다. 기울임체로 작성된 부분도 확인해보세요. 
+                  또한 밑줄과 취소선 기능도 테스트해볼 수 있습니다. 물론 다 적용해볼 수도 있죠.</p>
+
+                <h3>제목 스타일</h3>
+                <p>에디터의 Heading 기능을 사용하여 이 텍스트를 다양한 크기의 제목으로 변경해보세요. H1부터 H3까 크기를 적용할 수 있습니다. 기본값은 일반 Paragraph로 텍스트가 채워집니다. </p>
+
+                <h3>글자 색상 및 하이라이트</h3>
+                <p>이 부분은 글자 색상을 변경해보세요. 다양한 색상을 선택하여 텍스트에 적용할 수 있습니다. 또한 텍스트 배경에 하이라이트 효과를 주고 싶다면 해당 텍스트를 선택한 후 하이라이트 도구를 사용해보세요.</p>
+
+                <h3>글꼴 변경</h3>
+                <p>이 문장의 글꼴을 변경해보세요. 에디터에서 제공하는 다양한 글꼴(굴림체, 바탕체, Noto Sans KR, 나눔고딕, Black Han Sans, 도현체 등)을 적용해볼 수 있습니다.</p>
+                - 도현체 <br>
+                - 나눔고딕 <br>
+                - 바탕체 <br>
+                - 굴림체 <br>
+                - Noto Sans KR <br>
+                - Black Han Sans <br>
                 <br>
-                <br>순서 없는 리스트 1
-                <br>순서 없는 리스트 2
-                <br>순서 없는 리스트 3
-                <br>
-                <br>체크리스트 1
-                <br>체크리스트 2
-                <br>체크리스트 3
-              
+                코딩 폰트도 적용할 수 있어요. <br>
+                - Hack<br>
+                - JetBrains Mono<br><br>
 
-                <br>굴림체
-                <br>굴림
-                <br>바탕체
-                <br>Noto Sans KR
-                <br>나눔고딕
-                <br>Black Han Sans
-                <br>도현체 
+                영문도 적용합니다.<br><br>
+                arial <br>
+                Courier new <br>
+
+                블록쿼트도 적용합니다.<br>
+                블록쿼트 아이콘을 누르세요. 엔터를 치면 밖으로 빠져나옵니다.<br><br>
                 
-                <br> 샘플 이미지 주소 : https://t4.ftcdn.net/jpg/01/43/42/83/360_F_143428338_gcxw3Jcd0tJpkvvb53pfEztwtU9sxsgT.jpg
-                <pre>
-                    @Controller
-                    public class HomeController {
+                
+                <h3>순서 있는 리스트</h3>
+                <p>이 부분을 선택하고 순서 있는 리스트(Numbered List) 버튼을 클릭하세요:</p>
+                <p>첫 번째 항목<br>
+                두 번째 항목<br>
+                세 번째 항목<br>
+                네 번째 항목</p>
 
-                        @GetMapping("/home")
-                        public String home(Model model) {
-                            model.addAttribute("message", "Welcome to RabbitMQ Sample!");
-                            return "home"; // src/main/resources/templates/home.html 파일을 찾음
-                        }
+                <h3>순서 없는 리스트</h3>
+                <p>이 부분을 선택하고 순서 없는 리스트(Bullet List) 버튼을 클릭하세요:</p>
+                <p>과일 항목<br>
+                채소 항목<br>
+                육류 항목<br>
+                유제품 항목</p>
 
-                        @GetMapping("/news")
-                        public String news(Model model) {
-                            model.addAttribute("message", "Welcome to RabbitMQ News Sample!");
-                            return "news";
-                        }
-                    }
-                </pre>
+                <h3>체크리스트 </h3>
+                <p>체크리스트를 테스트하려면 이 부분을 선택하고 CheckList 버튼을 클릭하세요.</p>
+                <p>첫 번째 항목<br>
+                두 번째 항목<br>
+                세 번째 항목<br>
+                네 번째 항목</p>
 
-                <h2>지원 서식</h2>
-                <ul>
-                    <li><strong>undo</strong>: 실행 취소.</li>
-                    <li><strong>redo</strong>: 재실행.</li>
-                    
-                    <li><strong>폰트</strong>: 지정된 텍스트에 폰트를 적용합니다.</li>
-                    <li><strong>폰트 컬러</strong>지정한 컬러를 폰트에 적용합니다.</li>
-                    <li><strong>제목 (Heading)</strong>: 제목 텍스트 스타일을 적용합니다.</li>
-                    
-                    <li><strong>하이라이트</strong>지정한 텍스트에 하일라이트 처리 합니다.</li>
-                    <li><strong>굵게 (Bold)</strong>: 텍스트를 굵게 표시합니다.</li>
-                    <li><strong>기울임 (Italic)</strong>: 텍스트를 기울임꼴로 표시합니다.</li>
-                    <li><strong>밑줄 (Underline)</strong>: 텍스트에 밑줄을 추가합니다.</li>
-                    <li><strong>취소선 (Strike)</strong>: 텍스트에 취소선을 추가합니다.</li>
-                    
-                    <li><strong>코드 (Code)</strong>: 텍스트를 코드 블록으로 형식화합니다.</li>
-                    <li><strong>코드블럭 (CodeBlock)</strong>: 선택한 텍스트를 코드 블록으로 형식화합니다.</li>
-                    <li><strong>링크 (Link)</strong>: 선택한 텍스트에 하이퍼링크를 추가합니다.</li>
-                    <li><strong>이미지 (Image)</strong>: 선택한 텍스트에 이미지를 추가합니다.</li>
-                    <li><strong>테이블 (Table)</strong>: 텍스트를 테이블로 형식화합니다.</li>
-                    <li><strong>서식 지우기 (Reset Format)</strong>: 모든 서식을 제거합니다.</li>
-                </ul>
+                <h3>코드 및 코드블럭 하일라이팅, 자동 Syntax 하일라이팅 적용</h3>
+                <p>인라인 코드를 테스트하려면 이 부분을 선택하고 <code>Code</code> 버튼을 클릭하세요.</p>
+                <p>코드블럭을 테스트하려면 아래 텍스트를 선택하고 CodeBlock 버튼을 클릭하세요:</p>
+                
+            function testFunction() {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;console.log("Hello, LiteEditor!");<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
+            }<br>
+            <br>
+            const result = testFunction();<br>
+                
+
+
+                <h3>링크 추가</h3>
+                <p>링크를 추가하려면 이 텍스트를 선택하고 Link 버튼을 클릭한 후 http://www.google.com 을 입력하세요.</p>
+
+                <h3>이미지 추가</h3>
+                <p>이미지를 추가하려면 아래 이미지 URL을 복사하고 Image 버튼을 클릭한 후 URL을 붙여넣으세요:</p>
+                <p>https://t4.ftcdn.net/jpg/01/43/42/83/360_F_143428338_gcxw3Jcd0tJpkvvb53pfEztwtU9sxsgT.jpg</p>
+
+                <h3>동영상 링크</h3>
+                <p>동영상을 추가하려면 아래 유튜브 URL을 복사하여 Link 버튼을 클릭한 후 URL을 붙여넣으세요:</p>
+                <p>https://youtube.com/shorts/CuL-8CsrMZw?si=rZiyYB0sNegg6m5O</p>
+
+                <h3>테이블 추가</h3>
+                <p>테이블을 추가하려면 Table 버튼을 클릭하고 원하는 행과 열 수를 선택하세요. 예를 들어, 3x3 테이블을 만들어 제품 정보를 표시할 수 있습니다.</p>
+
+                <h3>서식 지우기</h3>
+                <p>모든 서식을 제거하려면 위의 내용을 선택한 후 Reset Format 버튼을 클릭하세요. 모든 서식(굵게, 기울임, 밑줄, 색상 등)이 제거되고 일반 텍스트로 변환됩니다.</p>
+
+                <h3>실행 취소 및 재실행</h3>
+                <p>텍스트를 편집한 후 Undo 버튼을 클릭하여 이전 상태로 되돌리거나, Redo 버튼을 클릭하여 취소한 작업을 다시 적용해보세요.</p>
+
             </div>
         </div>
         
@@ -263,25 +278,58 @@
             <p>다음과 같은 하나의 스크립트만으로 LiteEditor를 추가할 수 있습니다.</p>
             
             <pre class="code-block">
-&lt;!-- CSS 통합 로더 --&gt;
-&lt;link rel="stylesheet" href="path/to/lite-editor/css/loader.css"&gt;
-
-&lt;!-- 에디터가 표시될 영역 --&gt;
-&lt;div id="my-editor" contenteditable="true"&gt;&lt;/div&gt;
-
-&lt;!-- JS 로더 --&gt;
-&lt;script src="path/to/lite-editor/js/loader.js"&gt;&lt;/script&gt;
-
-&lt;!-- 초기화 코드 --&gt;
-&lt;script&gt;
-  document.addEventListener('lite-editor-loaded', function() {
-    const editor = LiteEditor.init('#my-editor', {
-      plugins: ['bold', 'italic', 'underline', 'link', 'reset'],
-      dividers: [3] // 구분선 위치
-    });
-  });
-&lt;/script&gt;
-            </pre>
+  &lt;!-- CSS 통합 로더 --&gt;
+  &lt;link rel="stylesheet" href="css/loader.css"&gt;
+  
+  &lt;!-- 에디터가 표시될 영역 정의 --&gt;
+  &lt;div id="lite-editor" contenteditable="true"&gt;
+      &lt;!-- 초기 콘텐츠 (선택 사항) --&gt;
+      &lt;h2&gt;초기 콘텐츠&lt;/h2&gt;
+      &lt;p&gt;여기에 기본 내용을 넣을 수 있습니다.&lt;/p&gt;
+  &lt;/div&gt;
+  
+  &lt;!-- 통합 스크립트 로더 --&gt;
+  &lt;script src="js/loader.js"&gt;&lt;/script&gt;
+  
+  &lt;script&gt;
+      // 디버그 모드를 활성화 (선택 사항)
+      window.DEBUG_MODE = true;
+      
+      // 모든 스크립트 로드 완료 후 에디터 초기화
+      document.addEventListener('lite-editor-loaded', function() {
+          // 에디터 초기화
+          const editor = LiteEditor.init('#lite-editor', {
+              // 사용할 플러그인 목록 지정
+              plugins: [
+                  'fontFamily', 'heading', 'fontColor', 'emphasis',        // 폰트서식 
+                  'bold', 'italic', 'underline', 'strike',                 // 폰트포맷 
+                  'link', 'imageUpload', 'table', 'media',                 // 오브젝트 삽입 
+                  'line','blockquote', 'code', 'codeBlock',                // 인용 및 코드 
+                  'unorderedList', 'orderedList', 'checkList',             // 목록 
+                  'align', 'formatIndent',                                 // 정렬과 인덴트
+                  'historyInit', 'undo', 'redo', 'reset',                  // 실행 취소/되돌리기  
+              ],
+              // 구분선 위치 정의
+              dividers: [4, 8, 12, 16, 19, 22],
+              // 에디터 크기 설정 (너비와 높이)
+              dimensions: {
+                  editor: {
+                      width: '1020px',    // 에디터 전체 너비
+                      maxWidth: '100%',   // 최대 너비
+                      height: '650px'     // 에디터 전체 높이
+                  },
+                  toolbar: {
+                      height: '42px'      // 툴바 높이
+                  },
+                  content: {
+                      height: '608px',    // 콘텐츠 영역 높이
+                      minHeight: '608px'  // 콘텐츠 영역 최소 높이
+                  }
+              }
+          });
+      });
+  &lt;/script&gt;
+              </pre>
         </div>
     </div>
 
@@ -311,7 +359,7 @@
             const editor1 = LiteEditor.init('#lite-editor', {
                 // 사용할 플러그인 목록 지정
                 plugins: [
-                    'fontFamily', 'heading', 'fontColor', 'emphasis',        // 폰트서식 
+                    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
                     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
                     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
                     'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
@@ -324,9 +372,9 @@
                 // 에디터 크기 설정 (너비와 높이)
                 dimensions: {
                     editor: {
-                        width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장)
+                        width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 960px 이상 권장)
                         maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
-                        height: '650px'    // 에디터 전체 높이 (고정)
+                        height: '650px'    // 에디터 전체 높이 (고정, 650px 이상 권장)
                     },
                     toolbar: {
                         height: '42px'     // 툴바 높이 (고정)
