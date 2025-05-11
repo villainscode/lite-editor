@@ -671,7 +671,70 @@
               }
             }, 10);
           } else {
-            // 마커 기반 처리 방식 (비 리스트 요소용) ---- 복원
+            // 마커 기반 처리 방식
+            
+            // 선택 영역 내용을 저장하고 서식 제거만 수행
+            const selectedText = originalSelection.text;
+            
+            // 서식 태그만 제거하고 텍스트를 유지하는 함수
+            const removeFormattingOnly = () => {
+              // 선택 영역의 내용을 임시 저장
+              const temp = document.createElement('div');
+              temp.appendChild(range.cloneContents());
+              
+              // 선택 영역 내용 삭제
+              range.deleteContents();
+              
+              // 서식을 제거한 텍스트만 삽입
+              const textNode = document.createTextNode(temp.textContent);
+              range.insertNode(textNode);
+              
+              // 텍스트 노드 선택
+              range.selectNode(textNode);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              
+              // 인라인 서식 제거 명령 실행
+              document.execCommand('removeFormat', false, null);
+              document.execCommand('unlink', false, null);
+              
+              log('인라인 서식만 제거 완료');
+              return true;
+            };
+            
+            // 폰트/배경색 태그 또는 일반 인라인 서식 태그만 있는지 확인
+            const tempFragment = range.cloneContents();
+            const tempDiv = document.createElement('div');
+            tempDiv.appendChild(tempFragment);
+            
+            // 특수 서식 태그 체크
+            const hasFontTag = tempDiv.querySelector('font[color]') !== null;
+            const hasStyleSpan = tempDiv.querySelector('span[style*="background-color"], span[style*="color"]') !== null;
+            
+            // 기본 인라인 서식 태그 체크
+            const hasBasicFormatTags = 
+              tempDiv.querySelector('b, i, u, strong, em, strike, span:not([style]), mark') !== null;
+            
+            // 블록 태그 체크 (p 태그 감싸기가 필요한 경우)
+            const hasBlockTags = Array.from(tempDiv.querySelectorAll('*')).some(
+              el => BLOCK_TAGS.includes(el.tagName)
+            );
+            
+            log('태그 분석', { 
+              hasFontTag, 
+              hasStyleSpan, 
+              hasBasicFormatTags, 
+              hasBlockTags,
+              html: tempDiv.innerHTML
+            });
+            
+            // 블록 태그 없이 인라인 서식 태그만 있는 경우
+            if ((hasFontTag || hasStyleSpan || hasBasicFormatTags) && !hasBlockTags) {
+              log('인라인 서식 태그만 감지 - 특별 처리');
+              return removeFormattingOnly();
+            }
+            
+            // 블록 태그가 포함된 경우 기존 마커 기반 처리 계속 진행
             const markerId = 'reset-selection-' + Date.now();
             const markerElement = document.createElement('p');
             markerElement.id = markerId;
