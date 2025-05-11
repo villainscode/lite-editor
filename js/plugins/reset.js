@@ -140,13 +140,13 @@
       log('선택 영역 내 블록 요소 수', allBlockElements.length);
       if (allBlockElements.length > 0) {
         log('선택 영역 관련 블록 태그', allBlockElements.map(el => el.nodeName).join(', '));
-        
-        // 선택된 블록 요소의 태그와 텍스트 자세히 로깅
+          
+          // 선택된 블록 요소의 태그와 텍스트 자세히 로깅
         log('선택된 블록 요소 상세 정보', allBlockElements.map(el => ({
-          태그: el.nodeName,
-          텍스트: el.textContent.slice(0, 50) + (el.textContent.length > 50 ? '...' : ''),
-          HTML: el.outerHTML.slice(0, 100) + (el.outerHTML.length > 100 ? '...' : '')
-        })));
+            태그: el.nodeName,
+            텍스트: el.textContent.slice(0, 50) + (el.textContent.length > 50 ? '...' : ''),
+            HTML: el.outerHTML.slice(0, 100) + (el.outerHTML.length > 100 ? '...' : '')
+          })));
       }
       
       if (allBlockElements.length === 0) {
@@ -156,7 +156,7 @@
       // 각 블록 태그를 p로 변환
       for (const blockElement of allBlockElements) {
         // 리스트 태그 특별 처리
-        if (blockElement.nodeName === 'UL' || blockElement.nodeName === 'OL') {
+          if (blockElement.nodeName === 'UL' || blockElement.nodeName === 'OL') {
           // 리스트 아이템을 개행으로 구분된 텍스트로 변환
           const listItems = Array.from(blockElement.querySelectorAll('li'));
           const listText = listItems.map(item => item.textContent.trim()).join('\n');
@@ -166,7 +166,7 @@
           p.style.whiteSpace = 'pre-wrap';
           p.textContent = listText;
           blockElement.parentNode.replaceChild(p, blockElement);
-        } else if (blockElement.nodeName === 'CODE') {
+          } else if (blockElement.nodeName === 'CODE') {
           // CODE 태그는 특별 처리 - 개행 문자 보존
           const content = blockElement.textContent;
           const p = document.createElement('p');
@@ -174,12 +174,12 @@
           p.style.whiteSpace = 'pre-wrap';
           p.textContent = content;
           blockElement.parentNode.replaceChild(p, blockElement);
-        } else {
-          const p = PluginUtil.dom.createElement('p', {
-            textContent: blockElement.textContent
-          });
-          blockElement.parentNode.replaceChild(p, blockElement);
-        }
+          } else {
+            const p = PluginUtil.dom.createElement('p', {
+              textContent: blockElement.textContent
+            });
+        blockElement.parentNode.replaceChild(p, blockElement);
+          }
       }
       
       return true;
@@ -342,7 +342,7 @@
     document.execCommand('unlink', false, null);
     
     // 7. 마커 내용을 p 요소로 대체
-    const p = document.createElement('p');
+        const p = document.createElement('p');
     p.textContent = textContent;
     
     if (marker.parentNode) {
@@ -532,22 +532,22 @@
           if (codeElement) {
             log('CODE 태그 직접 처리');
             
-            // 컴퓨티드 스타일에서 색상 추출
-            const computedStyle = window.getComputedStyle(codeElement);
-            const originalColor = computedStyle.color || '';
-            
-            // 코드 내용 추출
-            const codeContent = codeElement.textContent;
-            
-            // 새 p 요소 생성
+        // 컴퓨티드 스타일에서 색상 추출
+        const computedStyle = window.getComputedStyle(codeElement);
+        const originalColor = computedStyle.color || '';
+        
+        // 코드 내용 추출
+        const codeContent = codeElement.textContent;
+        
+        // 새 p 요소 생성
             const newP = document.createElement('p');
             newP.style.whiteSpace = 'pre-wrap';
-            if (originalColor) {
+        if (originalColor) {
               newP.style.color = originalColor; // 원본 색상 보존
-            }
+        }
             newP.textContent = codeContent;
-            
-            // CODE 태그를 p로 완전히 대체
+        
+        // CODE 태그를 p로 완전히 대체
             codeElement.parentNode.replaceChild(newP, codeElement);
             
             // 새 p 요소 선택
@@ -586,10 +586,10 @@
             // 리스트 아이템 텍스트 추출
             const listItems = Array.from(listElement.querySelectorAll('li'));
             const listText = listItems.map(item => item.textContent.trim()).join('\n');
-            
-            // 새 p 요소 생성
-            const newP = document.createElement('p');
-            newP.style.whiteSpace = 'pre-wrap';
+        
+        // 새 p 요소 생성
+        const newP = document.createElement('p');
+        newP.style.whiteSpace = 'pre-wrap';
             if (originalColor) {
               newP.style.color = originalColor; // 원본 색상 보존
             }
@@ -754,31 +754,31 @@
               const hadBlockChanges = handleBlockElements(contentArea, range, startNode, endNode);
               
               // 2. 인라인 태그 제거 로직 개선 - execCommand 이전에 직접 제거 로직 적용
-              const elementsToRemove = [];
-              INLINE_TAGS.forEach(tag => {
-                // 대소문자 구분 없이 태그 선택 (case-insensitive)
-                const selector = tag.toLowerCase();
+        const elementsToRemove = [];
+        INLINE_TAGS.forEach(tag => {
+          // 대소문자 구분 없이 태그 선택 (case-insensitive)
+          const selector = tag.toLowerCase();
                 const selectedTags = contentArea.querySelectorAll(selector);
-                
-                selectedTags.forEach(el => {
-                  // 마커 내부 또는 선택 영역 내부의 태그만 처리
-                  if (markerElement.contains(el) || range.intersectsNode(el)) {
-                    elementsToRemove.push(el);
-                  }
-                });
-              });
-              
-              // 태그 직접 제거 (부모에서 자식으로 먼저 처리)
-              elementsToRemove
-                .sort((a, b) => b.contains(a) ? -1 : (a.contains(b) ? 1 : 0)) // 깊은 요소부터 처리
-                .forEach(el => {
-                  try {
-                    if (el.parentNode) {
-                      const textNode = document.createTextNode(el.textContent);
-                      el.parentNode.replaceChild(textNode, el);
+          
+          selectedTags.forEach(el => {
+            // 마커 내부 또는 선택 영역 내부의 태그만 처리
+            if (markerElement.contains(el) || range.intersectsNode(el)) {
+              elementsToRemove.push(el);
+            }
+          });
+        });
+        
+        // 태그 직접 제거 (부모에서 자식으로 먼저 처리)
+        elementsToRemove
+          .sort((a, b) => b.contains(a) ? -1 : (a.contains(b) ? 1 : 0)) // 깊은 요소부터 처리
+          .forEach(el => {
+            try {
+              if (el.parentNode) {
+                const textNode = document.createTextNode(el.textContent);
+                el.parentNode.replaceChild(textNode, el);
                       log('인라인 태그 제거:', el.nodeName);
-                    }
-                  } catch (e) {
+              }
+            } catch (e) {
                     log('태그 제거 중 오류', e);
                   }
                 });
@@ -810,7 +810,7 @@
                   HTML: targetMarker.innerHTML,
                   텍스트: targetMarker.textContent
                 });
-              } else {
+          } else {
                 log('마커 요소를 찾을 수 없음, 대체 방법으로 복원 시도');
                 // 마커를 찾지 못한 경우 기존 방법으로 선택 복원 시도
                 restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
@@ -838,12 +838,12 @@
           return false;
         }
         
-        return true;
-      } catch (error) {
+      return true;
+    } catch (error) {
         errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
         contentArea.focus();
-        return false;
-      }
+      return false;
     }
+  }
   });
 })();
