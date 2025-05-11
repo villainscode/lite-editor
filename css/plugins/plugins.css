@@ -53,22 +53,28 @@
 }
 
 .lite-editor-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
 }
-
 .material-symbols-outlined {
   font-size: 20px;
   color: var(--selection-border);
   cursor: pointer;
 }
 
-/* 클릭 시 효과 */
+/* 클릭 시 일시적인 효과만 적용 */
 .lite-editor-button:active {
   transform: scale(0.95);
   background-color: rgba(0, 0, 0, 0.1);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: #1a73e8;
 }
 
+.lite-editor-button:active .material-icons {
+  color: #1a73e8;
+}
+
+/* active 클래스는 토글이 필요한 버튼들만 사용 */
 .lite-editor-button.active {
   color: #1a73e8;
   background-color: rgba(26, 115, 232, 0.1);
@@ -254,7 +260,7 @@
   border-radius: 4px;
   color: #5f6368;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
   font-size: 13px;
   width: 140px;
   white-space: nowrap;
@@ -288,8 +294,10 @@
 }
 
 .lite-editor-font-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
 }
+
 
 /* 폰트 패밀리 드롭다운 구분선 */
 .lite-editor-font-divider {
@@ -488,10 +496,14 @@ mark {
 
 /* 폰트 버튼 클릭 효과 */
 .lite-editor-font-button:active {
+  transform: scale(0.95);
   background-color: rgba(0, 0, 0, 0.1);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .lite-editor-font-button.active {
+  color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.1);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
 }

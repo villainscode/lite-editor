@@ -63,12 +63,32 @@
     document.body.appendChild(marker);
   }
   
+  // PluginUtil 참조 추가
+  const util = window.PluginUtil;
+
   // 플러그인 등록 - 기본 동작만 사용
-  PluginUtil.registerBlockFormatPlugin(
-    'blockquote',
-    'Blockquote',
-    'format_quote',
-    'blockquote',
-    null  // 커스텀 액션 없음 - 기본 문서 명령 사용
-  );
+  LiteEditor.registerPlugin('blockquote', {
+    title: 'Blockquote',
+    icon: 'format_quote',
+    customRender: function(toolbar, contentArea) {
+      const button = util.dom.createElement('button', {
+        className: 'lite-editor-button',
+        title: 'Blockquote'
+      });
+
+      const icon = util.dom.createElement('i', {
+        className: 'material-icons',
+        textContent: 'format_quote'
+      });
+      button.appendChild(icon);
+
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.execCommand('formatBlock', false, 'blockquote');
+      });
+
+      return button;
+    }
+  });
 })();

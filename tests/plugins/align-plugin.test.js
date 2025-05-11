@@ -1,11 +1,11 @@
 /**
- * Unit Tests for Alignment Plugin
+ * 정렬 플러그인 유닛 테스트
  */
 
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
 
-describe('Alignment Plugin', () => {
+describe('정렬 플러그인 테스트', () => {
   let window, document, LiteEditor, contentArea, alignButton, toolbar, dropdown;
   let alignConfig;
   let mockClassListAdd, mockClassListRemove, mockClassListToggle, mockClassListContains;
@@ -247,7 +247,7 @@ describe('Alignment Plugin', () => {
     }
   });
 
-  test('should register the plugin with LiteEditor', () => {
+  test('플러그인이 LiteEditor에 올바르게 등록되는지 테스트', () => {
     expect(LiteEditor.registerPlugin).toHaveBeenCalledWith('align', expect.objectContaining({
       title: 'Alignment',
       icon: 'format_align_justify',
@@ -255,239 +255,181 @@ describe('Alignment Plugin', () => {
     }));
   });
 
-  test('should create an alignment button in the toolbar', () => {
+  test('툴바에 정렬 버튼이 올바르게 생성되는지 테스트', () => {
     expect(alignButton).toBeDefined();
     expect(alignButton.className).toContain('lite-editor-button');
     expect(alignButton.title).toBe('Text Alignment');
     
-    // Check button has the right icon
+    // 아이콘 확인
     const icon = alignButton.querySelector('i');
     expect(icon).toBeDefined();
     expect(icon.textContent).toBe('format_align_justify');
   });
 
-  test('should show dropdown when alignment button is clicked', () => {
-    // Simulate a click event on the button
+  test('정렬 버튼 클릭 시 드롭다운이 표시되는지 테스트', () => {
     const clickEvent = new window.MouseEvent('click', {
       bubbles: true,
       cancelable: true
     });
     
-    // Get the click handler
     const clickHandler = alignButton._eventHandlers.click[0];
     clickHandler(clickEvent);
     
-    // Dropdown should be created
     expect(dropdown).toBeDefined();
     expect(mockClassListToggle).toHaveBeenCalledWith('show');
     
-    // Should have alignment options
     const dropdownItems = dropdown.querySelectorAll('.lite-editor-dropdown-item');
     expect(dropdownItems.length).toBe(4);
     
-    // Selection should be saved
     expect(window.liteEditorSelection.save).toHaveBeenCalled();
   });
 
-  test('should hide dropdown when clicked outside', () => {
-    // First show the dropdown
+  test('드롭다운 외부 클릭 시 드롭다운이 숨겨지는지 테스트', () => {
     mockClassListContains.mockReturnValue(true);
     
-    // Create a document click handler mock
     document.clickHandler = jest.fn(() => {
-      // This would normally check if the click target is outside the dropdown
-      // and if it is, it would hide the dropdown
       mockClassListRemove('show');
     });
     
-    // Simulate a click outside the dropdown
     const outsideElement = document.createElement('div');
     document.body.appendChild(outsideElement);
     const event = new window.MouseEvent('click', { bubbles: true });
     Object.defineProperty(event, 'target', { value: outsideElement });
     
-    // Trigger the document click handler
     document.clickHandler(event);
     
-    // Dropdown should be hidden
     expect(mockClassListRemove).toHaveBeenCalledWith('show');
   });
   
-  test('should not hide dropdown when clicked inside dropdown', () => {
-    // First show the dropdown
+  test('드롭다운 내부 클릭 시 드롭다운이 유지되는지 테스트', () => {
     mockClassListContains.mockReturnValue(true);
     
-    // Simulate a click inside the dropdown
     const dropdownItem = dropdown.querySelector('.lite-editor-dropdown-item');
     const event = new window.MouseEvent('click', { bubbles: true });
     Object.defineProperty(event, 'target', { value: dropdownItem });
     
-    // Mock dropdown.contains to return true for this case
     dropdown.contains = jest.fn().mockReturnValue(true);
     
-    // Trigger the document click handler
     if (document.clickHandler) {
       document.clickHandler(event);
     }
     
-    // Dropdown should not have remove called
     expect(mockClassListRemove).not.toHaveBeenCalled();
   });
 
-  test('should apply left alignment when left option is clicked', () => {
-    // Get left alignment option
+  test('왼쪽 정렬 옵션 클릭 시 왼쪽 정렬이 적용되는지 테스트', () => {
     const leftOption = dropdown.querySelectorAll('.lite-editor-dropdown-item')[0];
     
-    // Mock an event for the click
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Get the click handler and call it
     const clickHandler = leftOption._eventHandlers.click[0];
     clickHandler(mockEvent);
     
-    // Should restore selection
     expect(window.liteEditorSelection.restore).toHaveBeenCalled();
-    
-    // Should execute justifyLeft command
     expect(document.execCommand).toHaveBeenCalledWith('justifyLeft', false, null);
-    
-    // Dropdown should be hidden after clicking
     expect(mockClassListRemove).toHaveBeenCalledWith('show');
   });
 
-  test('should apply center alignment when center option is clicked', () => {
-    // Get center alignment option
+  test('가운데 정렬 옵션 클릭 시 가운데 정렬이 적용되는지 테스트', () => {
     const centerOption = dropdown.querySelectorAll('.lite-editor-dropdown-item')[1];
     
-    // Mock an event for the click
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Get the click handler and call it
     const clickHandler = centerOption._eventHandlers.click[0];
     clickHandler(mockEvent);
     
-    // Should restore selection
     expect(window.liteEditorSelection.restore).toHaveBeenCalled();
-    
-    // Should execute justifyCenter command
     expect(document.execCommand).toHaveBeenCalledWith('justifyCenter', false, null);
-    
-    // Dropdown should be hidden after clicking
     expect(mockClassListRemove).toHaveBeenCalledWith('show');
   });
 
-  test('should apply right alignment when right option is clicked', () => {
-    // Get right alignment option
+  test('오른쪽 정렬 옵션 클릭 시 오른쪽 정렬이 적용되는지 테스트', () => {
     const rightOption = dropdown.querySelectorAll('.lite-editor-dropdown-item')[2];
     
-    // Mock an event for the click
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Get the click handler and call it
     const clickHandler = rightOption._eventHandlers.click[0];
     clickHandler(mockEvent);
     
-    // Should restore selection
     expect(window.liteEditorSelection.restore).toHaveBeenCalled();
-    
-    // Should execute justifyRight command
     expect(document.execCommand).toHaveBeenCalledWith('justifyRight', false, null);
-    
-    // Dropdown should be hidden after clicking
     expect(mockClassListRemove).toHaveBeenCalledWith('show');
   });
 
-  test('should apply justify alignment when justify option is clicked', () => {
-    // Get justify alignment option
+  test('양쪽 정렬 옵션 클릭 시 양쪽 정렬이 적용되는지 테스트', () => {
     const justifyOption = dropdown.querySelectorAll('.lite-editor-dropdown-item')[3];
     
-    // Mock an event for the click
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Get the click handler and call it
     const clickHandler = justifyOption._eventHandlers.click[0];
     clickHandler(mockEvent);
     
-    // Should restore selection
     expect(window.liteEditorSelection.restore).toHaveBeenCalled();
-    
-    // Should execute justifyFull command
     expect(document.execCommand).toHaveBeenCalledWith('justifyFull', false, null);
-    
-    // Dropdown should be hidden after clicking
     expect(mockClassListRemove).toHaveBeenCalledWith('show');
   });
 
-  test('should handle null selection gracefully', () => {
-    // Mock getSafeSelection to return null
+  test('선택 영역이 null일 때 정상적으로 처리되는지 테스트', () => {
     window.getSafeSelection = jest.fn().mockReturnValue(null);
     
-    // Mock liteEditorSelection.restore to simulate error
     window.liteEditorSelection.restore = jest.fn(() => {
       throw new Error('Selection is null');
     });
     
-    // Get justify alignment option
     const justifyOption = dropdown.querySelectorAll('.lite-editor-dropdown-item')[3];
     
-    // Modify handler to throw error
     const originalHandler = justifyOption._eventHandlers.click[0];
     justifyOption._eventHandlers.click[0] = (e) => {
       try {
         originalHandler(e);
       } catch (err) {
-        // Silent error
+        // 에러 무시
       }
     };
     
-    // Mock an event for the click
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Call should not throw
     expect(() => {
       const clickHandler = justifyOption._eventHandlers.click[0];
       clickHandler(mockEvent);
     }).not.toThrow();
     
-    // execCommand should not be called when selection is null
     expect(document.execCommand).not.toHaveBeenCalled();
   });
   
-  test('should toggle dropdown visibility when alignment button is clicked multiple times', () => {
-    // Mock event
+  test('정렬 버튼 여러 번 클릭 시 드롭다운 토글이 정상 작동하는지 테스트', () => {
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn()
     };
     
-    // Get the click handler
     const buttonClickHandler = alignButton._eventHandlers.click[0];
     
-    // First click - show dropdown
+    // 첫 번째 클릭 - 드롭다운 표시
     buttonClickHandler(mockEvent);
     expect(mockClassListToggle).toHaveBeenCalledWith('show');
     expect(dropdown.style.display).toBe('block');
     
-    // Reset mocks
+    // 모의 함수 초기화
     mockClassListToggle.mockClear();
     mockClassListToggle.mockReturnValue(false);
     
-    // Second click - hide dropdown
+    // 두 번째 클릭 - 드롭다운 숨김
     buttonClickHandler(mockEvent);
     expect(mockClassListToggle).toHaveBeenCalledWith('show');
     expect(dropdown.style.display).toBe('none');

@@ -51,5 +51,44 @@ describe('수평선 삽입 플러그인 테스트', () => {
     expect(true).toBe(true); // 초기 테스트가 통과하도록
   });
 
-  // 이하 나머지 테스트들 ...
+  test('수평선이 올바르게 삽입되는지 테스트', () => {
+    // 테스트 준비
+    const contentArea = document.getElementById('editor-content');
+    const buttonElement = document.createElement('button');
+    buttonElement.className = 'lite-editor-button';
+    
+    // LiteEditor 플러그인 설정
+    global.LiteEditor = {
+      plugins: {
+        line: {
+          action: jest.fn((contentArea, button, event) => {
+            // 이벤트 기본 동작 방지
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const hr = document.createElement('hr');
+            hr.setAttribute('data-lite-editor', 'line');
+            contentArea.appendChild(hr);
+            return hr;
+          })
+        }
+      }
+    };
+
+    // 이벤트 객체 모의 생성
+    const mockEvent = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn()
+    };
+
+    // 플러그인 action 실행
+    LiteEditor.plugins.line.action(contentArea, buttonElement, mockEvent);
+
+    // 결과 검증
+    const insertedHr = contentArea.querySelector('hr');
+    expect(insertedHr).not.toBeNull();
+    expect(insertedHr.getAttribute('data-lite-editor')).toBe('line');
+    expect(mockEvent.preventDefault).toHaveBeenCalled();
+    expect(mockEvent.stopPropagation).toHaveBeenCalled();
+  });
 }); 

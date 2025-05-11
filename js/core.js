@@ -507,27 +507,30 @@ const LiteEditor = (function() {
           e.preventDefault();
           e.stopPropagation();
           
+          // 토글이 필요한 플러그인만 active 클래스 토글
+          const togglePlugins = ['bold', 'italic', 'underline', 'strike', 'heading', 'fontColor', 'emphasis'];
+          if (togglePlugins.includes(pluginName)) {
+            buttonElement.classList.toggle('active');
+          }
+          
           // 이미 처리 중인 버튼인지 확인
           if (buttonElement.hasAttribute('data-processing')) {
             errorHandler.logError('Core', errorHandler.codes.COMMON.OPERATION_IN_PROGRESS, e);
             return;
           }
           
-          // active 클래스를 토글하지 않음 - 시각적 상태는 mousedown/mouseup 이벤트만으로 처리
-          
           // 선택 영역 저장
           if (window.liteEditorSelection) {
             window.liteEditorSelection.save();
           }
           
-          // 이벤트 객체 전달!
+          // 이벤트 객체 전달
           if (currentPlugin && typeof currentPlugin.action === 'function') {
             currentPlugin.action(contentArea, buttonElement, e);
           }
           
-          // 처리 중 플래그가 없는 경우에만 복원 (인라인 태그와 그 외 플러그인 구분)
+          // 처리 중 플래그가 없는 경우에만 복원
           if (!buttonElement.hasAttribute('data-processing')) {
-            // 일반 플러그인 - 코어에서 선택 영역 복원
             contentArea.focus();
             if (window.liteEditorSelection) {
               setTimeout(() => {

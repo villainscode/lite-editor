@@ -198,7 +198,7 @@
           // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
           fontItem.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();            
+            e.stopPropagation();
             errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
             
             // 현재 스크롤 위치 저장

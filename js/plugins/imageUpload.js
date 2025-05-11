@@ -419,6 +419,12 @@
         imageModal.style.opacity = '0';
         imageModal.style.visibility = 'hidden';
         
+        // 버튼의 active 클래스 제거
+        const button = document.querySelector('.lite-editor-image-upload-button');
+        if (button) {
+            button.classList.remove('active');
+        }
+        
         // 활성 모달 관리자에서 제거
         util.activeModalManager.unregister(imageModal);
         
@@ -441,6 +447,7 @@
         // 이미 열려있으면 닫기
         if (isModalOpen && imageModal) {
             closeImageModal();
+            button.classList.remove('active');  // active 클래스 제거
             return;
         }
         
@@ -454,6 +461,9 @@
         const {modal, urlInput} = createModal(button);
         document.body.appendChild(modal);
         imageModal = modal;
+        
+        // active 클래스 추가
+        button.classList.add('active');
         
         // 모달 위치 설정
         const buttonRect = button.getBoundingClientRect();
