@@ -13,11 +13,10 @@
   // CDN 주소
   const CDN_SCRIPT = 'https://unpkg.com/@speed-highlight/core/dist/index.js';
   const CDN_STYLE = 'https://unpkg.com/@speed-highlight/core/dist/themes/default.css';
-  const CDN_DETECT = 'https://unpkg.com/@speed-highlight/core/dist/detect.js';
+  const CDN_DETECT = '/js/plugins/customDetect.js';  // 루트에서부터의 경로
   
   // 지원 언어 목록
   const LANGUAGES = [
-    { value: "", label: "Select Code" },
     { value: "auto", label: "Auto Detect" },
     { value: "bash", label: "Bash" },
     { value: "c", label: "C" },
@@ -39,8 +38,11 @@
     { value: "yaml", label: "YAML" }
   ];
   
-  // PluginUtil 참조
+  // PluginUtil 참조 및 검증
   const util = window.PluginUtil || {};
+  if (!util.selection) {
+    console.error('CodeBlockPlugin: PluginUtil.selection이 필요합니다.');
+  }
   
   // 전역 상태 변수
   let activeLayer = null;
@@ -87,14 +89,7 @@
    * 현재 선택 영역을 저장
    */
   function saveSelection() {
-    if (util.selection && util.selection.saveSelection) {
-      savedRange = util.selection.saveSelection();
-    } else {
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        savedRange = selection.getRangeAt(0).cloneRange();
-      }
-    }
+    savedRange = util.selection.saveSelection();
   }
   
   /**
@@ -102,16 +97,7 @@
    */
   function restoreSelection() {
     if (!savedRange) return false;
-    
-    if (util.selection && util.selection.restoreSelection) {
-      util.selection.restoreSelection(savedRange);
-    } else {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedRange);
-    }
-    
-    return true;
+    return util.selection.restoreSelection(savedRange);
   }
   
   /**
@@ -162,7 +148,7 @@
     // 선택된 텍스트 표시 영역
     const selectedText = document.createElement('span');
     selectedText.className = 'lite-editor-code-dropdown-text';
-    selectedText.textContent = 'Select Code';
+    selectedText.textContent = 'Auto Detect';
     
     // 화살표 아이콘
     const arrowIcon = document.createElement('span');
@@ -189,8 +175,8 @@
       item.dataset.value = lang.value;
       item.textContent = lang.label;
       
-      // 첫 번째 항목(Select Code...)을 기본 선택으로 표시
-      if (lang.value === '') {
+      // 첫 번째 항목(Auto Detect)을 기본 선택으로 표시
+      if (lang.value === 'auto') {
         item.classList.add('active');
       }
       
@@ -260,13 +246,25 @@
   }
   
   /**
+   * 공통 함수로 추출
+   */
+  function safelyFocusElement(element) {
+    try {
+      element.focus({ preventScroll: true });
+    } catch (e) {
+      element.focus();
+      // 포커스 후 즉시 스크롤 위치 복원
+      if (window.originalScrollPosition) {
+        window.scrollTo(window.originalScrollPosition.x, window.originalScrollPosition.y);
+      }
+    }
+  }
+  
+  /**
    * 코드 블록 레이어 표시
    */
   function showCodeBlockLayer(buttonElement, contentArea, SpeedHighlight) {
-    // 현재 스크롤 위치 저장
-    const currentScrollY = window.scrollY;
-    
-    // 선택 영역 저장
+    // 선택 영역 저장만 하고 스크롤 위치는 저장하지 않음
     saveSelection();
     
     // 다른 활성화된 모달 모두 닫기
@@ -325,8 +323,11 @@
     const processCode = (code, language) => {
       if (!code.trim()) return;
       
-      contentArea.focus();
-      setTimeout(() => insertCodeBlock(code, language, contentArea, SpeedHighlight), 0);
+      safelyFocusElement(contentArea);
+      
+      setTimeout(() => {
+        insertCodeBlock(code, language, contentArea, SpeedHighlight);
+      }, 0);
     };
     
     // 버튼 클릭 이벤트
@@ -341,17 +342,10 @@
     // 외부 클릭 시 닫기 설정
     util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
     
-    // 텍스트 영역에 포커스
-    setTimeout(() => codeInput.focus(), 0);
-    
-    // 스크롤 위치 복원
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.scrollTo(window.scrollX, currentScrollY);
-      }, 50);
-    });
-    
-    return activeLayer;
+    // 텍스트 영역에 포커스 (스크롤 방지)
+    setTimeout(() => {
+      safelyFocusElement(codeInput);
+    }, 0);
   }
   
   /**
@@ -361,13 +355,34 @@
     if (!code.trim()) return;
     
     try {
+      // 입력 정보 로깅
+      console.log('코드 블록 삽입 시작:', { 
+        inputLanguage: language, 
+        codeLength: code.length,
+        codePreview: code.substring(0, 50) + (code.length > 50 ? '...' : '')
+      });
+      
       // 언어 결정: 빈 값이면 plain, 자동 감지면 감지 시도, 아니면 선택값 사용
       let finalLanguage = language;
       if (!language) {
         finalLanguage = 'plain';
       } else if (language === 'auto') {
+        // 자동 감지 시도 전 로깅
+        console.log('언어 자동 감지 시도:', { 
+          detectLanguageFunction: !!SpeedHighlight.detectLanguage,
+          supportedLanguages: Object.keys(SpeedHighlight.detectLanguage?.supportedLanguages || {})
+        });
+        
         finalLanguage = SpeedHighlight.detectLanguage(code) || 'plain';
+        
+        // 자동 감지 결과 로깅
+        console.log('언어 자동 감지 결과:', {
+          detectedLanguage: finalLanguage,
+          fallbackUsed: finalLanguage === 'plain'
+        });
       }
+      
+      safelyFocusElement(contentArea);
       
       // 저장된 선택 영역 복원
       restoreSelection();
@@ -407,6 +422,19 @@
       // 레이어 닫기 및 선택 영역 초기화
       clearSelection();
       closeCodeBlockLayer();
+      
+      // 스크롤 복원 로직 간소화
+      setTimeout(() => {
+        if (window.originalScrollPosition) {
+          window.scrollTo({
+            left: window.originalScrollPosition.x,
+            top: window.originalScrollPosition.y,
+            behavior: 'auto'
+          });
+          console.log('스크롤 복원: ', window.originalScrollPosition);
+          window.originalScrollPosition = null;
+        }
+      }, 150);
     }
   }
   
@@ -459,8 +487,11 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
+        // 전역 변수에 현재 스크롤 위치 저장
+        window.originalScrollPosition = {
+          x: window.scrollX,
+          y: window.scrollY
+        };
         
         // 레이어가 이미 열려있다면 닫기
         if (activeLayer && document.body.contains(activeLayer)) {
@@ -478,12 +509,7 @@
         // 코드 블록 레이어 표시
         showCodeBlockLayer(button, contentArea, SpeedHighlight);
         
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
+        // 스크롤 복원 하지 않음 (레이어 표시에는 복원 로직 없음)
       });
       
       return button;
