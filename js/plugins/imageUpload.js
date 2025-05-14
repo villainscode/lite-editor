@@ -11,16 +11,14 @@
     
     // PluginUtil 참조
     const util = window.PluginUtil || {};
+    if (!util.selection) {
+        console.error('ImageUploadPlugin: PluginUtil.selection이 필요합니다.');
+    }
     
     // 전역 상태 변수
     let savedRange = null;          // 임시로 저장된 선택 영역
     let isModalOpen = false;        // 모달 열림 상태
     let imageModal = null;          // 현재 열린 모달 참조
-
-    // 디버깅 유틸리티
-    function debugLog(action, data) {
-        errorHandler.logError('ImageUploadPlugin', errorHandler.codes.PLUGINS.IMAGE.DEBUG, { action, data });
-    }
 
     /**
      * 선택 영역 저장
@@ -57,31 +55,15 @@
             return;
         }
         
-        editor.focus();
+        try {
+            editor.focus({ preventScroll: true });
+        } catch (e) {
+            editor.focus();
+        }
+        
+        // 저장된 선택 영역 복원
         restoreSelection();
-
-        // 컨테이너 div 생성 (리사이징을 위해)
-        const container = util.dom.createElement('div', {}, {
-            display: 'inline-block',
-            resize: 'both',
-            overflow: 'auto',
-            maxWidth: '100%',
-            margin: '10px 0'
-        });
-        container.contentEditable = false;
-
-        // 이미지 생성 및 스타일 적용
-        const img = util.dom.createElement('img', {
-            src: src
-        }, {
-            width: '100%',
-            height: 'auto',
-            display: 'block'
-        });
-
-        // 이미지를 컨테이너에 추가
-        container.appendChild(img);
-
+        
         // 선택 영역 가져오기
         const selection = util.selection.getSafeSelection();
         let range = (selection && selection.rangeCount > 0) ? selection.getRangeAt(0) : null;
@@ -93,20 +75,77 @@
             range.collapse(false);
         }
         
-        // 컨테이너 삽입
-        range.deleteContents();
+        // 1. 먼저 앵커 요소 삽입 (고정 ID 사용)
+        const anchorId = 'image-insert-anchor-' + Date.now();
+        const anchor = document.createElement('span');
+        anchor.id = anchorId;
+        anchor.style.display = 'inline';
+        anchor.style.width = '0';
+        anchor.style.height = '0';
+        anchor.style.overflow = 'hidden';
+        anchor.style.lineHeight = '0';
+        anchor.innerHTML = '&nbsp;'; // 일부 브라우저에서 빈 요소가 제대로 처리되지 않을 수 있음
+        range.insertNode(anchor);
+        
+        // 2. range를 앵커 뒤로 이동 (이미지가 앵커 뒤에 삽입되도록)
+        range.setStartAfter(anchor);
+        range.collapse(true);
+        
+        // 3. 이미지 컨테이너 생성
+        const container = util.dom.createElement('div', {}, {
+            display: 'inline-block',
+            resize: 'both',
+            overflow: 'auto',
+            maxWidth: '100%',
+            margin: '10px 0'
+        });
+        container.contentEditable = false;
+        
+        // 4. 이미지 생성
+        const img = util.dom.createElement('img', {
+            src: src
+        }, {
+            width: '100%',
+            height: 'auto',
+            display: 'block'
+        });
+        container.appendChild(img);
+        
+        // 5. 컨테이너 삽입 (앵커 뒤에 삽입됨)
         range.insertNode(container);
-
-        // 컨테이너 뒤에 줄바꿈 추가
+        
+        // 6. 컨테이너 뒤에 줄바꿈 추가
         const br = document.createElement('br');
         container.parentNode.insertBefore(br, container.nextSibling);
         
-        // 커서 위치 조정 (줄바꿈 뒤로)
+        // 7. 커서 위치 조정 (줄바꿈 뒤로)
         util.selection.moveCursorTo(br.nextSibling || br, 0);
-
-        // 에디터 상태 업데이트
+        
+        // 8. 에디터 상태 업데이트
         util.editor.dispatchEditorEvent(editor);
+        
+        // 9. 선택 영역 초기화
+        clearSelection();
+        
+        // 10. 이미지 로드 후 앵커로 스크롤
+        img.onload = function() {
+            const anchor = document.getElementById(anchorId);
+            if (anchor) {
+                anchor.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                anchor.remove();
+            }
+        };
+        
+        // 11. 이미지 로드 이벤트가 발생하지 않을 경우를 대비한 백업
+        setTimeout(() => {
+            const anchor = document.getElementById(anchorId);
+            if (anchor) {
+                anchor.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                anchor.remove();
+            }
+        }, 500);
     }
+
     
     /**
      * 모달 컨텐츠 생성
@@ -384,14 +423,11 @@
             const file = fileInput.files[0];
             
             if (url || file) {
+                // 모달 닫기 전에 필요한 값만 저장
                 closeImageModal();
                 
-                // 모달이 닫힌 후 이미지 삽입 처리
+                // 약간의 지연 후 이미지 삽입
                 setTimeout(() => {
-                    const editor = document.querySelector('#lite-editor');
-                    if (editor) editor.focus();
-                    restoreSelection();
-                    
                     if (url) {
                         insertImage(url);
                     } else if (file) {
@@ -441,9 +477,6 @@
      * 모달 토글
      */
     function toggleImageModal(button) {
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
-        
         // 이미 열려있으면 닫기
         if (isModalOpen && imageModal) {
             closeImageModal();
@@ -503,13 +536,6 @@
             // 외부 클릭 시 닫기 설정
             util.setupOutsideClickHandler(modal, closeImageModal, [button]);
         }, 10);
-        
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                window.scrollTo(window.scrollX, currentScrollY);
-            }, 50);
-        });
     }
     
     /**

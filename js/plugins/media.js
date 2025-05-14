@@ -17,6 +17,9 @@
   
   // PluginUtil 참조
   const util = window.PluginUtil;
+  if (!util.selection) {
+    console.error('MediaPlugin: PluginUtil.selection이 필요합니다.');
+  }
   
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
@@ -31,9 +34,39 @@
    * @returns {string|null} - 추출된 video ID 또는 null
    */
   function parseYouTubeID(url) {
-    const reg = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/))([A-Za-z0-9_-]{11})/;
-    const m = url.match(reg);
-    return m ? m[1] : null;
+    // URL에서 불필요한 @ 기호 제거
+    url = url.replace(/^@/, '');
+    
+    // 다양한 YouTube 링크 패턴 처리
+    // 1. 일반 유튜브 링크: youtube.com/watch?v=VIDEO_ID
+    // 2. 짧은 링크: youtu.be/VIDEO_ID
+    // 3. 임베드 링크: youtube.com/embed/VIDEO_ID
+    // 4. 쇼츠 링크: youtube.com/shorts/VIDEO_ID
+    const patterns = [
+      // 일반 유튜브 및 임베드 링크
+      /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/))([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)/,
+      // 짧은 링크
+      /(?:youtu\.be\/)([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)?/,
+      // 쇼츠 링크
+      /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)?/
+    ];
+    
+    // 각 패턴에 대해 매칭 시도
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    // 기본 비디오 ID 추출 (다른 모든 패턴 실패 시 시도)
+    // URL 내 11자 영숫자 패턴 찾기
+    const basicIdMatch = url.match(/([A-Za-z0-9_-]{11})/);
+    if (basicIdMatch) {
+      return basicIdMatch[1];
+    }
+    
+    return null;
   }
 
   /**
@@ -42,7 +75,13 @@
    * @returns {boolean} - 유효성 여부
    */
   function isValidYouTubeUrl(url) {
-    return parseYouTubeID(url) !== null;
+    // URL에 youtube 또는 youtu.be가 포함되어 있는지만 확인
+    // 더 적극적으로 수용하는 방식 사용
+    return (
+      url.includes('youtube.com') || 
+      url.includes('youtu.be') || 
+      parseYouTubeID(url) !== null
+    );
   }
   
   /**
@@ -93,23 +132,20 @@
    */
   function insertYouTubeVideo(url, contentArea) {
     try {
-      // 현재 스크롤 위치 저장
-      const currentScrollY = window.scrollY;
-      const currentScrollX = window.scrollX;
-      
       // YouTube ID 추출
       const videoId = parseYouTubeID(url);
       
       if (!videoId) return;
       
-      // 선택 영역 복원
-      restoreSelection();
       
       try {
         contentArea.focus({ preventScroll: true });
       } catch (e) {
         contentArea.focus();
       }
+      
+      restoreSelection();
+
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -159,13 +195,6 @@
       
       // 선택 영역 초기화
       clearSelection();
-      
-      // 스크롤 위치 복원
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.scrollTo(currentScrollX, currentScrollY);
-        }, 50);
-      });
       
     } catch (error) {
       errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
@@ -337,9 +366,6 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
-        
         // 선택 영역 저장
         saveSelection();
         
@@ -397,12 +423,6 @@
           }, [mediaButton]);
         }
         
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
       });
       
       return mediaButton;

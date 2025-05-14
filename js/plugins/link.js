@@ -11,6 +11,9 @@
     
     // PluginUtil 참조
     const util = window.PluginUtil || {};
+    if (!util.selection) {
+        console.error('LinkPlugin: PluginUtil.selection이 필요합니다.');
+    }
     
     // 전역 상태 변수
     let savedRange = null;          // 임시로 저장된 선택 영역
@@ -45,13 +48,6 @@
         return util.selection.restoreSelection(savedRange);
     }
     
-    /**
-     * 선택 영역 초기화
-     */
-    function clearSelection() {
-        savedRange = null;
-    }
-
     /**
      * 선택된 텍스트에 링크를 적용
      * @param {string} url - 적용할 URL
