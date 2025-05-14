@@ -13,11 +13,10 @@
   // CDN 주소
   const CDN_SCRIPT = 'https://unpkg.com/@speed-highlight/core/dist/index.js';
   const CDN_STYLE = 'https://unpkg.com/@speed-highlight/core/dist/themes/default.css';
-  const CDN_DETECT = 'https://unpkg.com/@speed-highlight/core/dist/detect.js';
+  const CDN_DETECT = '/js/plugins/customDetect.js';  // 루트에서부터의 경로
   
   // 지원 언어 목록
   const LANGUAGES = [
-    { value: "", label: "Select Code" },
     { value: "auto", label: "Auto Detect" },
     { value: "bash", label: "Bash" },
     { value: "c", label: "C" },
@@ -162,7 +161,7 @@
     // 선택된 텍스트 표시 영역
     const selectedText = document.createElement('span');
     selectedText.className = 'lite-editor-code-dropdown-text';
-    selectedText.textContent = 'Select Code';
+    selectedText.textContent = 'Auto Detect';
     
     // 화살표 아이콘
     const arrowIcon = document.createElement('span');
@@ -189,8 +188,8 @@
       item.dataset.value = lang.value;
       item.textContent = lang.label;
       
-      // 첫 번째 항목(Select Code...)을 기본 선택으로 표시
-      if (lang.value === '') {
+      // 첫 번째 항목(Auto Detect)을 기본 선택으로 표시
+      if (lang.value === 'auto') {
         item.classList.add('active');
       }
       
@@ -361,12 +360,31 @@
     if (!code.trim()) return;
     
     try {
+      // 1. 입력 정보 로깅
+      console.log('코드 블록 삽입 시작:', { 
+        inputLanguage: language, 
+        codeLength: code.length,
+        codePreview: code.substring(0, 50) + (code.length > 50 ? '...' : '')
+      });
+      
       // 언어 결정: 빈 값이면 plain, 자동 감지면 감지 시도, 아니면 선택값 사용
       let finalLanguage = language;
       if (!language) {
         finalLanguage = 'plain';
       } else if (language === 'auto') {
+        // 2. 자동 감지 시도 전 로깅
+        console.log('언어 자동 감지 시도:', { 
+          detectLanguageFunction: !!SpeedHighlight.detectLanguage,
+          supportedLanguages: Object.keys(SpeedHighlight.detectLanguage?.supportedLanguages || {})
+        });
+        
         finalLanguage = SpeedHighlight.detectLanguage(code) || 'plain';
+        
+        // 3. 자동 감지 결과 로깅
+        console.log('언어 자동 감지 결과:', {
+          detectedLanguage: finalLanguage,
+          fallbackUsed: finalLanguage === 'plain'
+        });
       }
       
       // 저장된 선택 영역 복원

@@ -46,13 +46,6 @@
     }
     
     /**
-     * 선택 영역 초기화
-     */
-    function clearSelection() {
-        savedRange = null;
-    }
-
-    /**
      * 선택된 텍스트에 링크를 적용
      * @param {string} url - 적용할 URL
      * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
