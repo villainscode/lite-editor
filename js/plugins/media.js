@@ -17,6 +17,9 @@
   
   // PluginUtil 참조
   const util = window.PluginUtil;
+  if (!util.selection) {
+    console.error('MediaPlugin: PluginUtil.selection이 필요합니다.');
+  }
   
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
