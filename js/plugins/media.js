@@ -132,23 +132,20 @@
    */
   function insertYouTubeVideo(url, contentArea) {
     try {
-      // 현재 스크롤 위치 저장
-      const currentScrollY = window.scrollY;
-      const currentScrollX = window.scrollX;
-      
       // YouTube ID 추출
       const videoId = parseYouTubeID(url);
       
       if (!videoId) return;
       
-      // 선택 영역 복원
-      restoreSelection();
       
       try {
         contentArea.focus({ preventScroll: true });
       } catch (e) {
         contentArea.focus();
       }
+      
+      restoreSelection();
+
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -198,13 +195,6 @@
       
       // 선택 영역 초기화
       clearSelection();
-      
-      // 스크롤 위치 복원
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.scrollTo(currentScrollX, currentScrollY);
-        }, 50);
-      });
       
     } catch (error) {
       errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
@@ -376,9 +366,6 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
-        
         // 선택 영역 저장
         saveSelection();
         
@@ -436,12 +423,6 @@
           }, [mediaButton]);
         }
         
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
       });
       
       return mediaButton;
