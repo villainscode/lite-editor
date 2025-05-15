@@ -92,14 +92,17 @@
         range.collapse(true);
         
         // 3. 이미지 컨테이너 생성
-        const container = util.dom.createElement('div', {}, {
+        const container = util.dom.createElement('div', {
+            className: 'lite-editor-image-container'
+        }, {
             display: 'inline-block',
             resize: 'both',
             overflow: 'auto',
             maxWidth: '100%',
-            margin: '10px 0'
+            margin: '10px 0',
+            position: 'relative',
+            cursor: 'pointer'
         });
-        container.contentEditable = false;
         
         // 4. 이미지 생성
         const img = util.dom.createElement('img', {
@@ -556,6 +559,15 @@
             }
         `;
         util.styles.addInlineStyle('imageModalHoverStyles', hoverStyles);
+        
+        // 이미지 선택 관련 스타일 추가
+        const imageSelectionStyles = `
+            .lite-editor-image-container.selected {
+                outline: 2px solid #4285f4 !important;
+                border-radius: 2px;
+            }
+        `;
+        util.styles.addInlineStyle('imageSelectionStyles', imageSelectionStyles);
     }
 
     // 플러그인 등록

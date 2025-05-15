@@ -27,7 +27,7 @@
 
   // CSS 파일 로드
   util.styles.loadCssFile(`${PLUGIN_ID}-css`, CSS_PATH);
-
+  
   /**
    * YouTube URL에서 video ID 추출
    * @param {string} url - YouTube URL
@@ -137,7 +137,6 @@
       
       if (!videoId) return;
       
-      
       try {
         contentArea.focus({ preventScroll: true });
       } catch (e) {
@@ -145,7 +144,6 @@
       }
       
       restoreSelection();
-
       
       // 보안 관리자가 있는 경우 도메인 검증
       if (typeof LiteEditorSecurity !== 'undefined') {
@@ -161,17 +159,14 @@
       // iframe 요소 생성
       const iframe = createYouTubeIframe(videoId);
       
-      // 래퍼 생성 및 기본 크기 설정
+      // 래퍼 생성 (스타일은 CSS로 처리)
       const wrapper = util.dom.createElement('div', {
         className: 'video-wrapper'
-      }, {
-        width: '480px',
-        height: '270px'
       });
+      wrapper.contentEditable = false;
       wrapper.appendChild(iframe);
       
       // 에디터에 삽입
-      // 커서 위치에 삽입하기 위해 Range API 사용
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);

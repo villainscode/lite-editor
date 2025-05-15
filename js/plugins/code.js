@@ -55,7 +55,13 @@
             // 코드 요소 생성 및 삽입
             const codeElement = document.createElement('code');
             codeElement.setAttribute('data-selection-marker', 'true');
+            codeElement.style.display = 'block';
+            codeElement.style.width = '100%';
+            codeElement.style.padding = '10px';
+            codeElement.style.borderRadius = '4px';
+            codeElement.style.fontFamily = 'monospace';
             codeElement.innerHTML = formattedText;
+            
             range.insertNode(codeElement);
             
             // 선택 영역 복원 - 마커를 찾아서 복원
