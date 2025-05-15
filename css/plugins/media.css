@@ -93,8 +93,6 @@
 /* 동영상 래퍼 스타일 */
 .video-wrapper {
   position: relative;
-  width: 640px;
-  height: 360px;
   margin: 10px 0;
   resize: both;
   overflow: hidden;

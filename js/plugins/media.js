@@ -159,12 +159,37 @@
       // iframe 요소 생성
       const iframe = createYouTubeIframe(videoId);
       
-      // 래퍼 생성 (스타일은 CSS로 처리)
-      const wrapper = util.dom.createElement('div', {
-        className: 'video-wrapper'
+      // 래퍼 생성 - 클래스와 인라인 스타일 모두 적용
+      const wrapper = document.createElement('div');
+      wrapper.className = 'video-wrapper';
+      
+      // 중요: width와 height를 style 속성에 직접 지정 (저장 시 유지)
+      wrapper.style.width = '640px';
+      wrapper.style.height = '360px';
+      wrapper.style.position = 'relative';
+      wrapper.style.margin = '10px 0';
+      wrapper.style.resize = 'both';
+      wrapper.style.overflow = 'hidden';
+      wrapper.style.border = '2px solid #e0e0e0';
+      wrapper.style.boxSizing = 'border-box';
+      wrapper.style.maxWidth = '100%';
+      
+      // 리사이즈 핸들 요소 추가 (CSS pseudo-element 대신 실제 요소로 대체)
+      const resizeHandle = util.dom.createElement('div', {
+        className: 'video-resize-handle'
       });
+      resizeHandle.style.position = 'absolute';
+      resizeHandle.style.right = '0';
+      resizeHandle.style.bottom = '0';
+      resizeHandle.style.width = '20px';
+      resizeHandle.style.height = '20px';
+      resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
+      resizeHandle.style.cursor = 'nwse-resize';
+      resizeHandle.style.zIndex = '10';
+      
       wrapper.contentEditable = false;
       wrapper.appendChild(iframe);
+      wrapper.appendChild(resizeHandle);
       
       // 에디터에 삽입
       const selection = window.getSelection();
@@ -186,6 +211,21 @@
       // 에디터 이벤트 발생 (수정사항 적용)
       if (util.editor && util.editor.dispatchEditorEvent) {
         util.editor.dispatchEditorEvent(contentArea);
+      }
+      
+      // 크기 변경 감지를 위한 MutationObserver 설정
+      if (window.MutationObserver) {
+        const observer = new MutationObserver(mutations => {
+          // 에디터 이벤트 발생 (수정사항 적용)
+          if (util.editor && util.editor.dispatchEditorEvent) {
+            util.editor.dispatchEditorEvent(contentArea);
+          }
+        });
+        
+        observer.observe(wrapper, {
+          attributes: true,
+          attributeFilter: ['style']
+        });
       }
       
       // 선택 영역 초기화
@@ -324,12 +364,50 @@
       // 7. 처리 함수 정의
       const processVideoUrl = (url) => {
         url = url.trim();
-        if (!isValidYouTubeUrl(url)) {
-          if (typeof LiteEditorModal !== 'undefined') {
-            LiteEditorModal.alert('Please enter a valid YouTube URL.<BR>Ex : https://www.youtube.com/watch?v=...');
-          } else {
-            alert('Please enter a valid YouTube URL.\nEx : https://www.youtube.com/watch?v=...');
-          }
+        
+        // 보안 검사: HTML 태그 감지
+        if (url.indexOf('<') !== -1 || url.indexOf('>') !== -1) {
+          // 드롭다운 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          mediaButton.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
+          
+          // 경고 메시지 표시 (지연 적용)
+          setTimeout(() => {
+            if (typeof LiteEditorModal !== 'undefined') {
+              LiteEditorModal.alert('유효하지 않은 동영상 URL입니다.<BR>HTML 태그는 허용되지 않습니다.');
+            } else {
+              alert('유효하지 않은 동영상 URL입니다.\nHTML 태그는 허용되지 않습니다.');
+            }
+          }, 300);
+          
+          return;
+        }
+        
+        // 기존 YouTube URL 유효성 검사 대신 SecurityManager 사용
+        if (!LiteEditorSecurity.isDomainAllowed(url)) {
+          // 드롭다운 닫기
+          dropdownMenu.classList.remove('show');
+          dropdownMenu.style.display = 'none';
+          mediaButton.classList.remove('active');
+          isDropdownOpen = false;
+          
+          // 모달 관리 시스템에서 제거
+          util.activeModalManager.unregister(dropdownMenu);
+          
+          // 경고 메시지 표시 (지연 적용)
+          setTimeout(() => {
+            if (typeof LiteEditorModal !== 'undefined') {
+              LiteEditorModal.alert('유효한 YouTube URL을 입력해주세요.<BR>Ex : https://www.youtube.com/watch?v=...');
+            } else {
+              alert('유효한 YouTube URL을 입력해주세요.\nEx : https://www.youtube.com/watch?v=...');
+            }
+          }, 300);
+          
           return;
         }
         
@@ -417,7 +495,6 @@
             util.activeModalManager.unregister(dropdownMenu);
           }, [mediaButton]);
         }
-        
       });
       
       return mediaButton;

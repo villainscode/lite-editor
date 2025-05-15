@@ -184,9 +184,87 @@ const LiteEditorSecurity = (function() {
     `;
   }
   
+  /**
+   * 이미지 URL 유효성 검사
+   * @param {string} url - 검사할 이미지 URL
+   * @returns {boolean} 유효성 여부
+   */
+  function isValidImageUrl(url) {
+    if (!url) return false;
+    
+    // HTML 태그 감지 (간단한 방법)
+    if (url.indexOf('<') !== -1 || url.indexOf('>') !== -1) {
+      return false;
+    }
+    
+    try {
+      // 기본 URL 형식 검사
+      const urlObj = new URL(url);
+      const path = urlObj.pathname;
+      
+      // 허용된 이미지 확장자 검사
+      const imageUrlRegex = /\.(jpg|jpeg|png|gif|webp|svg)($|\?|\/)/i;
+      
+      // 차단할 확장자 검사
+      const blockedExtensionRegex = /\.(html|js|php|jsp|exe|dll|sh|bat|py)$/i;
+      
+      return imageUrlRegex.test(path) && !blockedExtensionRegex.test(path);
+    } catch (e) {
+      errorHandler.logError('SecurityManager', errorHandler.codes.SECURITY.URL_PARSE, e);
+      return false;
+    }
+  }
+  
+  /**
+   * 일반 URL 유효성 검사 (XSS 방지)
+   * @param {string} url - 검사할 URL
+   * @returns {boolean} 유효성 여부
+   */
+  function isValidUrl(url) {
+    if (!url) return false;
+    
+    // URL 디코딩 시도
+    let decodedUrl;
+    try {
+      decodedUrl = decodeURIComponent(url);
+    } catch (e) {
+      decodedUrl = url;
+    }
+    
+    // 1. HTML 태그 및 위험한 문자 감지 (원본 및 디코딩된 URL 모두 검사)
+    if (/<[\s\S]*?>/i.test(url) || /<[\s\S]*?>/i.test(decodedUrl) || 
+        /[<>]/i.test(url) || /[<>]/i.test(decodedUrl)) {
+      return false;
+    }
+    
+    // 2. 위험한 URL 인코딩 패턴 감지
+    if (/%(?:3C|3E|00|0A|0D|27|22|60|28|29)/i.test(url)) {
+      return false;
+    }
+    
+    // 3. 위험한 프로토콜 차단
+    if (/^(?:javascript|data|vbscript|file):/i.test(url) || 
+        /^(?:javascript|data|vbscript|file):/i.test(decodedUrl)) {
+      return false;
+    }
+    
+    // 4. 위험한 자바스크립트 키워드 검사
+    const dangerousKeywords = /\b(?:script|alert|eval|confirm|prompt|on\w+\s*=)/i;
+    if (dangerousKeywords.test(url) || dangerousKeywords.test(decodedUrl)) {
+      return false;
+    }
+    
+    // 5. 기존 URL 형식 검증
+    const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9\u3131-\u314E\uAC00-\uD7A3-]+\.)+([a-zA-Z\u3131-\u314E\uAC00-\uD7A3]{2,}))(:\d+)?(\/[^\s]*)?(\?.*)?$/;
+    const invalidPrefixRegex = /^(https?:\/\/)?(wwww\.|ww\.|w{5,}\.|w{1,2}\.)/i;
+    return domainRegex.test(url) && !invalidPrefixRegex.test(url);
+  }
+  
   // 공개 API
   return {
     isDomainAllowed,
+    isValidImageUrl,
+    isValidUrl,
     addAllowedDomain,
     removeAllowedDomain,
     getAllowedDomains,

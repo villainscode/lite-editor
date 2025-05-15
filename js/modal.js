@@ -96,13 +96,17 @@
     
       // Escape 키 처리
       function handleKey(e) {
-        if (e.key === 'Escape' && options.closeOnEsc !== false) {
-          e.preventDefault();
-          document.removeEventListener('keydown', handleKey);
-          const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
-          closeModal(cb);
-        } else {
-          errorHandler.logError('Modal', errorHandler.codes.COMMON.KEY_EVENT, e);
+        try {
+          // ESC 키만 처리하고 나머지는 무시
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            document.removeEventListener('keydown', handleKey);
+            const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
+            closeModal(cb);
+          }
+          // 다른 키는 처리하지 않음
+        } catch (error) {
+          errorHandler.logError('Modal', errorHandler.codes.MODAL.KEY_HANDLER, error);
         }
       }
       document.addEventListener('keydown', handleKey);
@@ -129,21 +133,50 @@
       return modal;
     }
 
+  // 공통 헬퍼 함수: 아이콘이 있는 타이틀 생성
+  function createIconTitle(icon, titleText, options = {}) {
+    const iconSize = options.iconSize || '18px';
+    const textSize = options.textSize || '16px';
+    
+    return `
+      <div style="
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+        padding: 4px 0;
+        line-height: 1.2;
+      ">
+        <span style="font-size: ${iconSize};">${icon}</span>
+        <span style="
+          font-size: ${textSize}; 
+          font-weight: 600;
+          vertical-align: middle;
+        ">${titleText}</span>
+      </div>
+    `;
+  }
+
   window.LiteEditorModal = {
     alert(message, options = {}) {
+      const titleText = options.titleText || 'Alert';
+      const formattedTitle = createIconTitle('⚠️', titleText, options);
+      
       return showModal(MODAL_TYPES.ALERT, {
         ...options,
         message,
-        title: options.title || 'Alert',
+        title: options.title || formattedTitle,
         confirmText: options.confirmText || 'OK',
       });
     },
 
     confirm(message, options = {}) {
+      const titleText = options.titleText || 'Confirm';
+      const formattedTitle = createIconTitle('💡', titleText, options);
+      
       return showModal(MODAL_TYPES.CONFIRM, {
         ...options,
         message,
-        title: options.title || 'Confirm',
+        title: options.title || formattedTitle,
         confirmText: options.confirmText || 'OK',
         cancelText: options.cancelText || 'Cancel',
       });

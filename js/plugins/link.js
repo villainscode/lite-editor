@@ -28,9 +28,13 @@
      * URL 유효성 검사
      */
     function isValidUrl(url) {
-        const domainRegex = /^(https?:\/\/)?(([a-zA-Z0-9\u3131-\u314E\uAC00-\uD7A3-]+\.)+([a-zA-Z\u3131-\u314E\uAC00-\uD7A3]{2,}))(:\d+)?(\/[^\s]*)?(\?.*)?$/;
-        const invalidPrefixRegex = /^(https?:\/\/)?(wwww\.|ww\.|w{5,}\.|w{1,2}\.)/i;
-        return domainRegex.test(url) && !invalidPrefixRegex.test(url);
+        // security-manager.js로 이동한 로직 사용
+        if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.isValidUrl) {
+            return LiteEditorSecurity.isValidUrl(url);
+        }
+        
+        // 폴백: 기본 검사 (security-manager.js가 없는 경우)
+        return /^(https?:\/\/)?(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(:\d+)?(\/[^\s]*)?$/.test(url);
     }
 
     /**
@@ -234,7 +238,14 @@
             
             submitButton.addEventListener('click', () => processUrl(urlInput.value.trim()));
             
-            urlInput.addEventListener('keydown', (e) => {
+            // 링크 입력 필드 이벤트 핸들러
+            urlInput.addEventListener('keydown', e => {
+                // ESC 키를 제외한 모든 키 이벤트의 버블링 방지
+                if (e.key !== 'Escape') {
+                    e.stopPropagation();
+                }
+                
+                // Enter 키 처리 추가
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     processUrl(urlInput.value.trim());

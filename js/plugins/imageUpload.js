@@ -91,62 +91,157 @@
         range.setStartAfter(anchor);
         range.collapse(true);
         
-        // 3. 이미지 컨테이너 생성
-        const container = util.dom.createElement('div', {
-            className: 'lite-editor-image-container'
-        }, {
-            display: 'inline-block',
-            resize: 'both',
-            overflow: 'auto',
-            maxWidth: '100%',
-            margin: '10px 0',
-            position: 'relative',
-            cursor: 'pointer'
-        });
-        
-        // 4. 이미지 생성
-        const img = util.dom.createElement('img', {
-            src: src
-        }, {
-            width: '100%',
-            height: 'auto',
-            display: 'block'
-        });
-        container.appendChild(img);
-        
-        // 5. 컨테이너 삽입 (앵커 뒤에 삽입됨)
-        range.insertNode(container);
-        
-        // 6. 컨테이너 뒤에 줄바꿈 추가
-        const br = document.createElement('br');
-        container.parentNode.insertBefore(br, container.nextSibling);
-        
-        // 7. 커서 위치 조정 (줄바꿈 뒤로)
-        util.selection.moveCursorTo(br.nextSibling || br, 0);
-        
-        // 8. 에디터 상태 업데이트
-        util.editor.dispatchEditorEvent(editor);
-        
-        // 9. 선택 영역 초기화
-        clearSelection();
-        
-        // 10. 이미지 로드 후 앵커로 스크롤
-        img.onload = function() {
+        // 이미지 로드하여 초기 크기 계산
+        const tempImg = new Image();
+        tempImg.onload = function() {
+            // 3. 이미지 컨테이너 생성 - 인라인 스타일로 크기 지정
+            const container = document.createElement('div');
+            container.className = 'image-wrapper';
+            
+            // 초기 크기 설정 (인라인 스타일로 지정 - 저장 시 유지됨)
+            // 이미지 크기 기준으로 초기값 계산 (너무 큰 이미지는 적절히 축소)
+            let initialWidth = tempImg.width;
+            let initialHeight = tempImg.height;
+            
+            // 이미지가 너무 큰 경우 최대 너비 800px로 제한
+            const maxWidth = 800;
+            if (initialWidth > maxWidth) {
+                const ratio = maxWidth / initialWidth;
+                initialWidth = maxWidth;
+                initialHeight = Math.floor(initialHeight * ratio);
+            }
+            
+            // 인라인 스타일 설정
+            container.style.width = initialWidth + 'px';
+            container.style.height = initialHeight + 'px';
+            container.style.position = 'relative';
+            container.style.display = 'inline-block';
+            container.style.resize = 'both';
+            container.style.overflow = 'hidden';
+            container.style.maxWidth = '100%';
+            container.style.boxSizing = 'border-box';
+            container.style.border = 'none';
+            container.contentEditable = false;
+            
+            // 4. 이미지 생성
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            img.style.display = 'block';
+            
+            // 리사이즈 핸들 추가
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'image-resize-handle';
+            resizeHandle.style.position = 'absolute';
+            resizeHandle.style.right = '0';
+            resizeHandle.style.bottom = '0';
+            resizeHandle.style.width = '20px';
+            resizeHandle.style.height = '20px';
+            resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
+            resizeHandle.style.cursor = 'nwse-resize';
+            resizeHandle.style.zIndex = '10';
+            
+            container.appendChild(img);
+            container.appendChild(resizeHandle);
+            
+            // 5. 컨테이너 삽입 (앵커 뒤에 삽입됨)
+            range.insertNode(container);
+            
+            // 6. 컨테이너 뒤에 줄바꿈 추가
+            const br = document.createElement('br');
+            container.parentNode.insertBefore(br, container.nextSibling);
+            
+            // 7. 커서 위치 조정 (줄바꿈 뒤로)
+            util.selection.moveCursorTo(br.nextSibling || br, 0);
+            
+            // 8. 에디터 상태 업데이트
+            util.editor.dispatchEditorEvent(editor);
+            
+            // 9. 크기 변경 감지를 위한 MutationObserver 설정
+            if (window.MutationObserver) {
+                const observer = new MutationObserver(mutations => {
+                    for (let mutation of mutations) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            // 현재 컨테이너의 실제 크기 측정
+                            const width = Math.round(container.offsetWidth);
+                            const height = Math.round(container.offsetHeight);
+                            
+                            // 인라인 스타일에 명시적으로 px 단위로 업데이트
+                            container.style.width = width + 'px';
+                            container.style.height = height + 'px';
+                            
+                            // border 속성 제거
+                            container.style.border = 'none';
+                            
+                            // 에디터 이벤트 발생 (수정사항 적용)
+                            if (util.editor && util.editor.dispatchEditorEvent) {
+                                util.editor.dispatchEditorEvent(editor);
+                            }
+                        }
+                    }
+                });
+                
+                observer.observe(container, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+            }
+            
+            // 10. 앵커로 스크롤 및 제거
             const anchor = document.getElementById(anchorId);
             if (anchor) {
                 anchor.scrollIntoView({ block: 'nearest', behavior: 'auto' });
                 anchor.remove();
             }
+            
+            // 11. 선택 영역 초기화
+            clearSelection();
         };
         
-        // 11. 이미지 로드 이벤트가 발생하지 않을 경우를 대비한 백업
-        setTimeout(() => {
+        // 이미지 로드 시작
+        tempImg.src = src;
+        
+        // 이미지 로드 실패 시 기본 처리
+        tempImg.onerror = function() {
+            // 기본 컨테이너 생성 (이미지 크기를 알 수 없는 경우)
+            const container = document.createElement('div');
+            container.className = 'image-wrapper';
+            container.style.width = '300px';
+            container.style.height = '200px';
+            container.style.position = 'relative';
+            container.style.display = 'inline-block';
+            container.style.resize = 'both';
+            container.style.overflow = 'hidden';
+            container.style.maxWidth = '100%';
+            container.style.border = 'none';
+            container.contentEditable = false;
+            
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            img.style.display = 'block';
+            
+            container.appendChild(img);
+            range.insertNode(container);
+            
+            // 컨테이너 뒤에 줄바꿈 추가
+            const br = document.createElement('br');
+            container.parentNode.insertBefore(br, container.nextSibling);
+            
+            // 에디터 상태 업데이트
+            util.editor.dispatchEditorEvent(editor);
+            
+            // 앵커 제거
             const anchor = document.getElementById(anchorId);
-            if (anchor) {
-                anchor.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-                anchor.remove();
-            }
-        }, 500);
+            if (anchor) anchor.remove();
+            
+            // 선택 영역 초기화
+            clearSelection();
+        };
     }
 
     
@@ -404,6 +499,21 @@
                 e.preventDefault();
                 const url = urlInput.value.trim();
                 if (url) {
+                    if (!LiteEditorSecurity.isValidImageUrl(url)) {
+                        // 모달 먼저 닫기
+                        closeImageModal();
+                        
+                        // 약간의 지연 후 경고 메시지 표시
+                        setTimeout(() => {
+                            if (typeof LiteEditorModal !== 'undefined') {
+                                LiteEditorModal.alert('유효한 이미지 URL을 입력해주세요.<BR>지원 형식: jpg, jpeg, png, gif, webp, svg');
+                            } else {
+                                alert('유효한 이미지 URL을 입력해주세요.\n지원 형식: jpg, jpeg, png, gif, webp, svg');
+                            }
+                        }, 300);
+                        
+                        return;
+                    }
                     insertImage(url);
                     closeImageModal();
                 }
@@ -425,8 +535,27 @@
             const url = urlInput.value.trim();
             const file = fileInput.files[0];
             
+            if (url) {
+                // URL 보안 검사
+                if (!LiteEditorSecurity.isValidImageUrl(url)) {
+                    // 모달 먼저 닫기
+                    closeImageModal();
+                    
+                    // 약간의 지연 후 경고 메시지 표시
+                    setTimeout(() => {
+                        if (typeof LiteEditorModal !== 'undefined') {
+                            LiteEditorModal.alert('유효한 이미지 URL을 입력해주세요.<BR>지원 형식: jpg, jpeg, png, gif, webp, svg');
+                        } else {
+                            alert('유효한 이미지 URL을 입력해주세요.\n지원 형식: jpg, jpeg, png, gif, webp, svg');
+                        }
+                    }, 300); // 모달 닫힘 애니메이션과 동일한 시간 지연
+                    
+                    return;
+                }
+            }
+            
             if (url || file) {
-                // 모달 닫기 전에 필요한 값만 저장
+                // 유효한 입력인 경우 모달 닫기
                 closeImageModal();
                 
                 // 약간의 지연 후 이미지 삽입
@@ -559,15 +688,6 @@
             }
         `;
         util.styles.addInlineStyle('imageModalHoverStyles', hoverStyles);
-        
-        // 이미지 선택 관련 스타일 추가
-        const imageSelectionStyles = `
-            .lite-editor-image-container.selected {
-                outline: 2px solid #4285f4 !important;
-                border-radius: 2px;
-            }
-        `;
-        util.styles.addInlineStyle('imageSelectionStyles', imageSelectionStyles);
     }
 
     // 플러그인 등록
