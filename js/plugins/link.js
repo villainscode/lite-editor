@@ -1,13 +1,17 @@
 /**
  * LiteEditor Link Plugin
  * 텍스트에 링크를 추가하는 기능을 제공하는 플러그인
- * 리팩토링: 직접 레이어 관리 방식으로 변경
+ * 리팩토링: 미디어 플러그인과 동일한 UI 스타일 적용
  */
 (function() {
     // 플러그인 상수 정의
     const PLUGIN_ID = 'link';
     const STYLE_ID = 'linkStyles';
     const CSS_PATH = 'css/plugins/link.css';
+    
+    // 드롭다운 UI 설정
+    const DROPDOWN_WIDTH = 300;    // 드롭다운 너비 (px)
+    const DROPDOWN_HEIGHT = 90;    // 드롭다운 높이 (px)
     
     // PluginUtil 참조
     const util = window.PluginUtil || {};
@@ -18,6 +22,11 @@
     // 전역 상태 변수
     let savedRange = null;          // 임시로 저장된 선택 영역
     let isDropdownOpen = false;     // 드롭다운 열림 상태
+
+    // CSS 파일 로드
+    if (util.styles && util.styles.loadCssFile) {
+        util.styles.loadCssFile(STYLE_ID, CSS_PATH);
+    }
 
     // link.js 파일 상단에 디버깅 유틸리티 추가
     function debugLog(action, data) {
@@ -126,7 +135,7 @@
         icon: 'link',
         customRender: function(toolbar, contentArea) {
             // 1. 링크 버튼 생성
-            const linkButton = util.dom.createElement('div', {
+            const linkButton = util.dom.createElement('button', {
                 className: 'lite-editor-button',
                 title: 'Insert Link'
             });
@@ -142,83 +151,53 @@
             const dropdownMenu = util.dom.createElement('div', {
                 className: 'lite-editor-dropdown-menu link-dropdown',
                 id: 'link-dropdown-' + Math.random().toString(36).substr(2, 9)
-            }, {
-                width: '264px',
-                height: '49px',
-                padding: '8px',
-                boxShadow: '0 1px 5px rgba(0,0,0,0.1)',
-                textAlign: 'center',
-                display: 'none',
-                position: 'absolute',
-                zIndex: '99999',
-                backgroundColor: '#fff',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                flexDirection: 'column',
-                alignItems: 'center',
-                overflow: 'hidden'
             });
             
-            // 4. 링크 입력 UI 생성
-            const inputContainer = util.dom.createElement('div', {
-                className: 'link-input-container'
-            }, {
-                display: 'flex',
-                width: '100%',
-                height: '33px',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '6px'
+            // 4. 헤더 생성
+            const header = util.dom.createElement('div', {
+                className: 'lite-editor-link-header'
+            });
+            
+            const title = util.dom.createElement('span', {
+                className: 'lite-editor-link-title',
+                textContent: 'Enter the URL to insert link'
+            });
+            
+            header.appendChild(title);
+            dropdownMenu.appendChild(header);
+            
+            // 5. 입력 그룹 생성
+            const inputGroup = util.dom.createElement('div', {
+                className: 'lite-editor-link-input-group'
             });
             
             const urlInput = util.dom.createElement('input', {
                 type: 'url',
-                placeholder: 'https://',
-                className: 'lite-editor-link-input'
-            }, {
-                width: '210px',
-                height: '33px',
-                padding: '6px 8px',
-                fontSize: '13px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                verticalAlign: 'middle'
+                className: 'lite-editor-link-input',
+                placeholder: 'https://'
             });
             
             const submitButton = util.dom.createElement('button', {
+                type: 'submit',
                 className: 'lite-editor-link-button',
+                title: 'Insert',
                 textContent: 'OK'
-            }, {
-                marginLeft: '4px',
-                padding: '5px 10px',
-                border: 'none',
-                borderRadius: '3px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500',
-                height: '33px',
-                minWidth: '36px',
-                boxSizing: 'border-box'
             });
             
-            inputContainer.appendChild(urlInput);
-            inputContainer.appendChild(submitButton);
-            dropdownMenu.appendChild(inputContainer);
+            inputGroup.appendChild(urlInput);
+            inputGroup.appendChild(submitButton);
+            dropdownMenu.appendChild(inputGroup);
             
-            // 5. 드롭다운을 document.body에 추가
+            // 6. 드롭다운을 document.body에 추가
             document.body.appendChild(dropdownMenu);
             
-            // 6. 버튼 이벤트 설정
+            // 7. 버튼 이벤트 설정
             const processUrl = (url) => {
                 if (!isValidUrl(url)) {
                     if (typeof LiteEditorModal !== 'undefined') {
-                        LiteEditorModal.alert('Please enter a valid URL.<BR>Example: https://example.com');
+                        LiteEditorModal.alert('유효한 URL을 입력해주세요.<BR>예시: https://example.com');
                     } else {
-                        alert('Please enter a valid URL. Example: https://example.com');
+                        alert('유효한 URL을 입력해주세요.\n예시: https://example.com');
                     }
                     return;
                 }
@@ -284,7 +263,7 @@
                 } else {
                     // 열기
                     dropdownMenu.classList.add('show');
-                    dropdownMenu.style.display = 'flex'; // flex로 변경 (입력창 레이아웃 유지)
+                    dropdownMenu.style.display = 'flex'; // flex로 변경 (레이아웃 유지)
                     linkButton.classList.add('active');
                     isDropdownOpen = true;
                     

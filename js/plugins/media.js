@@ -13,7 +13,7 @@
   
   // 드롭다운 UI 설정
   const DROPDOWN_WIDTH = 300;    // 드롭다운 너비 (px)
-  const DROPDOWN_HEIGHT = 80;    // 드롭다운 높이 (px)
+  const DROPDOWN_HEIGHT = 90;    // 드롭다운 높이 (px)
   
   // PluginUtil 참조
   const util = window.PluginUtil;
@@ -283,6 +283,7 @@
       }, {
         padding: '4px 8px',
         margin: '0',
+        height: '32px',
         borderTopLeftRadius: '4px',
         borderTopRightRadius: '4px',
         borderBottom: '1px solid #e0e0e0',

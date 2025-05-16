@@ -244,7 +244,18 @@
         };
     }
 
-    
+    /**
+     * 플러스 서클 SVG 생성 함수
+     * 중복 코드 제거와 재사용성 개선을 위한 함수
+     */
+    function createPlusCircleSvg() {
+        return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#5f6368">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            </svg>
+        `;
+    }
+
     /**
      * 모달 컨텐츠 생성
      * @returns {HTMLElement} 모달 컨텐츠 요소
@@ -255,7 +266,7 @@
             className: 'modal-content'
         }, {
             width: '280px',
-            height: '280px',
+            height: '275px',
             boxSizing: 'border-box',
             position: 'relative',
             borderRadius: '4px',
@@ -265,7 +276,7 @@
         
         // 모달 내용 영역
         const contentContainer = util.dom.createElement('div', {}, {
-            padding: '16px 16px 10px 16px'
+            padding: '2px'
         });
         
         // 제목
@@ -366,7 +377,7 @@
             width: '100%',
             height: '100%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '8px',
@@ -375,21 +386,25 @@
             borderRadius: '4px',
             border: '1px dashed #ccc',
             cursor: 'pointer',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            gap: '8px'
         });
         
+        // Material Symbols Outlined 아이콘 사용으로 변경
         const fileIcon = util.dom.createElement('span', {
             className: 'material-symbols-outlined',
-            textContent: 'add_photo_alternate'
+            textContent: 'image_search'
         }, {
-            fontSize: '20px',
-            marginBottom: '4px'
+            fontSize: '24px',
+            color: '#5f6368',
+            marginBottom: '0'
         });
         
         const fileText = util.dom.createElement('span', {
             textContent: 'Select a File'
         }, {
-            fontSize: '12px'
+            fontSize: '14px',
+            fontWeight: '500'
         });
         
         const fileInput = util.dom.createElement('input', {
@@ -417,8 +432,7 @@
             width: '100%',
             display: 'flex',
             justifyContent: 'flex-end',
-            padding: '8px 16px',
-            height: '40px',
+            padding: '7px 7px',
             boxSizing: 'border-box',
             backgroundColor: 'white'
         });
@@ -437,15 +451,17 @@
             backgroundColor: 'transparent',
             cursor: 'pointer'
         });
-        
-        const buttonIcon = util.dom.createElement('span', {
-            className: 'material-symbols-outlined',
-            textContent: 'add_circle'
+
+        // buttonIcon도 동일한 재사용 함수 사용
+        const buttonIcon = util.dom.createElement('div', {
+            innerHTML: createPlusCircleSvg()
         }, {
-            fontSize: '16px',
-            color: '#5f6368'
+            paddingBottom: '7px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
         });
-        
+
         insertButton.appendChild(buttonIcon);
         buttonContainer.appendChild(insertButton);
         
