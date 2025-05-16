@@ -791,22 +791,19 @@
             return;
         }
         
-        // 전역 변수 - 선택 관리
-        let selectedImage = null;
-        
         // 에디터 클릭 이벤트 위임 처리
         editor.addEventListener('click', (event) => {
             // 이미지 컨테이너 찾기
             const imageWrapper = findClosestElement(event.target, '.image-wrapper[data-selectable="true"]');
             
+            // 기존 선택된 이미지 찾기
+            const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
+            
             // 이미지 외부 클릭 시 선택 해제
             if (!imageWrapper) {
-                // 기존 선택된 이미지 찾기
-                const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
                 if (prevSelected) {
                     prevSelected.removeAttribute('data-selected');
                 }
-                selectedImage = null;
                 return;
             }
             
@@ -815,15 +812,13 @@
                 return;
             }
             
-            // 기존 선택된 이미지 선택 해제
-            const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
+            // 기존 선택된 이미지가 현재와 다르면 선택 해제
             if (prevSelected && prevSelected !== imageWrapper) {
                 prevSelected.removeAttribute('data-selected');
             }
             
             // 현재 이미지 선택
             imageWrapper.setAttribute('data-selected', 'true');
-            selectedImage = imageWrapper;
             
             // 이미지 선택 시 에디터에 포커스 유지
             editor.focus({ preventScroll: true });
@@ -832,42 +827,9 @@
             event.preventDefault();
             event.stopPropagation();
         });
-        
-        // 더블 클릭으로 이미지 선택
-        editor.addEventListener('dblclick', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper[data-selectable="true"]');
-            if (imageWrapper) {
-                // 리사이즈 핸들 클릭은 무시
-                if (event.target.classList.contains('image-resize-handle')) {
-                    return;
-                }
-                
-                // 이미지 선택 상태 토글
-                if (imageWrapper.hasAttribute('data-selected')) {
-                    imageWrapper.removeAttribute('data-selected');
-                    selectedImage = null;
-                } else {
-                    // 다른 이미지 선택 해제
-                    const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
-                    if (prevSelected) {
-                        prevSelected.removeAttribute('data-selected');
-                    }
-                    
-                    // 현재 이미지 선택
-                    imageWrapper.setAttribute('data-selected', 'true');
-                    selectedImage = imageWrapper;
-                    
-                    // 에디터에 포커스 유지
-                    editor.focus({ preventScroll: true });
-                }
-                
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        });
 
         // 키보드 이벤트 처리 (방향키, 삭제 등)
-        document.addEventListener('keydown', (event) => {
+        editor.addEventListener('keydown', (event) => {
             // 방향키로 이동 시 이미지 선택 해제
             if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || 
                 event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -876,7 +838,6 @@
                 if (selectedImg) {
                     // 선택 해제
                     selectedImg.removeAttribute('data-selected');
-                    selectedImage = null;
                 }
                 return; // 방향키 기본 동작 유지
             }
