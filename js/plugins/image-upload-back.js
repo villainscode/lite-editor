@@ -20,9 +20,6 @@
     let isModalOpen = false;        // 모달 열림 상태
     let imageModal = null;          // 현재 열린 모달 참조
 
-    // 전역 변수로 이벤트 등록 여부 추적
-    let imageHandlingInitialized = false;
-
     /**
      * 선택 영역 저장
      */
@@ -100,7 +97,6 @@
             // 3. 이미지 컨테이너 생성 - 인라인 스타일로 크기 지정
             const container = document.createElement('div');
             container.className = 'image-wrapper';
-            container.setAttribute('draggable', 'true');  // 드래그 가능하도록 설정
             
             // 초기 크기 설정 (인라인 스타일로 지정 - 저장 시 유지됨)
             // 이미지 크기 기준으로 초기값 계산 (너무 큰 이미지는 적절히 축소)
@@ -259,7 +255,7 @@
             </svg>
         `;
     }
-    
+
     /**
      * 모달 컨텐츠 생성
      * @returns {HTMLElement} 모달 컨텐츠 요소
@@ -455,7 +451,7 @@
             backgroundColor: 'transparent',
             cursor: 'pointer'
         });
-        
+
         // buttonIcon도 동일한 재사용 함수 사용
         const buttonIcon = util.dom.createElement('div', {
             innerHTML: createPlusCircleSvg()
@@ -465,7 +461,7 @@
             alignItems: 'center',
             justifyContent: 'center'
         });
-        
+
         insertButton.appendChild(buttonIcon);
         buttonContainer.appendChild(insertButton);
         
@@ -697,8 +693,8 @@
         // CSS 파일 로드
         util.styles.loadCssFile(STYLE_ID, CSS_PATH);
         
-        // 이미지 처리 관련 스타일 추가
-        const imageHandlingStyles = `
+        // 호버 효과 인라인 스타일 추가
+        const hoverStyles = `
             .modal-overlay button {
                 transition: transform 0.1s ease !important;
             }
@@ -706,211 +702,17 @@
                 transform: scale(0.95) !important;
                 background-color: rgba(0, 0, 0, 0.05) !important;
             }
-            .image-wrapper.selected {
-                outline: 2px solid #4285f4 !important;
-                box-shadow: 0 0 5px rgba(66, 133, 244, 0.5) !important;
-            }
-            .image-wrapper.dragging {
-                opacity: 0.7 !important;
-                outline: 2px dashed #4285f4 !important;
-            }
-            .image-wrapper {
-                transition: outline 0.2s ease, box-shadow 0.2s ease;
-                cursor: pointer;
-            }
-            .image-wrapper:hover {
-                outline: 1px solid rgba(66, 133, 244, 0.3);
-            }
-            #image-drop-indicator {
-                box-shadow: 0 0 3px rgba(66, 133, 244, 0.7);
-            }
         `;
-        
-        util.styles.addInlineStyle('imageHandlingStyles', imageHandlingStyles);
+        util.styles.addInlineStyle('imageModalHoverStyles', hoverStyles);
     }
 
-    /**
-     * 이미지 드래그 앤 드롭 기능 초기화 (image-handle.html 방식 그대로 적용)
-     */
-    function initImageDragDrop() {
-        // 플래그로 한 번만 초기화되도록 관리
-        if (window.imageDragDropInitialized) return;
-        window.imageDragDropInitialized = true;
-        
-        const editor = document.querySelector('#lite-editor');
-        if (!editor) return;
-        
-        // 이미지 선택 효과를 위한 스타일 추가
-        const style = document.createElement('style');
-        style.textContent = `
-            .image-wrapper {
-                cursor: pointer;
-            }
-            .image-wrapper.selected {
-                outline: 2px solid #4285f4;
-                box-shadow: 0 0 5px rgba(66, 133, 244, 0.5);
-            }
-            .image-wrapper.dragging {
-                opacity: 0.7;
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // 이미지 드래그 시작 - 에디터 내 이미지
-        editor.addEventListener('dragstart', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
-            if (imageWrapper) {
-                // 리사이즈 핸들 드래그는 무시
-                if (event.target.classList.contains('image-resize-handle')) {
-                    event.preventDefault();
-                    return;
-                }
-                
-                window.draggedElement = imageWrapper;
-                imageWrapper.classList.add('dragging');
-            }
-        });
-        
-        // 드래그 영역 허용
-        editor.addEventListener('dragover', (event) => {
-            event.preventDefault(); // 드롭 허용
-        });
-        
-        // 드롭 처리 - image-handle.html 방식 그대로 적용
-        editor.addEventListener('drop', (event) => {
-            event.preventDefault();
-            
-            if (window.draggedElement) {
-                const selection = window.getSelection();
-                if (selection.rangeCount) {
-                    let caretRange = document.caretRangeFromPoint(event.clientX, event.clientY);
-                    
-                    if (caretRange) {
-                        // 원래 위치에서 요소 제거 (에디터 내 이미지를 옮기는 경우)
-                        if (window.draggedElement.parentNode === editor || 
-                            window.draggedElement.closest('#lite-editor')) {
-                            window.draggedElement.remove();
-                        }
-                        
-                        // 새 위치에 삽입
-                        caretRange.deleteContents();
-                        caretRange.insertNode(window.draggedElement);
-                        
-                        // 커서 위치 조정
-                        caretRange.collapse(false);
-                        selection.removeAllRanges();
-                        selection.addRange(caretRange);
-                        
-                        // 드래그 클래스 제거
-                        window.draggedElement.classList.remove('dragging');
-                        
-                        // 이미지 선택 상태로 설정
-                        document.querySelectorAll('.image-wrapper.selected').forEach(el => {
-                            el.classList.remove('selected');
-                        });
-                        window.draggedElement.classList.add('selected');
-                        
-                        // 에디터 변경 이벤트 발생
-                        const event = new Event('input', { bubbles: true });
-                        editor.dispatchEvent(event);
-                    }
-                }
-                
-                // 드래그 상태 초기화
-                window.draggedElement = null;
-            }
-        });
-        
-        // 드래그 종료
-        editor.addEventListener('dragend', (event) => {
-            if (window.draggedElement) {
-                window.draggedElement.classList.remove('dragging');
-                window.draggedElement = null;
-            }
-        });
-        
-        // 이미지 선택
-        editor.addEventListener('click', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
-            
-            // 이미지 외부 클릭 시 선택 해제
-            if (!imageWrapper) {
-                document.querySelectorAll('.image-wrapper.selected').forEach(el => {
-                    el.classList.remove('selected');
-                });
-                return;
-            }
-            
-            // 리사이즈 핸들 클릭은 무시
-            if (event.target.classList.contains('image-resize-handle')) {
-                return;
-            }
-            
-            // 선택 상태 토글
-            const isSelected = imageWrapper.classList.contains('selected');
-            
-            // 모든 이미지 선택 해제
-            document.querySelectorAll('.image-wrapper.selected').forEach(el => {
-                el.classList.remove('selected');
-            });
-            
-            // 현재 이미지 선택 (토글)
-            if (!isSelected) {
-                imageWrapper.classList.add('selected');
-            }
-        });
-        
-        // 이미지 삭제 기능
-        document.addEventListener('keydown', (event) => {
-            if ((event.key === 'Delete' || event.key === 'Backspace')) {
-                const selectedImage = document.querySelector('.image-wrapper.selected');
-                if (selectedImage) {
-                    event.preventDefault();
-                    
-                    // 커서 위치 설정
-                    const range = document.createRange();
-                    range.setStartBefore(selectedImage);
-                    range.collapse(true);
-                    
-                    // 이미지 제거
-                    selectedImage.remove();
-                    
-                    // 커서 위치 설정
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    
-                    // 에디터 변경 이벤트 발생
-                    const inputEvent = new Event('input', { bubbles: true });
-                    editor.dispatchEvent(inputEvent);
-                }
-            }
-        });
-    }
-
-    /**
-     * 가장 가까운 요소 찾기
-     */
-    function findClosestElement(element, selector) {
-        while (element && element.nodeType === 1) {
-            if (element.matches(selector)) {
-                return element;
-            }
-            element = element.parentElement;
-        }
-        return null;
-    }
-
-    // 플러그인 등록 수정
+    // 플러그인 등록
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Insert Image',
         icon: 'photo_camera',
         customRender: (toolbar, contentArea) => {
             // 스타일 로드
             loadStyles();
-            
-            // 이미지 드래그 앤 드롭 기능 초기화 (지연 실행)
-            setTimeout(initImageDragDrop, 500);
 
             // 버튼 생성
             const button = util.dom.createElement('button', {
