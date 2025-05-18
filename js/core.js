@@ -791,19 +791,7 @@ const LiteEditor = (function() {
         if (sel && sel.getRangeAt && sel.rangeCount) {
           const range = sel.getRangeAt(0);
           range.deleteContents();
-          
-          // 텍스트 노드 생성 및 삽입
-          const textNode = document.createTextNode(text);
-          range.insertNode(textNode);
-          
-          // 중요: 붙여넣기 후 커서를 텍스트 끝으로 이동 (선택 해제)
-          range.setStartAfter(textNode);
-          range.setEndAfter(textNode);
-          range.collapse(true);
-          
-          // 선택 영역 업데이트 (선택 해제)
-          sel.removeAllRanges();
-          sel.addRange(range);
+          range.insertNode(document.createTextNode(text));
         }
       } catch (e) {
         errorHandler.logError('Core', errorHandler.codes.COMMON.PASTE, e);
@@ -814,11 +802,6 @@ const LiteEditor = (function() {
       // TextArea인 경우 원본 요소 업데이트
       if (originalElement.tagName === 'TEXTAREA') {
         originalElement.value = contentArea.innerHTML;
-      }
-      
-      // 선택 영역 저장 (비선택 상태로)
-      if (window.liteEditorSelection) {
-        window.liteEditorSelection.save();
       }
     });
     
@@ -844,71 +827,35 @@ const LiteEditor = (function() {
       }
     });
     
-    // 단축키 리스너 설정
-    setupShortcutListener(contentArea);
-
-    // Tab 키 처리 - 들여쓰기 기능
+    // Tab 키 이벤트 처리 - 개선된 버전
     contentArea.addEventListener('keydown', (e) => {
-      // Tab 키 이벤트 확인
+      // Tab 키 감지
       if (e.key === 'Tab') {
-        e.preventDefault(); // 기본 동작 방지
+        // 기본 동작 방지 (반드시 필요)
+        e.preventDefault();
+        e.stopPropagation();
         
-        const INDENT_SIZE = 4; // 들여쓰기 크기 (공백 4칸)
-        const INDENT_CHAR = '\u00A0'; // non-breaking space
+        // document.execCommand 사용 (더 안정적)
+        document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
         
-        if (e.shiftKey) {
-          // Shift+Tab: 들여쓰기 제거
-          const selection = getSafeSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            
-            // 현재 줄의 시작 부분에 있는 공백 확인
-            if (range.startContainer.nodeType === Node.TEXT_NODE) {
-              const text = range.startContainer.textContent;
-              const lineStart = text.lastIndexOf('\n', range.startOffset - 1) + 1;
-              const spacesToRemove = Math.min(INDENT_SIZE, getLeadingSpaces(text.substring(lineStart)));
-              
-              if (spacesToRemove > 0) {
-                // 공백 제거
-                const newText = text.substring(0, lineStart) + text.substring(lineStart + spacesToRemove);
-                range.startContainer.textContent = newText;
-                
-                // 커서 위치 조정
-                range.setStart(range.startContainer, Math.max(lineStart, range.startOffset - spacesToRemove));
-                range.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(range);
-              }
-            }
-          }
-        } else {
-          // Tab: 들여쓰기 추가 (공백 4칸 삽입)
-          document.execCommand('insertHTML', false, INDENT_CHAR.repeat(INDENT_SIZE));
-        }
+        // 변경 이벤트 발생 (에디터 업데이트)
+        const event = new Event('input', { bubbles: true });
+        contentArea.dispatchEvent(event);
+        
+        // 디버깅 코드 추가
+        console.log('Tab 키 처리됨: 스페이스 4칸 삽입');
         
         // TextArea인 경우 원본 요소 업데이트
         if (originalElement.tagName === 'TEXTAREA') {
           originalElement.value = contentArea.innerHTML;
         }
+        
+        return false; // 이벤트 전파 중지
       }
-    });
-  }
-  
-  /**
-   * 선행 공백 개수 가져오기
-   * @param {string} text - 텍스트
-   * @returns {number} 선행 공백 개수
-   */
-  function getLeadingSpaces(text) {
-    let count = 0;
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] === ' ' || text[i] === '\u00A0') {
-        count++;
-      } else {
-        break;
-      }
-    }
-    return count;
+    }, true); // 캡처링 단계에서 이벤트 처리
+    
+    // 단축키 리스너 설정
+    setupShortcutListener(contentArea);
   }
   
   /**
