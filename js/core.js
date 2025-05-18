@@ -42,6 +42,63 @@ const LiteEditor = (function() {
     }
   };
   
+  // 단축키 관리
+  const shortcuts = {};
+  
+  /**
+   * 단축키 등록
+   * @param {string} id - 플러그인 ID
+   * @param {Object} shortcutDef - 단축키 정의
+   */
+  function registerShortcut(id, shortcutDef) {
+    if (!shortcuts[id]) {
+      shortcuts[id] = [];
+    }
+    shortcuts[id].push(shortcutDef);
+  }
+  
+  /**
+   * 단축키 이벤트 처리
+   * @param {Element} contentArea - 에디터 콘텐츠 영역
+   */
+  function setupShortcutListener(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      // 현재 입력된 키 확인
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const isCtrlPressed = isMac ? e.metaKey : e.ctrlKey;
+      
+      // 모든 단축키 순회
+      for (const id in shortcuts) {
+        const shortcutList = shortcuts[id];
+        
+        for (const shortcut of shortcutList) {
+          const { key, ctrl, alt, shift, meta, action } = shortcut;
+          
+          const keyMatches = e.key.toLowerCase() === key.toLowerCase();
+          const ctrlMatches = ctrl ? isCtrlPressed : !isCtrlPressed;
+          const altMatches = alt ? e.altKey : !e.altKey;
+          const shiftMatches = shift ? e.shiftKey : !e.shiftKey;
+          const metaMatches = meta ? e.metaKey : !e.metaKey;
+          
+          // 모든 조건이 일치하면 해당 액션 실행
+          if (keyMatches && ctrlMatches && altMatches && shiftMatches && metaMatches) {
+            e.preventDefault();
+            
+            // 플러그인 액션 실행
+            const plugin = getPlugin(id);
+            if (plugin && typeof action === 'function') {
+              action(contentArea);
+            } else if (plugin && typeof plugin.action === 'function') {
+              plugin.action(contentArea);
+            }
+            
+            return false;
+          }
+        }
+      }
+    });
+  }
+  
   /**
    * 안전하게 Selection 객체 가져오기
    * @returns {Selection|null} Selection 객체 또는 null
@@ -769,6 +826,9 @@ const LiteEditor = (function() {
         }
       }
     });
+    
+    // 단축키 리스너 설정
+    setupShortcutListener(contentArea);
   }
   
   /**
@@ -801,6 +861,7 @@ const LiteEditor = (function() {
   return {
     init,
     registerPlugin,
+    registerShortcut,
     getPlugin,
     getAllPlugins
   };

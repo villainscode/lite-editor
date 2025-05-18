@@ -213,5 +213,15 @@
             editor.contentArea.setAttribute('data-no-completion', 'true');
         }
     });
+
+    // 수평선 삽입 단축키 (Alt+L)
+    LiteEditor.registerShortcut('line', {
+        key: 'l',
+        alt: true,
+        action: function(contentArea) {
+            // 직접 insertLine 함수 호출
+            insertLine(contentArea);
+        }
+    });
 })();
 

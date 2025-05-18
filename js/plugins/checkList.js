@@ -27,22 +27,42 @@
     if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
-    let text = range.toString();
-    if (!text.trim()) return;
-
-    // 선택된 텍스트의 마지막 불필요한 공백과 줄바꿈 제거 (추가된 코드)
-    text = text.replace(/[\s\n\r]+$/, '');
     
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    range.deleteContents();
+    // 선택 영역 내용 추출
+    const fragment = range.extractContents();
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment);
     
-    const fragment = document.createDocumentFragment();
-    lines.forEach(line => fragment.appendChild(createSingleChecklistItem(line)));
-    range.insertNode(fragment);
-
-    // 마지막 체크리스트 항목에 포커스 설정
-    const lastItem = fragment.lastChild;
-    if (lastItem) maintainFocus(lastItem);
+    // HTML에서 줄바꿈 정보 보존
+    let content = tempDiv.innerHTML;
+    // p, div 태그를 <br>로 변환
+    content = content.replace(/<\/(div|p)>/gi, '<br>');
+    content = content.replace(/<(div|p)[^>]*>/gi, '');
+    
+    // 줄바꿈으로 분리
+    const lines = content.split(/<br\s*\/?>/i).filter(line => line.trim());
+    
+    // 결과 프래그먼트
+    const resultFragment = document.createDocumentFragment();
+    
+    if (lines.length === 0) {
+      // 선택된 텍스트가 없으면 빈 체크리스트 항목 생성
+      resultFragment.appendChild(createSingleChecklistItem(''));
+    } else {
+      // 각 줄마다 체크리스트 항목 생성
+      lines.forEach(line => {
+        resultFragment.appendChild(createSingleChecklistItem(line.trim()));
+      });
+    }
+    
+    // 생성된 항목들을 삽입
+    range.insertNode(resultFragment);
+    
+    // 마지막 체크리스트 항목에 포커스
+    const items = Array.from(resultFragment.childNodes);
+    if (items.length > 0) {
+      maintainFocus(items[items.length - 1]);
+    }
   }
 
   // 유니크 ID 생성을 위한 카운터
@@ -405,6 +425,97 @@
     });
   }
   
+  // 체크리스트 토글 함수 (단축키용)
+  function toggleCheckList(contentArea) {
+    // 에디터에 포커스 설정
+    contentArea.focus();
+    
+    // 현재 선택 영역 가져오기
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // 현재 선택 영역이 체크리스트인지 확인
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
+    const checklistItem = element.closest('.checklist-item');
+    
+    if (checklistItem || container.querySelector?.('.checklist-item')) {
+      // 이미 체크리스트면 일반 텍스트로 변환
+      const checklistItems = getSelectedChecklistItems(range);
+      
+      if (checklistItems.length > 0) {
+        // 체크리스트 아이템들을 원래 형식으로 변환
+        const fragment = document.createDocumentFragment();
+        
+        checklistItems.forEach(item => {
+          const label = item.querySelector('label');
+          // innerHTML 사용하여 BR 태그 유지
+          const content = label ? label.innerHTML : '';
+          
+          // div 사용하여 형식 유지
+          const div = document.createElement('div');
+          div.innerHTML = content || '<br>';
+          fragment.appendChild(div);
+        });
+        
+        // 첫 번째 체크리스트 아이템 위치에 삽입
+        const firstItem = checklistItems[0];
+        firstItem.parentNode.insertBefore(fragment, firstItem);
+        
+        // 체크리스트 아이템들 제거
+        checklistItems.forEach(item => item.remove());
+        
+        // 생성된 요소들 선택
+        const newElements = Array.from(fragment.childNodes);
+        if (newElements.length > 0) {
+          const newRange = document.createRange();
+          newRange.setStartBefore(newElements[0]);
+          newRange.setEndAfter(newElements[newElements.length - 1]);
+          
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+      }
+    } else {
+      // 일반 텍스트면 체크리스트로 변환
+      createChecklistItems(contentArea);
+    }
+  }
+
+  // 선택 영역에 포함된 모든 체크리스트 항목 가져오기
+  function getSelectedChecklistItems(range) {
+    if (!range) return [];
+    
+    // 공통 조상 요소 찾기
+    let container = range.commonAncestorContainer;
+    if (container.nodeType === Node.TEXT_NODE) {
+      container = container.parentNode;
+    }
+    
+    // 편집 가능한 영역 찾기
+    const editableRoot = container.closest('[contenteditable="true"]') || document;
+    
+    // 선택 영역에 있는 모든 체크리스트 항목 찾기
+    const allItems = Array.from(editableRoot.querySelectorAll('.checklist-item'));
+    
+    return allItems.filter(item => {
+      const itemRange = document.createRange();
+      itemRange.selectNode(item);
+      return range.intersectsNode(item);
+    });
+  }
+
+  // Check List 단축키 (Alt+K)
+  LiteEditor.registerShortcut('checkList', {
+    key: 'k',
+    alt: true,
+    action: function(contentArea) {
+      toggleCheckList(contentArea);
+    }
+  });
+
   // 플러그인 등록
   PluginUtil.registerPlugin('checkList', {
     title: 'Check List',
@@ -416,8 +527,9 @@
         window.liteEditorSelection.save();
         window.liteEditorSelection.restore();
       }
-      createChecklistItems(contentArea);
-      if (window.liteEditorSelection) window.liteEditorSelection.save();
+      
+      // createChecklistItems 대신 toggleCheckList 함수 사용
+      toggleCheckList(contentArea);
       
       // 체크박스 이벤트 처리 초기화
       setTimeout(initCheckboxHandlers, 0);
