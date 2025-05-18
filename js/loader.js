@@ -10,6 +10,7 @@
     // 로드할 스크립트 파일 목록 (순서 중요)
     const scripts = [
         // 코어 라이브러리
+        'js/data/version.js',
         'js/error-handler.js',
         'js/core.js',
         'js/security-manager.js',

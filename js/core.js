@@ -4,6 +4,9 @@
  */
 
 const LiteEditor = (function() {
+  // 버전 정보 확인 및 출력
+  console.log('LiteEditor 현재 버전:', window.LiteEditorVersion ? window.LiteEditorVersion.version : '로딩 전');
+  
   // 에디터 인스턴스 저장
   const instances = [];
   
