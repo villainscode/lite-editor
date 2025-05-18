@@ -19,6 +19,7 @@
     let savedRange = null;          // 임시로 저장된 선택 영역
     let isModalOpen = false;        // 모달 열림 상태
     let imageModal = null;          // 현재 열린 모달 참조
+    let draggedImage = null;
 
     /**
      * 선택 영역 저장
@@ -763,6 +764,12 @@
                 margin: 0.5em 0;
                 width: 100%;
             }
+
+            /* 드래그 중인 이미지 스타일 */
+            .image-wrapper.dragging {
+                opacity: 0.6;
+                outline: 2px dashed #4285f4;
+            }
         `;
 
         util.styles.addInlineStyle('imageSelectionStyles', imageSelectionStyles);
@@ -902,6 +909,106 @@
         window.LiteImageHandlers.hasSelectedImage = function() {
             return !!editor.querySelector('.image-wrapper[data-selected="true"]');
         };
+
+        // 이미지 드래그&드롭 기능 구현
+        let draggedImage = null;
+
+        // 드래그 시작 시 처리
+        editor.addEventListener('dragstart', (event) => {
+            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
+            if (imageWrapper) {
+                // 원본 이미지 참조 저장
+                draggedImage = imageWrapper;
+                
+                // 선택된 이미지로 표시 (옵션)
+                const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
+                if (prevSelected && prevSelected !== imageWrapper) {
+                    prevSelected.removeAttribute('data-selected');
+                }
+                imageWrapper.setAttribute('data-selected', 'true');
+                imageWrapper.classList.add('dragging'); // 드래그 중 클래스 추가
+                
+                // 드래그 이미지 설정 (시각적 피드백용)
+                try {
+                    const img = imageWrapper.querySelector('img');
+                    if (img) {
+                        event.dataTransfer.setDragImage(img, 10, 10);
+                    }
+                } catch (e) {
+                    // setDragImage 실패해도 계속 진행
+                }
+                
+                // 드래그 효과 설정
+                event.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        // 드래그 오버 시 드롭 허용
+        editor.addEventListener('dragover', (event) => {
+            if (draggedImage) {
+                event.preventDefault(); // 드롭 허용 (이 부분은 필수, 제거하면 드롭이 안됨)
+            }
+        });
+
+        // 드롭 처리
+        editor.addEventListener('drop', (event) => {
+            if (draggedImage) {
+                event.preventDefault(); // 기본 동작 방지
+                event.stopPropagation();
+                
+                // 드래그 클래스 제거
+                draggedImage.classList.remove('dragging');
+                
+                // 드롭 위치에 Range 생성
+                let range;
+                
+                if (document.caretRangeFromPoint) {
+                    // 표준 방식 (Chrome, Safari, Edge)
+                    range = document.caretRangeFromPoint(event.clientX, event.clientY);
+                } else if (document.caretPositionFromPoint) {
+                    // Firefox 방식
+                    const position = document.caretPositionFromPoint(event.clientX, event.clientY);
+                    range = document.createRange();
+                    range.setStart(position.offsetNode, position.offset);
+                    range.collapse(true);
+                }
+                
+                if (range) {
+                    // data-selectable 속성 보존 확인
+                    if (!draggedImage.hasAttribute('data-selectable')) {
+                        draggedImage.setAttribute('data-selectable', 'true');
+                    }
+                    
+                    // 원본 이미지를 새 위치로 이동
+                    range.insertNode(draggedImage);
+                    
+                    // 커서 위치 설정
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(draggedImage);
+                    newRange.collapse(true);
+                    selection.addRange(newRange);
+                    
+                    // 에디터 변경 이벤트 발생
+                    util.editor.dispatchEditorEvent(editor);
+                }
+                
+                // 드래그 작업 완료
+                draggedImage = null;
+            }
+        });
+
+        // 드래그 종료 처리
+        editor.addEventListener('dragend', (event) => {
+            // 드래그 클래스 제거
+            if (draggedImage) {
+                draggedImage.classList.remove('dragging');
+            }
+            
+            draggedImage = null;
+        });
     }
 
     // 플러그인 등록
