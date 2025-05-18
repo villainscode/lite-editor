@@ -159,69 +159,6 @@
   }
   
   /**
-   * 불릿 리스트 제거 (토글)
-   */
-  function unwrapBulletList(ul, range) {
-    if (!ul || ul.nodeName !== 'UL') return;
-    
-    // 선택 영역 정보 저장 (복원을 위한 준비)
-    const contentArea = ul.closest('[contenteditable="true"]');
-    
-    // 리스트 아이템들을 일반 텍스트로 변환
-    const fragment = document.createDocumentFragment();
-    const items = Array.from(ul.children);
-    
-    // 변환할 위치에 임시 마커 생성 (위치 참조용)
-    const marker = document.createElement('span');
-    marker.setAttribute('data-unwrap-marker', 'true');
-    ul.parentNode.insertBefore(marker, ul);
-    
-    items.forEach(item => {
-      if (item.nodeName === 'LI') {
-        // LI 콘텐츠를 일반 텍스트로 변환
-        const p = document.createElement('p');
-        p.innerHTML = item.innerHTML;
-        fragment.appendChild(p);
-      }
-    });
-    
-    // 리스트 대체
-    ul.parentNode.insertBefore(fragment, ul);
-    ul.parentNode.removeChild(ul);
-    
-    // 선택 영역 복원 (마커 기반)
-    setTimeout(() => {
-      const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
-      const paragraphs = [];
-      
-      if (marker) {
-        // 마커 다음에 있는 모든 p 태그 수집
-        let nextSibling = marker.nextSibling;
-        while (nextSibling && nextSibling.nodeName === 'P' && paragraphs.length < items.length) {
-          paragraphs.push(nextSibling);
-          nextSibling = nextSibling.nextSibling;
-        }
-        
-        // 마커 제거
-        marker.parentNode.removeChild(marker);
-        
-        if (paragraphs.length > 0) {
-          // 모든 변환된 단락을 선택
-          const range = document.createRange();
-          range.setStartBefore(paragraphs[0]);
-          range.setEndAfter(paragraphs[paragraphs.length - 1]);
-          
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          contentArea.focus();
-        }
-      }
-    }, 10);
-  }
-  
-  /**
    * UL 요소의 중첩 깊이를 계산하는 함수
    */
   function getUlDepth(ul) {

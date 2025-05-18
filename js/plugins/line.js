@@ -214,14 +214,30 @@
         }
     });
 
-    // 수평선 삽입 단축키 (Alt+L)
-    LiteEditor.registerShortcut('line', {
-        key: 'l',
+    // 코어 단축키 시스템 디버깅을 위한 테스트 코드
+    console.log('단축키 핸들러 로드 확인');
+
+    // 테스트용 더 간단한 단축키 추가 (Alt+H)
+    LiteEditor.registerShortcut('line_test', {
+        key: 'h',
         alt: true,
         action: function(contentArea) {
-            // 직접 insertLine 함수 호출
-            insertLine(contentArea);
+            console.log('테스트 단축키 Alt+H 작동!');
+            alert('단축키 테스트');
         }
     });
-})();
 
+    // 파일 끝부분에 이 코드 추가
+    document.addEventListener('keydown', function(e) {
+        // Alt+H 테스트
+        if ((e.key.toLowerCase() === 'h' || e.key === 'ㅗ') && e.altKey && !e.ctrlKey && !e.shiftKey) {
+            try {
+                insertLine(document.querySelector('[contenteditable="true"]'));
+            } catch (err) {
+                console.error('오류:', err);
+                alert('오류: ' + err.message);
+            }
+            e.preventDefault();
+        }
+    }, false);
+})();

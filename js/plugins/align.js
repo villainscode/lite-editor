@@ -349,4 +349,32 @@
       return alignButton;
     }
   });
+  
+  // 직접 키보드 이벤트 리스너 추가 - 단축키 충돌 해결
+  document.addEventListener('keydown', function(e) {
+    // 편집 가능한 영역이 있는지 확인
+    const contentArea = document.querySelector('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    // Ctrl+Alt+L: 왼쪽 정렬
+    if ((e.key.toLowerCase() === 'l' || e.key === 'ㅣ') && e.ctrlKey && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      saveSelection();
+      applyAlignment('Left', contentArea);
+    }
+    
+    // Ctrl+Alt+E: 가운데 정렬 - 다른 키로 변경
+    if ((e.key.toLowerCase() === 'e' || e.key === 'ㄷ') && e.ctrlKey && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      saveSelection();
+      applyAlignment('Center', contentArea);
+    }
+    
+    // Ctrl+Alt+R: 오른쪽 정렬
+    if ((e.key.toLowerCase() === 'r' || e.key === 'ㄱ') && e.ctrlKey && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      saveSelection();
+      applyAlignment('Right', contentArea);
+    }
+  }, false);
 })();

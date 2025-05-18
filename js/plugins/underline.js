@@ -32,4 +32,13 @@
       applyUnderline(contentArea);
     }
   });
+
+  // Underline 단축키 (Alt+U)
+  LiteEditor.registerShortcut('underline', {
+    key: 'u',
+    alt: true,
+    action: function(contentArea) {
+      document.execCommand('underline', false, null);
+    }
+  });
 })();

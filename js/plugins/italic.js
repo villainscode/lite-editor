@@ -32,4 +32,13 @@
     meta: true,  // Mac은 ⌘+I
     action: italicAction
   });
+
+  // Italic 단축키 (Alt+I)
+  LiteEditor.registerShortcut(PLUGIN_ID, {
+    key: 'i',
+    alt: true,
+    action: function(contentArea) {
+      document.execCommand('italic', false, null);
+    }
+  });
 })();

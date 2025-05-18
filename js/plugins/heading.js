@@ -449,25 +449,4 @@
       applyHeadingByShortcut('p', contentArea);
     }
   });
-
-  // 단축키 디버깅
-  document.addEventListener('keydown', function(e) {
-    // Cmd+Option+1 단축키 확인
-    if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === '1') {
-      console.log('Cmd+Option+1 키 감지됨!');
-    }
-  });
-
-  // 헤딩 플러그인 로드 확인
-  console.log('헤딩 플러그인 단축키 등록 완료:', Object.keys(LiteEditor).includes('registerShortcut'));
-
-  // 더 단순한 단축키 예시
-  LiteEditor.registerShortcut('heading', {
-    key: '1',
-    alt: true,  // Alt+1만 사용
-    action: function(contentArea) {
-      console.log('Alt+1 실행');
-      applyHeadingByShortcut('h1', contentArea);
-    }
-  });
 })();
