@@ -17,80 +17,80 @@
       // 에디터에 포커스 설정
       contentArea.focus();
       
-      // 현재 선택 영역 정확히 저장
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
+      // 현재 선택 영역 저장
+      const selection = PluginUtil.selection.getSafeSelection();
+      if (!selection || !selection.rangeCount) return;
       
-      // 원본 선택 영역의 컨테이너와 오프셋 저장
-      const originalRange = selection.getRangeAt(0).cloneRange();
-      const startContainer = originalRange.startContainer;
-      const startOffset = originalRange.startOffset;
-      const endContainer = originalRange.endContainer;
-      const endOffset = originalRange.endOffset;
+      const range = selection.getRangeAt(0);
       
-      // ID로 위치 마킹 (안정적인 방법)
-      const startId = 'selection-start-' + Date.now();
-      const endId = 'selection-end-' + Date.now();
-      
-      // 시작과 끝에 마커 삽입
+      // 선택 영역의 시작/끝 지점 표시
       const startMarker = document.createElement('span');
-      startMarker.id = startId;
+      startMarker.setAttribute('data-selection-start', 'true');
       startMarker.style.display = 'inline';
       startMarker.innerHTML = '\u200B'; // 제로 너비 공백
       
       const endMarker = document.createElement('span');
-      endMarker.id = endId;
+      endMarker.setAttribute('data-selection-end', 'true');
       endMarker.style.display = 'inline';
       endMarker.innerHTML = '\u200B'; // 제로 너비 공백
       
-      // 범위 끝에서 시작하여 마커 삽입
-      const tempRange = originalRange.cloneRange();
-      tempRange.collapse(false);
-      tempRange.insertNode(endMarker);
+      // 범위 복제하여 마커 삽입
+      const clonedRange = range.cloneRange();
       
-      // 범위 시작에 마커 삽입
-      tempRange.setStart(startContainer, startOffset);
-      tempRange.collapse(true);
-      tempRange.insertNode(startMarker);
+      // 끝 마커 먼저 삽입 (중요!)
+      clonedRange.collapse(false); // 끝으로 이동
+      clonedRange.insertNode(endMarker);
+      
+      // 시작 마커 삽입
+      clonedRange.setStart(range.startContainer, range.startOffset);
+      clonedRange.collapse(true); // 시작으로 이동
+      clonedRange.insertNode(startMarker);
       
       // 브라우저 내장 명령어로 불릿 리스트 토글
       document.execCommand('insertUnorderedList', false, null);
       
-      // 생성된 UL에 스타일 적용 및 선택 영역 복원
+      // 생성된 UL에 스타일 적용하고 선택 영역 복원
       setTimeout(() => {
-        // 모든 UL 요소에 스타일 적용
-        contentArea.querySelectorAll('ul').forEach(ul => {
-          ul.setAttribute('data-lite-editor-bullet', 'true');
-          applyStyleToSingleUl(ul);
-        });
-        
-        // ID로 마커 찾기 (DOM 변경 후에도 안정적)
-        const startMarkerElement = document.getElementById(startId);
-        const endMarkerElement = document.getElementById(endId);
-        
-        if (startMarkerElement && endMarkerElement) {
-          // 새 범위 생성
-          const newRange = document.createRange();
-          newRange.setStartAfter(startMarkerElement);
-          newRange.setEndBefore(endMarkerElement);
+        try {
+          // 모든 UL 요소에 스타일 적용
+          contentArea.querySelectorAll('ul').forEach(ul => {
+            ul.setAttribute('data-lite-editor-bullet', 'true');
+            applyStyleToSingleUl(ul);
+          });
           
-          // 선택 적용
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // 마커 찾기
+          const start = contentArea.querySelector('[data-selection-start]');
+          const end = contentArea.querySelector('[data-selection-end]');
           
-          // 마커 제거
-          startMarkerElement.parentNode.removeChild(startMarkerElement);
-          endMarkerElement.parentNode.removeChild(endMarkerElement);
-          
-          // 선택 영역 저장 (중요!)
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.save();
+          if (start && end) {
+            // 원래 선택 영역 복원
+            const newRange = document.createRange();
+            
+            // startMarker의 바로 뒤에서 시작
+            newRange.setStartAfter(start);
+            
+            // endMarker의 바로 앞에서 끝
+            newRange.setEndBefore(end);
+            
+            // 선택 영역 적용
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // 마커 제거
+            start.parentNode.removeChild(start);
+            end.parentNode.removeChild(end);
           }
+        } catch(e) {
+          console.error('Error during list selection restore:', e);
+          // 오류 발생 시 모든 마커 제거
+          contentArea.querySelectorAll('[data-selection-start], [data-selection-end]').forEach(el => {
+            el.parentNode.removeChild(el);
+          });
         }
         
         // 에디터에 다시 포커스
         contentArea.focus();
-      }, 10);
+      }, 50);
     }
   });
   

@@ -350,22 +350,58 @@
     }
   });
   
-  // 정렬 단축키 전역 이벤트 리스너 추가
+  // 정렬 단축키 추가
+  // 왼쪽 정렬 (Ctrl+Alt+L)
+  LiteEditor.registerShortcut('alignLeft', {
+    key: 'l',
+    ctrl: true,
+    alt: true,
+    action: function(contentArea) {
+      saveSelection();
+      applyAlignment('Left', contentArea);
+    }
+  });
+
+  // 가운데 정렬 (Ctrl+Alt+C)
+  LiteEditor.registerShortcut('alignCenter', {
+    key: 'c',
+    ctrl: true,
+    alt: true,
+    action: function(contentArea) {
+      saveSelection();
+      applyAlignment('Center', contentArea);
+    }
+  });
+
+  // 오른쪽 정렬 (Ctrl+Alt+R)
+  LiteEditor.registerShortcut('alignRight', {
+    key: 'r',
+    ctrl: true,
+    alt: true,
+    action: function(contentArea) {
+      saveSelection();
+      applyAlignment('Right', contentArea);
+    }
+  });
+  
+  // 전역 단축키 이벤트 처리
   document.addEventListener('keydown', function(e) {
-    // contentArea 찾기
+    // 에디터 영역 찾기
     const contentArea = document.querySelector('[contenteditable="true"]');
     if (!contentArea) return;
     
     // 왼쪽 정렬 (Ctrl+Alt+L)
     if ((e.key === 'l' || e.key === 'ㅣ') && e.ctrlKey && e.altKey) {
       e.preventDefault();
+      contentArea.focus();
       saveSelection();
       applyAlignment('Left', contentArea);
     }
     
     // 가운데 정렬 (Ctrl+Alt+C)
-    if ((e.key === 'e' || e.key === 'ㄷ') && e.ctrlKey && e.altKey) {
+    if ((e.key === 'c' || e.key === 'ㅊ') && e.ctrlKey && e.altKey) {
       e.preventDefault();
+      contentArea.focus();
       saveSelection();
       applyAlignment('Center', contentArea);
     }
@@ -373,6 +409,7 @@
     // 오른쪽 정렬 (Ctrl+Alt+R)
     if ((e.key === 'r' || e.key === 'ㄱ') && e.ctrlKey && e.altKey) {
       e.preventDefault();
+      contentArea.focus();
       saveSelection();
       applyAlignment('Right', contentArea);
     }
