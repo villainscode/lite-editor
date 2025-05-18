@@ -42,6 +42,63 @@ const LiteEditor = (function() {
     }
   };
   
+  // 단축키 관리
+  const shortcuts = {};
+  
+  /**
+   * 단축키 등록
+   * @param {string} id - 플러그인 ID
+   * @param {Object} shortcutDef - 단축키 정의
+   */
+  function registerShortcut(id, shortcutDef) {
+    if (!shortcuts[id]) {
+      shortcuts[id] = [];
+    }
+    shortcuts[id].push(shortcutDef);
+  }
+  
+  /**
+   * 단축키 이벤트 처리
+   * @param {Element} contentArea - 에디터 콘텐츠 영역
+   */
+  function setupShortcutListener(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      // 현재 입력된 키 확인
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const isCtrlPressed = isMac ? e.metaKey : e.ctrlKey;
+      
+      // 모든 단축키 순회
+      for (const id in shortcuts) {
+        const shortcutList = shortcuts[id];
+        
+        for (const shortcut of shortcutList) {
+          const { key, ctrl, alt, shift, meta, action } = shortcut;
+          
+          const keyMatches = e.key.toLowerCase() === key.toLowerCase();
+          const ctrlMatches = ctrl ? isCtrlPressed : !isCtrlPressed;
+          const altMatches = alt ? e.altKey : !e.altKey;
+          const shiftMatches = shift ? e.shiftKey : !e.shiftKey;
+          const metaMatches = meta ? e.metaKey : !e.metaKey;
+          
+          // 모든 조건이 일치하면 해당 액션 실행
+          if (keyMatches && ctrlMatches && altMatches && shiftMatches && metaMatches) {
+            e.preventDefault();
+            
+            // 플러그인 액션 실행
+            const plugin = getPlugin(id);
+            if (plugin && typeof action === 'function') {
+              action(contentArea);
+            } else if (plugin && typeof plugin.action === 'function') {
+              plugin.action(contentArea);
+            }
+            
+            return false;
+          }
+        }
+      }
+    });
+  }
+  
   /**
    * 안전하게 Selection 객체 가져오기
    * @returns {Selection|null} Selection 객체 또는 null
@@ -299,143 +356,9 @@ const LiteEditor = (function() {
           icon: defaultIcon,
           title: defaultTitle,
           action: function(contentArea) {
-            // 기본 기능 적용
-            if (['bold', 'italic', 'underline', 'strike'].includes(pluginName)) {
-              document.execCommand(pluginName, false, null);
-            } else if (pluginName === 'bulletList') {
-              document.execCommand('insertUnorderedList', false, null);
-            } else if (pluginName === 'numberList') {
-              document.execCommand('insertOrderedList', false, null);
-            } else if (pluginName === 'indent') {
-              document.execCommand('indent', false, null);
-            } else if (pluginName === 'outdent') {
-              document.execCommand('outdent', false, null);
-            } else if (pluginName === 'undo') {
-              document.execCommand('undo', false, null);
-            } else if (pluginName === 'redo') {
-              document.execCommand('redo', false, null);
-            } else if (pluginName === 'heading') {
-              // 제목 기능 구현 - h1~h3 전환
-              const headingLevel = prompt('Select heading level (1-3):', '2');
-              if (headingLevel && ['1', '2', '3'].includes(headingLevel)) {
-                document.execCommand('formatBlock', false, 'h' + headingLevel);
-              }
-            } else if (pluginName === 'emphasis') {
-              // 배경색 기능 구현
-              document.execCommand('hiliteColor', false, 'yellow');
-            } else if (pluginName === 'align') {
-              // 정렬 목록 표시
-              const alignElement = document.createElement('div');
-              alignElement.className = 'lite-editor-dropdown-menu lite-editor-align-menu';
-              alignElement.style.position = 'absolute';
-              
-              // 버튼 클릭 위치에 드롭다운 위치 설정
-              const buttonRect = buttonElement.getBoundingClientRect();
-              alignElement.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-              alignElement.style.left = (buttonRect.left + window.scrollX) + 'px';
-              alignElement.style.backgroundColor = 'white';
-              alignElement.style.border = '1px solid #ccc';
-              alignElement.style.borderRadius = '3px';
-              alignElement.style.zIndex = '1000';
-              alignElement.style.display = 'flex';
-              alignElement.style.flexDirection = 'column';
-              alignElement.style.padding = '5px';
-              
-              // 정렬 옵션 추가
-              const options = [
-                { icon: 'format_align_left', text: 'Left Align', command: 'justifyleft' },
-                { icon: 'format_align_center', text: 'Center Align', command: 'justifycenter' },
-                { icon: 'format_align_right', text: 'Right Align', command: 'justifyright' },
-                { icon: 'format_align_justify', text: 'Justify', command: 'justifyfull' }
-              ];
-              
-              options.forEach(option => {
-                const optionBtn = document.createElement('button');
-                optionBtn.className = 'lite-editor-button lite-editor-align-option';
-                optionBtn.title = option.text;
-                optionBtn.style.display = 'flex';
-                optionBtn.style.alignItems = 'center';
-                optionBtn.style.padding = '5px';
-                optionBtn.style.marginBottom = '3px';
-                optionBtn.style.backgroundColor = 'transparent';
-                optionBtn.style.border = 'none';
-                optionBtn.style.cursor = 'pointer';
-                optionBtn.style.width = '100%';
-                optionBtn.style.textAlign = 'left';
-                
-                // 아이콘 추가
-                const iconEl = document.createElement('span');
-                iconEl.className = 'material-icons';
-                iconEl.textContent = option.icon;
-                iconEl.style.marginRight = '5px';
-                optionBtn.appendChild(iconEl);
-                
-                // 텍스트 추가
-                const textEl = document.createElement('span');
-                textEl.textContent = option.text;
-                optionBtn.appendChild(textEl);
-                
-                // 클릭 이벤트
-                optionBtn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  document.execCommand(option.command, false, null);
-                  alignElement.remove(); // 옵션 선택 후 드롭다운 삭제
-                  contentArea.focus(); // 에디터에 포커스 돌리기
-                });
-                
-                alignElement.appendChild(optionBtn);
-              });
-              
-              // 드롭다운 추가
-              document.body.appendChild(alignElement);
-              
-              // body 클릭 시 드롭다운 삭제
-              setTimeout(() => {
-                const clickOutsideHandler = (e) => {
-                  if (!alignElement.contains(e.target) && e.target !== buttonElement) {
-                    alignElement.remove();
-                    document.removeEventListener('click', clickOutsideHandler);
-                  }
-                };
-                document.addEventListener('click', clickOutsideHandler);
-              }, 0);
-              
-              // 기본 동작 방지
-              return false;
-            } else if (pluginName === 'blockquote') {
-              document.execCommand('formatBlock', false, 'blockquote');
-            } else if (pluginName === 'code') {
-              document.execCommand('formatBlock', false, 'pre');
-            } else if (pluginName === 'codeBlock') {
-              document.execCommand('formatBlock', false, 'pre');
-            } else if (pluginName === 'image') {
-              const imageUrl = prompt('Enter image URL:', 'https://example.com/image.jpg');
-              if (imageUrl) {
-                document.execCommand('insertImage', false, imageUrl);
-              }
-            } else if (pluginName === 'table') {
-              // 행과 열 수를 입력받음
-              const rows = prompt('Enter number of rows:', '3');
-              const cols = prompt('Enter number of columns:', '3');
-              
-              if (rows && cols) {
-                let tableHtml = '<table border="1" style="width:100%;border-collapse:collapse;">';
-                for (let i = 0; i < parseInt(rows); i++) {
-                  tableHtml += '<tr>';
-                  for (let j = 0; j < parseInt(cols); j++) {
-                    tableHtml += '<td style="padding:8px;">Cell</td>';
-                  }
-                  tableHtml += '</tr>';
-                }
-                tableHtml += '</table>';
-                document.execCommand('insertHTML', false, tableHtml);
-              }
-            } else if (pluginName === 'reset') {
-              document.execCommand('removeFormat', false, null);
-            } else {
-              // 기본 기능이 없는 경우, 아직 구현되지 않았음을 알림
-              errorHandler.logError('Core', errorHandler.codes.PLUGINS.REGISTER, e);
-            }
+            contentArea.focus();  // 먼저 포커스 설정
+            saveSelection();
+            applyAlignment('Left', contentArea);
           }
         };
         
@@ -769,6 +692,9 @@ const LiteEditor = (function() {
         }
       }
     });
+    
+    // 단축키 리스너 설정
+    setupShortcutListener(contentArea);
   }
   
   /**
@@ -801,6 +727,7 @@ const LiteEditor = (function() {
   return {
     init,
     registerPlugin,
+    registerShortcut,
     getPlugin,
     getAllPlugins
   };

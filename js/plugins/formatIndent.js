@@ -4,16 +4,17 @@
  */
 
 (function() {
-  // 들여쓰기 간격 설정 (em 단위)
-  let indentSize = 1.5;
+  // 들여쓰기 간격 설정 (공백 수)
+  let INDENT_SIZE = 4;
+  const INDENT_CHAR = '\u00A0'; // non-breaking space
   
   /**
    * 들여쓰기 간격 설정 함수
-   * @param {number} size - 들여쓰기 간격 (em 단위)
+   * @param {number} size - 들여쓰기 간격 (공백 수)
    */
   function setIndentSize(size) {
     if (typeof size === 'number' && size > 0) {
-      indentSize = size;
+      INDENT_SIZE = size;
       // 문서 내 모든 에디터 영역에 대해 정규화 적용
       document.querySelectorAll('[contenteditable="true"]').forEach(normalizeIndent);
     }
@@ -26,7 +27,7 @@
   function normalizeIndent(contentArea) {
     // blockquote 들여쓰기 강제
     contentArea.querySelectorAll('blockquote').forEach(bq => {
-      bq.style.marginLeft = `${indentSize}em`;
+      bq.style.paddingLeft = `${INDENT_SIZE * 0.25}em`;
       bq.style.marginRight = '0';
     });
     
@@ -34,11 +35,24 @@
     contentArea.querySelectorAll('p[style*="margin-left"], div[style*="margin-left"], h1[style*="margin-left"], h2[style*="margin-left"], h3[style*="margin-left"], h4[style*="margin-left"], h5[style*="margin-left"], h6[style*="margin-left"]').forEach(el => {
       // 현재 들여쓰기 레벨 계산
       const currentMargin = parseFloat(window.getComputedStyle(el).marginLeft) || 0;
-      const currentLevel = Math.round(currentMargin / (16 * indentSize));
+      const currentLevel = Math.round(currentMargin / (16 * 1)); // 1em 기준으로 레벨 계산
       
-      // 레벨에 맞게 간격 재설정
       if (currentLevel > 0) {
-        el.style.marginLeft = `${currentLevel * indentSize}em`;
+        // Tab 키와 동일한 들여쓰기 방식 사용
+        // 텍스트 컨텐츠 앞에 공백 추가
+        if (el.firstChild && el.firstChild.nodeType === Node.TEXT_NODE) {
+          // 기존 공백 제거
+          el.firstChild.textContent = el.firstChild.textContent.replace(/^[\u00A0 ]+/, '');
+          // 새로운 레벨에 맞는 공백 추가
+          el.firstChild.textContent = INDENT_CHAR.repeat(INDENT_SIZE * currentLevel) + el.firstChild.textContent;
+        } else {
+          // 텍스트 노드가 없으면 생성
+          const textNode = document.createTextNode(INDENT_CHAR.repeat(INDENT_SIZE * currentLevel));
+          el.insertBefore(textNode, el.firstChild);
+        }
+        
+        // 마진 스타일 제거
+        el.style.marginLeft = '';
       }
     });
   }
@@ -54,19 +68,59 @@
       window.liteEditorSelection.restore();
     }
     
-    // 명령 실행
-    document.execCommand(command, false, null);
+    if (command === 'indent') {
+      // 탭 키와 동일한 방식으로 들여쓰기 추가
+      document.execCommand('insertHTML', false, INDENT_CHAR.repeat(INDENT_SIZE));
+    } else {
+      // 내어쓰기
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        
+        if (range.startContainer.nodeType === Node.TEXT_NODE) {
+          const text = range.startContainer.textContent;
+          const lineStart = text.lastIndexOf('\n', range.startOffset - 1) + 1;
+          const spacesToRemove = Math.min(INDENT_SIZE, getLeadingSpaces(text.substring(lineStart)));
+          
+          if (spacesToRemove > 0) {
+            // 공백 제거
+            const newText = text.substring(0, lineStart) + text.substring(lineStart + spacesToRemove);
+            range.startContainer.textContent = newText;
+            
+            // 커서 위치 조정
+            range.setStart(range.startContainer, Math.max(lineStart, range.startOffset - spacesToRemove));
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+      }
+    }
     
     // 포커스 유지
     contentArea.focus();
-    
-    // 들여쓰기 간격 일관성 유지
-    normalizeIndent(contentArea);
     
     // 변경 효과 확인을 위해 다시 선택 영역 저장
     if (window.liteEditorSelection) {
       window.liteEditorSelection.save();
     }
+  }
+  
+  /**
+   * 선행 공백 개수 가져오기
+   * @param {string} text - 텍스트
+   * @returns {number} 선행 공백 개수
+   */
+  function getLeadingSpaces(text) {
+    let count = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === ' ' || text[i] === INDENT_CHAR) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
   }
   
   /**

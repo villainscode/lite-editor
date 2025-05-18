@@ -79,4 +79,58 @@
       return button;
     }
   });
+
+  // Code 단축키 (Alt+C)
+  LiteEditor.registerShortcut('code', {
+    key: 'c',
+    alt: true,
+    action: function(contentArea) {
+      // 선택 영역이 있는 경우에만 처리
+      const selection = util.selection.getSafeSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+          // 선택 영역의 오프셋 저장
+          const offsets = util.selection.calculateOffsets(contentArea);
+          
+          // 선택된 텍스트 가져오기
+          let selectedText = range.toString();
+          
+          // 불필요한 줄바꿈 제거 및 포맷
+          const trimmedText = selectedText.replace(/[\s\n\r]+$/, '');
+          selectedText = trimmedText;
+          
+          // HTML 이스케이프 처리
+          const formattedText = selectedText
+            .split('\n')
+            .map(line => line.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+            .join('\n');
+          
+          // 선택 영역 삭제 후 코드 태그 삽입
+          range.deleteContents();
+          
+          // 코드 요소 생성 및 삽입
+          const codeElement = document.createElement('code');
+          codeElement.setAttribute('data-selection-marker', 'true');
+          codeElement.style.display = 'block';
+          codeElement.style.width = '100%';
+          codeElement.style.padding = '10px';
+          codeElement.style.borderRadius = '4px';
+          codeElement.style.fontFamily = 'monospace';
+          codeElement.innerHTML = formattedText;
+          
+          range.insertNode(codeElement);
+          
+          // 선택 영역 복원
+          util.selection.restoreSelectionByMarker(contentArea, 'code[data-selection-marker="true"]', 10)
+            .then(success => {
+              if (!success) {
+                util.selection.restoreFromOffsets(contentArea, offsets);
+                contentArea.focus();
+              }
+            });
+        }
+      }
+    }
+  });
 })();

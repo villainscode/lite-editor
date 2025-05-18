@@ -471,9 +471,10 @@
           let listElementDirect = null;
           try {
             if (container.nodeType === Node.ELEMENT_NODE) {
-              listElementDirect = container.closest('ul, ol');
+              // data-lite-editor-bullet 속성을 가진 요소도 검색
+              listElementDirect = container.closest('ul[data-lite-editor-bullet], ol, ul');
             } else if (container.nodeType === Node.TEXT_NODE && container.parentNode) {
-              listElementDirect = container.parentNode.closest('ul, ol');
+              listElementDirect = container.parentNode.closest('ul[data-lite-editor-bullet], ol, ul');
             }
           } catch (e) {
             log('closest 메소드 호출 오류', e);
@@ -627,49 +628,51 @@
           if (isSpecialStructure) {
             log('특수 구조(리스트/코드) 감지됨 - 직접 처리 적용');
             
-            // 텍스트 기반 검색으로 커서 복원
+            // 시간 지연 증가
             setTimeout(() => {
-              contentArea.focus();
-              if (originalTextContent && originalTextContent.trim()) {
-                // 텍스트 내용을 기반으로 검색해서 선택
-                const cleanText = originalTextContent.replace(/\s+/g, ' ').trim();
-                const textNodes = findTextNodesWithContent(contentArea, cleanText);
+              // 데이터 속성으로 bulletList 찾기
+              const bulletLists = contentArea.querySelectorAll('ul[data-lite-editor-bullet="true"]');
+              if (bulletLists.length > 0) {
+                log('불릿 리스트 발견 - 직접 변환');
                 
-                if (textNodes.length > 0) {
-                  const textNode = textNodes[0];
-                  // p 요소 생성 - 결과 표시용
+                // 선택 영역과 겹치는 리스트 아이템만 추출
+                const listText = [];
+                bulletLists.forEach(list => {
+                  if (range.intersectsNode(list)) {
+                    const items = Array.from(list.querySelectorAll('li'));
+                    items.forEach(item => {
+                      if (range.intersectsNode(item)) {
+                        listText.push(item.textContent.trim());
+                      }
+                    });
+                  }
+                });
+                
+                // 새 p 태그 생성 및 텍스트 삽입
+                if (listText.length > 0) {
                   const p = document.createElement('p');
                   p.style.whiteSpace = 'pre-wrap';
-                  p.textContent = originalTextContent;
+                  p.textContent = listText.join('\n');
                   
-                  // 부모가 이미 <p>인지 확인
-                  if (textNode.parentNode.nodeName !== 'P') {
-                    // 텍스트 노드를 p로 감싸기
-                    textNode.parentNode.replaceChild(p, textNode);
-                  } else {
-                    // 이미 p라면 스타일만 적용
-                    textNode.parentNode.style.whiteSpace = 'pre-wrap';
-                  }
-                  
-                  // 새 요소 선택
-                  const range = document.createRange();
-                  range.selectNodeContents(p);
-                  const selection = window.getSelection();
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                  
-                  log('▶▶▶ 최종 결과물 ◀◀◀', {
-                    HTML: p.innerHTML,
-                    텍스트: p.textContent
+                  // 리스트 제거 후 p 태그 삽입
+                  bulletLists.forEach(list => {
+                    if (range.intersectsNode(list)) {
+                      list.parentNode.replaceChild(p, list);
+                    }
                   });
-                } else {
-                  // 검색 실패시 일반 선택 복원
-                  restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
+                  
+                  // p 태그 선택
+                  const newRange = document.createRange();
+                  newRange.selectNodeContents(p);
+                  selection.removeAllRanges();
+                  selection.addRange(newRange);
+                  return true;
                 }
-              } else {
-                restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
               }
-            }, 10);
+              
+              // 기존 로직 실행 (백업)
+              restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
+            }, 50); // 시간 증가
           } else {
             // 마커 기반 처리 방식
             

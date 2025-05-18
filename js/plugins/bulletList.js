@@ -4,7 +4,7 @@
  * - 규칙: 011-numberlist-bulletlist-rule-agent.mdc
  */
 (function() {
-  // 플러그인 등록 - PluginUtil 활용
+  // 플러그인 등록 - 선택 영역 정확히 유지하도록 수정
   PluginUtil.registerPlugin('unorderedList', {
     title: 'Bullet List',
     icon: 'format_list_bulleted',
@@ -14,28 +14,83 @@
         event.stopPropagation();
       }
       
-      // 에디터 영역에 포커스
+      // 에디터에 포커스 설정
       contentArea.focus();
       
-      // 현재 선택 영역 가져오기
+      // 현재 선택 영역 저장
       const selection = PluginUtil.selection.getSafeSelection();
       if (!selection || !selection.rangeCount) return;
       
       const range = selection.getRangeAt(0);
       
-      // 선택 영역이 이미 리스트 내부인지 확인
-      const container = range.commonAncestorContainer;
-      const listItem = container.nodeType === Node.TEXT_NODE ? 
-                      container.parentNode.closest('li') : 
-                      container.closest('li');
+      // 선택 영역의 시작/끝 지점 표시
+      const startMarker = document.createElement('span');
+      startMarker.setAttribute('data-selection-start', 'true');
+      startMarker.style.display = 'inline';
+      startMarker.innerHTML = '\u200B'; // 제로 너비 공백
       
-      if (listItem && listItem.parentNode.nodeName === 'UL') {
-        // 리스트 제거 (토글)
-        unwrapBulletList(listItem.closest('ul'), range);
-      } else {
-        // 새 리스트 생성
-        createBulletList(contentArea, range);
-      }
+      const endMarker = document.createElement('span');
+      endMarker.setAttribute('data-selection-end', 'true');
+      endMarker.style.display = 'inline';
+      endMarker.innerHTML = '\u200B'; // 제로 너비 공백
+      
+      // 범위 복제하여 마커 삽입
+      const clonedRange = range.cloneRange();
+      
+      // 끝 마커 먼저 삽입 (중요!)
+      clonedRange.collapse(false); // 끝으로 이동
+      clonedRange.insertNode(endMarker);
+      
+      // 시작 마커 삽입
+      clonedRange.setStart(range.startContainer, range.startOffset);
+      clonedRange.collapse(true); // 시작으로 이동
+      clonedRange.insertNode(startMarker);
+      
+      // 브라우저 내장 명령어로 불릿 리스트 토글
+      document.execCommand('insertUnorderedList', false, null);
+      
+      // 생성된 UL에 스타일 적용하고 선택 영역 복원
+      setTimeout(() => {
+        try {
+          // 모든 UL 요소에 스타일 적용
+          contentArea.querySelectorAll('ul').forEach(ul => {
+            ul.setAttribute('data-lite-editor-bullet', 'true');
+            applyStyleToSingleUl(ul);
+          });
+          
+          // 마커 찾기
+          const start = contentArea.querySelector('[data-selection-start]');
+          const end = contentArea.querySelector('[data-selection-end]');
+          
+          if (start && end) {
+            // 원래 선택 영역 복원
+            const newRange = document.createRange();
+            
+            // startMarker의 바로 뒤에서 시작
+            newRange.setStartAfter(start);
+            
+            // endMarker의 바로 앞에서 끝
+            newRange.setEndBefore(end);
+            
+            // 선택 영역 적용
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // 마커 제거
+            start.parentNode.removeChild(start);
+            end.parentNode.removeChild(end);
+          }
+        } catch(e) {
+          console.error('Error during list selection restore:', e);
+          // 오류 발생 시 모든 마커 제거
+          contentArea.querySelectorAll('[data-selection-start], [data-selection-end]').forEach(el => {
+            el.parentNode.removeChild(el);
+          });
+        }
+        
+        // 에디터에 다시 포커스
+        contentArea.focus();
+      }, 50);
     }
   });
   
@@ -101,69 +156,6 @@
     PluginUtil.selection.restoreSelectionByMarker(contentArea, 'ul[data-selection-marker="true"]', 100);
     
     return ul;
-  }
-  
-  /**
-   * 불릿 리스트 제거 (토글)
-   */
-  function unwrapBulletList(ul, range) {
-    if (!ul || ul.nodeName !== 'UL') return;
-    
-    // 선택 영역 정보 저장 (복원을 위한 준비)
-    const contentArea = ul.closest('[contenteditable="true"]');
-    
-    // 리스트 아이템들을 일반 텍스트로 변환
-    const fragment = document.createDocumentFragment();
-    const items = Array.from(ul.children);
-    
-    // 변환할 위치에 임시 마커 생성 (위치 참조용)
-    const marker = document.createElement('span');
-    marker.setAttribute('data-unwrap-marker', 'true');
-    ul.parentNode.insertBefore(marker, ul);
-    
-    items.forEach(item => {
-      if (item.nodeName === 'LI') {
-        // LI 콘텐츠를 일반 텍스트로 변환
-        const p = document.createElement('p');
-        p.innerHTML = item.innerHTML;
-        fragment.appendChild(p);
-      }
-    });
-    
-    // 리스트 대체
-    ul.parentNode.insertBefore(fragment, ul);
-    ul.parentNode.removeChild(ul);
-    
-    // 선택 영역 복원 (마커 기반)
-    setTimeout(() => {
-      const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
-      const paragraphs = [];
-      
-      if (marker) {
-        // 마커 다음에 있는 모든 p 태그 수집
-        let nextSibling = marker.nextSibling;
-        while (nextSibling && nextSibling.nodeName === 'P' && paragraphs.length < items.length) {
-          paragraphs.push(nextSibling);
-          nextSibling = nextSibling.nextSibling;
-        }
-        
-        // 마커 제거
-        marker.parentNode.removeChild(marker);
-        
-        if (paragraphs.length > 0) {
-          // 모든 변환된 단락을 선택
-          const range = document.createRange();
-          range.setStartBefore(paragraphs[0]);
-          range.setEndAfter(paragraphs[paragraphs.length - 1]);
-          
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          contentArea.focus();
-        }
-      }
-    }, 10);
   }
   
   /**
@@ -480,4 +472,26 @@
   
   // Tab 키 이벤트 리스너 등록 (캡처링 단계에서 처리)
   document.addEventListener('keydown', handleTabKey, true);
+
+  // Bullet List 단축키 (Alt+U)
+  LiteEditor.registerShortcut('unorderedList', {
+    key: 'u',
+    alt: true,
+    action: function(contentArea) {
+      // 에디터에 포커스 설정
+      contentArea.focus();
+      
+      // 브라우저 내장 명령어로 불릿 리스트 토글
+      document.execCommand('insertUnorderedList', false, null);
+      
+      // 생성된 UL에 스타일 적용
+      setTimeout(() => {
+        // 모든 UL 요소에 스타일 적용
+        contentArea.querySelectorAll('ul').forEach(ul => {
+          ul.setAttribute('data-lite-editor-bullet', 'true');
+          applyStyleToSingleUl(ul);
+        });
+      }, 0);
+    }
+  });
 })();

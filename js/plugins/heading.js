@@ -307,4 +307,146 @@
       return headingButton;
     }
   });
+
+  // 단축키로 사용할 헤딩 적용 함수
+  function applyHeadingByShortcut(tag, contentArea) {
+    // 현재 스크롤 위치 저장
+    const currentScrollY = window.scrollY;
+    
+    // 선택 영역 저장
+    saveSelection();
+    
+    // 에디터에 포커스
+    try {
+      contentArea.focus({ preventScroll: true });
+    } catch (e) {
+      contentArea.focus();
+    }
+    
+    // 선택 영역 복원
+    restoreSelection();
+    
+    // Range API를 사용한 heading 적용
+    const selection = util.selection.getSafeSelection();
+    if (selection && selection.rangeCount > 0) {
+      // 선택한 영역의 범위 가져오기
+      const range = selection.getRangeAt(0);
+      let container = range.commonAncestorContainer;
+      
+      // 텍스트 노드인 경우 부모 노드 확인
+      if (container.nodeType === 3) {
+        container = container.parentNode;
+      }
+      
+      // 헤딩 또는 단락 태그 가져오기
+      let headingElement = null;
+      
+      // 현재 요소가 헤딩 또는 단락 태그인지 확인
+      if (container.nodeName === 'H1' || container.nodeName === 'H2' || 
+          container.nodeName === 'H3' || container.nodeName === 'P') {
+        headingElement = container;
+      } else {
+        // 부모 요소 중에서 헤딩 태그 찾기
+        const closestH1 = container.closest('h1');
+        const closestH2 = container.closest('h2');
+        const closestH3 = container.closest('h3');
+        const closestP = container.closest('p');
+        
+        if (closestH1) headingElement = closestH1;
+        else if (closestH2) headingElement = closestH2;
+        else if (closestH3) headingElement = closestH3;
+        else if (closestP) headingElement = closestP;
+      }
+      
+      // 기존 헤딩 태그가 있는 경우 처리
+      if (headingElement) {
+        // 현재 태그와 동일한 태그를 적용하려는 경우 (토글)
+        if (headingElement.nodeName.toLowerCase() === tag) {
+          // 기본 단락(p)으로 변환
+          const content = headingElement.innerHTML;
+          const p = document.createElement('P');
+          p.innerHTML = content;
+          
+          // 기존 헤딩 태그를 새 p 태그로 교체
+          headingElement.parentNode.replaceChild(p, headingElement);
+          
+          // 선택 영역 재설정
+          const newRange = document.createRange();
+          newRange.selectNodeContents(p);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } else {
+          // 현재 헤딩 태그의 내용을 가져와서 새 헤딩 태그로 변경
+          const content = headingElement.innerHTML;
+          const newHeading = document.createElement(tag.toUpperCase());
+          newHeading.innerHTML = content;
+          
+          // 기존 헤딩 태그를 새 헤딩 태그로 교체
+          headingElement.parentNode.replaceChild(newHeading, headingElement);
+          
+          // 선택 영역 재설정
+          const newRange = document.createRange();
+          newRange.selectNodeContents(newHeading);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+      } else {
+        // 새 태그 요소 생성
+        const heading = document.createElement(tag.toUpperCase());
+        
+        // 선택한 내용을 사용하여 새 요소에 추가
+        heading.appendChild(range.extractContents());
+        
+        // 새 요소를 DOM에 삽입
+        range.insertNode(heading);
+      }
+      
+      // 에디터 상태 업데이트
+      contentArea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // 스크롤 위치 복원
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.scrollTo(window.scrollX, currentScrollY);
+      }, 50);
+    });
+  }
+  
+  // 단순한 Alt 키 조합으로 변경
+  // H1 (Alt+1)
+  LiteEditor.registerShortcut('heading', {
+    key: '1',
+    alt: true,
+    action: function(contentArea) {
+      applyHeadingByShortcut('h1', contentArea);
+    }
+  });
+  
+  // H2 (Alt+2)
+  LiteEditor.registerShortcut('heading', {
+    key: '2',
+    alt: true,
+    action: function(contentArea) {
+      applyHeadingByShortcut('h2', contentArea);
+    }
+  });
+  
+  // H3 (Alt+3)
+  LiteEditor.registerShortcut('heading', {
+    key: '3',
+    alt: true,
+    action: function(contentArea) {
+      applyHeadingByShortcut('h3', contentArea);
+    }
+  });
+  
+  // Paragraph (Alt+4)
+  LiteEditor.registerShortcut('heading', {
+    key: '4',
+    alt: true,
+    action: function(contentArea) {
+      applyHeadingByShortcut('p', contentArea);
+    }
+  });
 })();

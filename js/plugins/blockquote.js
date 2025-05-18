@@ -91,4 +91,13 @@
       return button;
     }
   });
+
+  // Blockquote 단축키 (Alt+Q)
+  LiteEditor.registerShortcut('blockquote', {
+    key: 'q',
+    alt: true,
+    action: function(contentArea) {
+      document.execCommand('formatBlock', false, 'blockquote');
+    }
+  });
 })();

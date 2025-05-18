@@ -9,4 +9,13 @@
    * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
   PluginUtil.registerInlineFormatPlugin('strike', 'Strikethrough', 'strikethrough_s', 'strikeThrough');
+
+  // 더 단순한 단축키 조합 (Alt+S)
+  LiteEditor.registerShortcut('strike', {
+    key: 's',
+    alt: true,
+    action: function(contentArea) {
+      document.execCommand('strikeThrough', false, null);
+    }
+  });
 })();

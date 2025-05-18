@@ -5,7 +5,7 @@
  */
 
 (function() {
-  // 플러그인 등록 - PluginUtil 활용
+  // 플러그인 등록 - 선택 영역 유지 및 토글 기능 개선
   PluginUtil.registerPlugin('orderedList', {
     title: 'Numbered List',
     icon: 'format_list_numbered',
@@ -15,232 +15,85 @@
         event.stopPropagation();
       }
       
-      // 선택 영역 정보 저장
-      const selection = PluginUtil.selection.getSafeSelection();
-      if (!selection || !selection.rangeCount) return;
-      const range = selection.getRangeAt(0);
-      
-      // 에디터 영역에 포커스
+      // 에디터에 포커스 설정
       contentArea.focus();
       
-      // 현재 선택된 영역이 이미 OL인지 확인
-      const existingOl = findOlBySelection(contentArea);
-      
-      if (existingOl) {
-        // 이미 OL이면 일반 텍스트로 변환 (토글)
-        unwrapNumberedList(existingOl, range);
-      } else {
-        // OL이 아니면 새로 생성
-        createNumberedList(contentArea, range);
-      }
-    }
-  });
-  
-  /**
-   * 새로운 순서있는 리스트 생성 (직접 DOM 조작)
-   */
-  function createNumberedList(contentArea, range) {
-    if (!range) {
+      // 선택 영역의 시작/끝 지점 표시
       const selection = PluginUtil.selection.getSafeSelection();
       if (!selection || !selection.rangeCount) return;
-      range = selection.getRangeAt(0);
-    }
-    
-    // 선택 영역의 원본 텍스트 확인 (끝부분 공백 제거를 위해)
-    const originalText = range.toString();
-    if (originalText.match(/[\s\n\r]+$/)) {
-      try {
-        // 선택된 텍스트 끝에서 공백과 줄바꿈 수 계산
-        const match = originalText.match(/[\s\n\r]+$/);
-        const extraLength = match ? match[0].length : 0;
-        
-        if (extraLength > 0) {
-          // 원본 range의 끝점 조정
-          const endContainer = range.endContainer;
-          const endOffset = range.endOffset;
+      
+      const range = selection.getRangeAt(0);
+      
+      // 선택 영역의 시작/끝 지점 표시
+      const startMarker = document.createElement('span');
+      startMarker.setAttribute('data-selection-start', 'true');
+      startMarker.style.display = 'inline';
+      startMarker.innerHTML = '\u200B'; // 제로 너비 공백
+      
+      const endMarker = document.createElement('span');
+      endMarker.setAttribute('data-selection-end', 'true');
+      endMarker.style.display = 'inline';
+      endMarker.innerHTML = '\u200B'; // 제로 너비 공백
+      
+      // 범위 복제하여 마커 삽입
+      const clonedRange = range.cloneRange();
+      
+      // 끝 마커 먼저 삽입
+      clonedRange.collapse(false); // 끝으로 이동
+      clonedRange.insertNode(endMarker);
+      
+      // 시작 마커 삽입
+      clonedRange.setStart(range.startContainer, range.startOffset);
+      clonedRange.collapse(true); // 시작으로 이동
+      clonedRange.insertNode(startMarker);
+      
+      // 브라우저 내장 명령어로 순서있는 리스트 토글
+      document.execCommand('insertOrderedList', false, null);
+      
+      // 생성된 OL에 스타일 적용하고 선택 영역 복원
+      setTimeout(() => {
+        try {
+          // 모든 OL 요소에 스타일 적용
+          contentArea.querySelectorAll('ol').forEach(ol => {
+            ol.setAttribute('data-lite-editor-numbered', 'true');
+            applyStyleByDepth(ol, getOlDepth(ol));
+          });
           
-          // 텍스트 노드인 경우만 조정
-          if (endContainer.nodeType === Node.TEXT_NODE) {
-            range.setEnd(endContainer, Math.max(0, endOffset - extraLength));
+          // 마커 찾기
+          const start = contentArea.querySelector('[data-selection-start]');
+          const end = contentArea.querySelector('[data-selection-end]');
+          
+          if (start && end) {
+            // 원래 선택 영역 복원
+            const newRange = document.createRange();
+            
+            // startMarker의 바로 뒤에서 시작
+            newRange.setStartAfter(start);
+            
+            // endMarker의 바로 앞에서 끝
+            newRange.setEndBefore(end);
+            
+            // 선택 영역 적용
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // 마커 제거
+            start.parentNode.removeChild(start);
+            end.parentNode.removeChild(end);
           }
-        }
-      } catch (e) {
-        console.log('Range 조정 중 오류:', e);
-      }
-    }
-    
-    // 선택 영역의 오프셋 저장 (복원을 위해)
-    const offsets = PluginUtil.selection.calculateOffsets(contentArea);
-    
-    // 선택 영역의 콘텐츠 추출
-    const fragment = range.extractContents();
-    
-    // 새 OL 요소 생성
-    const ol = document.createElement('ol');
-    ol.className = 'number-depth-1'; // 기본 깊이 클래스
-    ol.setAttribute('data-lite-editor-numbered', 'true'); // 고유 식별자 추가
-    ol.setAttribute('data-selection-marker', 'true'); // 선택 영역 복원을 위한 마커
-    
-    // 선택 영역의 텍스트 줄을 LI로 변환
-    const tempDiv = document.createElement('div');
-    tempDiv.appendChild(fragment);
-    
-    // 텍스트 줄 분리
-    let content = tempDiv.innerHTML;
-    
-    // div, p 태그를 줄바꿈으로 처리
-    content = content.replace(/<\/(div|p)>/gi, '<br>');
-    content = content.replace(/<(div|p)[^>]*>/gi, '');
-    
-    // 마지막 불필요한 줄바꿈 제거
-    content = content.replace(/(<br\s*\/?>)+$/, '');
-    content = content.replace(/[\s\n\r]+$/, ''); // 추가: 모든 종류의 공백 제거
-    
-    const lines = content.split(/<br\s*\/?>/i);
-    
-    // 빈 줄 제거 및 각 줄을 LI로 변환
-    const nonEmptyLines = lines.filter(line => line.trim());
-    
-    if (nonEmptyLines.length === 0) {
-      // 선택된 텍스트가 없는 경우 빈 리스트 아이템 생성
-      const li = document.createElement('li');
-      li.innerHTML = '&nbsp;'; // 빈 리스트 아이템에 공백 추가
-      ol.appendChild(li);
-    } else {
-      nonEmptyLines.forEach(line => {
-        const li = document.createElement('li');
-        li.innerHTML = line.trim() || '&nbsp;';
-        ol.appendChild(li);
-      });
-    }
-    
-    // 생성된 OL을 선택 위치에 삽입
-    range.insertNode(ol);
-    
-    // 리스트 스타일 적용
-    applyNumberedStyles(ol);
-    
-    // 새로운 방식으로 선택 영역 복원
-    PluginUtil.selection.restoreSelectionByMarker(contentArea, 'ol[data-selection-marker="true"]', 100);
-    
-    return ol;
-  }
-  
-  /**
-   * 순서있는 리스트 토글 (일반 텍스트로 변환)
-   */
-  function unwrapNumberedList(ol, range) {
-    if (!ol || ol.nodeName !== 'OL') return;
-    
-    // 선택 영역 정보 저장 (복원을 위한 준비)
-    const contentArea = ol.closest('[contenteditable="true"]');
-    
-    // 선택 영역의 오프셋 저장
-    const offsets = contentArea ? PluginUtil.selection.calculateOffsets(contentArea) : null;
-    
-    // 변환할 위치에 임시 마커 생성
-    const marker = document.createElement('span');
-    marker.setAttribute('data-unwrap-marker', 'true');
-    ol.parentNode.insertBefore(marker, ol);
-    
-    // 리스트 아이템 가져오기
-    const items = Array.from(ol.children);
-    const fragment = document.createDocumentFragment();
-    
-    // 각 LI를 일반 텍스트(p)로 변환
-    items.forEach(item => {
-      if (item.nodeName === 'LI') {
-        const p = document.createElement('p');
-        // 리스트 내용 복사 전 불필요한 공백 처리
-        p.innerHTML = item.innerHTML.trim() || '&nbsp;';
-        fragment.appendChild(p);
-      }
-    });
-    
-    // 원래 OL 위치에 삽입
-    ol.parentNode.insertBefore(fragment, ol);
-    ol.parentNode.removeChild(ol);
-    
-    // 선택 영역 복원 (마커 기반)
-    setTimeout(() => {
-      if (!contentArea) return;
-      
-      const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
-      const paragraphs = [];
-      
-      if (marker) {
-        // 마커 다음에 있는 모든 p 태그 수집
-        let nextSibling = marker.nextSibling;
-        while (nextSibling && nextSibling.nodeName === 'P' && paragraphs.length < items.length) {
-          paragraphs.push(nextSibling);
-          nextSibling = nextSibling.nextSibling;
+        } catch(e) {
+          console.error('Error during list selection restore:', e);
+          // 오류 발생 시 모든 마커 제거
+          contentArea.querySelectorAll('[data-selection-start], [data-selection-end]').forEach(el => {
+            el.parentNode.removeChild(el);
+          });
         }
         
-        // 마커 제거
-        marker.parentNode.removeChild(marker);
-        
-        if (paragraphs.length > 0) {
-          // 모든 변환된 단락을 선택
-          const range = document.createRange();
-          range.setStartBefore(paragraphs[0]);
-          range.setEndAfter(paragraphs[paragraphs.length - 1]);
-          
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          contentArea.focus({ preventScroll: true }); // 추가: 스크롤 방지 옵션 추가
-        } else if (offsets) {
-          // 복원 실패 시 오프셋 기반 복원
-          PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-          contentArea.focus({ preventScroll: true });
-        }
-      } else if (offsets) {
-        // 마커를 찾지 못한 경우 오프셋 기반 복원
-        PluginUtil.selection.restoreFromOffsets(contentArea, offsets);
-        contentArea.focus({ preventScroll: true });
-      }
-    }, 10);
-  }
-  
-  /**
-   * 선택된 요소의 깊이를 기반으로 적절한 OL 요소를 찾는 함수
-   */
-  function findOlBySelection(contentArea) {
-    const selection = PluginUtil.selection.getSafeSelection();
-    if (!selection || !selection.rangeCount) return null;
-    
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    
-    // 컨테이너가 직접 OL인 경우
-    if (container.nodeName === 'OL') {
-      return container;
+        // 에디터에 다시 포커스
+        contentArea.focus();
+      }, 50);
     }
-    
-    // 부모 중 OL 찾기
-    let parent = container;
-    while (parent && parent !== contentArea) {
-      if (parent.nodeName === 'OL') {
-        return parent;
-      }
-      if (parent.nodeName === 'LI' && parent.parentNode && parent.parentNode.nodeName === 'OL') {
-        return parent.parentNode;
-      }
-      parent = parent.parentNode;
-    }
-    
-    // 선택된 LI의 부모 OL 찾기
-    const closestLi = container.nodeType === Node.TEXT_NODE ? 
-                      container.parentNode.closest('li') : 
-                      container.closest('li');
-    
-    if (closestLi) {
-      return closestLi.closest('ol');
-    }
-    
-    return null;
-  }
+  });
   
   /**
    * OL 요소의 중첩 깊이를 계산하는 함수
@@ -517,4 +370,26 @@
   
   // Tab 키 이벤트 리스너 등록 (캡처링 단계에서 처리)
   document.addEventListener('keydown', handleTabKey, true);
+
+  // Numbered List 단축키 (Alt+O)
+  LiteEditor.registerShortcut('orderedList', {
+    key: 'o',
+    alt: true,
+    action: function(contentArea) {
+      // 에디터에 포커스 설정
+      contentArea.focus();
+      
+      // 브라우저 내장 명령어로 순서있는 리스트 토글
+      document.execCommand('insertOrderedList', false, null);
+      
+      // 생성된 OL에 스타일 적용
+      setTimeout(() => {
+        // 모든 OL 요소에 스타일 적용
+        contentArea.querySelectorAll('ol').forEach(ol => {
+          ol.setAttribute('data-lite-editor-numbered', 'true');
+          applyStyleByDepth(ol, getOlDepth(ol));
+        });
+      }, 0);
+    }
+  });
 })();
