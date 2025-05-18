@@ -19,7 +19,6 @@
     let savedRange = null;          // 임시로 저장된 선택 영역
     let isModalOpen = false;        // 모달 열림 상태
     let imageModal = null;          // 현재 열린 모달 참조
-    let draggedImage = null;
 
     /**
      * 선택 영역 저장
@@ -147,14 +146,12 @@
             container.appendChild(img);
             container.appendChild(resizeHandle);
             
-            // 컨테이너를 p 태그로 감싸기
-            const containerWrapper = document.createElement('p');
-            containerWrapper.appendChild(container);
-            range.insertNode(containerWrapper);
+            // 5. 컨테이너 삽입 (앵커 뒤에 삽입됨)
+            range.insertNode(container);
             
             // 6. 컨테이너 뒤에 줄바꿈 추가
             const br = document.createElement('br');
-            containerWrapper.parentNode.insertBefore(br, containerWrapper.nextSibling);
+            container.parentNode.insertBefore(br, container.nextSibling);
             
             // 7. 커서 위치 조정 (줄바꿈 뒤로)
             util.selection.moveCursorTo(br.nextSibling || br, 0);
@@ -201,8 +198,6 @@
             
             // 11. 선택 영역 초기화
             clearSelection();
-            
-            container.setAttribute('data-selectable', 'true'); // 선택 가능 속성 추가
         };
         
         // 이미지 로드 시작
@@ -246,8 +241,6 @@
             
             // 선택 영역 초기화
             clearSelection();
-            
-            container.setAttribute('data-selectable', 'true'); // 선택 가능 속성 추가
         };
     }
 
@@ -711,304 +704,6 @@
             }
         `;
         util.styles.addInlineStyle('imageModalHoverStyles', hoverStyles);
-
-        // 호버 효과 인라인 스타일 추가 다음에 추가
-        const imageSelectionStyles = `
-            .image-wrapper {
-                transition: outline 0.2s ease, box-shadow 0.2s ease;
-                cursor: pointer;
-                position: relative;
-            }
-            
-            .image-wrapper:hover {
-                outline: 1px solid rgba(66, 133, 244, 0.3);
-            }
-            
-            .image-wrapper[data-selected="true"] {
-                outline: 2px solid #4285f4;
-                box-shadow: 0 0 5px rgba(66, 133, 244, 0.5);
-            }
-            
-            .image-wrapper[data-selected="true"]::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: rgba(66, 133, 244, 0.1);
-                pointer-events: none;
-                z-index: 1;
-            }
-            
-            /* 정렬 스타일 */
-            .image-wrapper.align-left {
-                float: left;
-                margin: 0 1em 0.5em 0;
-            }
-            
-            .image-wrapper.align-center {
-                float: none;
-                display: block;
-                margin: 0.5em auto;
-            }
-            
-            .image-wrapper.align-right {
-                float: right;
-                margin: 0 0 0.5em 1em;
-            }
-            
-            .image-wrapper.align-full {
-                float: none;
-                display: block;
-                margin: 0.5em 0;
-                width: 100%;
-            }
-
-            /* 드래그 중인 이미지 스타일 */
-            .image-wrapper.dragging {
-                opacity: 0.6;
-                outline: 2px dashed #4285f4;
-            }
-        `;
-
-        util.styles.addInlineStyle('imageSelectionStyles', imageSelectionStyles);
-    }
-
-    /**
-     * 가장 가까운 요소 찾기
-     */
-    function findClosestElement(element, selector) {
-        while (element && element.nodeType === 1) {
-            if (element.matches(selector)) {
-                return element;
-            }
-            element = element.parentElement;
-        }
-        return null;
-    }
-
-    /**
-     * 이미지 선택 기능 초기화
-     */
-    function initImageSelection() {
-        const editor = document.querySelector('#lite-editor');
-        if (!editor) {
-            console.error('ImageUploadPlugin: 에디터를 찾을 수 없습니다.');
-            return;
-        }
-        
-        // 에디터 클릭 이벤트 위임 처리
-        editor.addEventListener('click', (event) => {
-            // 이미지 컨테이너 찾기
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper[data-selectable="true"]');
-            
-            // 기존 선택된 이미지 찾기
-            const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
-            
-            // 이미지 외부 클릭 시 선택 해제
-            if (!imageWrapper) {
-                if (prevSelected) {
-                    prevSelected.removeAttribute('data-selected');
-                }
-                return;
-            }
-            
-            // 리사이즈 핸들 클릭은 무시 (리사이징 동작 유지)
-            if (event.target.classList.contains('image-resize-handle')) {
-                return;
-            }
-            
-            // 기존 선택된 이미지가 현재와 다르면 선택 해제
-            if (prevSelected && prevSelected !== imageWrapper) {
-                prevSelected.removeAttribute('data-selected');
-            }
-            
-            // 현재 이미지 선택
-            imageWrapper.setAttribute('data-selected', 'true');
-            
-            // 이미지 선택 시 에디터에 포커스 유지
-            editor.focus({ preventScroll: true });
-            
-            // 이벤트 기본 동작 및 버블링 방지
-            event.preventDefault();
-            event.stopPropagation();
-        });
-
-        // 키보드 이벤트 처리 (방향키, 삭제 등)
-        editor.addEventListener('keydown', (event) => {
-            // 방향키로 이동 시 이미지 선택 해제
-            if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || 
-                event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                // 선택된 이미지 찾기
-                const selectedImg = editor.querySelector('.image-wrapper[data-selected="true"]');
-                if (selectedImg) {
-                    // 선택 해제
-                    selectedImg.removeAttribute('data-selected');
-                }
-                return; // 방향키 기본 동작 유지
-            }
-            
-            // 삭제 키 처리 (Delete/Backspace)
-            if ((event.key === 'Delete' || event.key === 'Backspace')) {
-                // 선택된 이미지 찾기
-                const selectedImg = editor.querySelector('.image-wrapper[data-selected="true"]');
-                if (selectedImg) {
-                    event.preventDefault();
-                    
-                    // 커서 위치 설정
-                    const range = document.createRange();
-                    range.setStartBefore(selectedImg);
-                    range.collapse(true);
-                    
-                    // 이미지 제거
-                    selectedImg.remove();
-                    
-                    // 커서 위치 설정
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    
-                    // 에디터 변경 이벤트 발생
-                    const inputEvent = new Event('input', { bubbles: true });
-                    editor.dispatchEvent(inputEvent);
-                }
-            }
-        });
-
-        // align.js와 연동 (전역 함수로 선택된 이미지에 정렬 적용)
-        if (!window.LiteImageHandlers) {
-            window.LiteImageHandlers = {};
-        }
-
-        // 이미지 정렬 함수 (align.js에서 호출)
-        window.LiteImageHandlers.alignSelectedImage = function(alignType) {
-            const selectedImg = editor.querySelector('.image-wrapper[data-selected="true"]');
-            if (!selectedImg) return false;
-            
-            // 부모 p 태그 찾기 또는 생성
-            let parentP = selectedImg.parentElement;
-            if (parentP.tagName !== 'P') {
-                // 부모가 P가 아니면 P로 감싸기
-                parentP = document.createElement('p');
-                selectedImg.parentNode.insertBefore(parentP, selectedImg);
-                parentP.appendChild(selectedImg);
-            }
-            
-            // 부모 P 태그에 텍스트 정렬 적용
-            parentP.style.textAlign = alignType;
-            
-            // 에디터 변경 이벤트 발생
-            const inputEvent = new Event('input', { bubbles: true });
-            editor.dispatchEvent(inputEvent);
-            
-            return true;
-        };
-
-        // 현재 선택된 이미지 확인 함수 (align.js에서 호출)
-        window.LiteImageHandlers.hasSelectedImage = function() {
-            return !!editor.querySelector('.image-wrapper[data-selected="true"]');
-        };
-
-        // 이미지 드래그&드롭 기능 구현
-        let draggedImage = null;
-
-        // 드래그 시작 시 처리
-        editor.addEventListener('dragstart', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
-            if (imageWrapper) {
-                // 원본 이미지 참조 저장
-                draggedImage = imageWrapper;
-                
-                // 선택된 이미지로 표시 (옵션)
-                const prevSelected = editor.querySelector('.image-wrapper[data-selected="true"]');
-                if (prevSelected && prevSelected !== imageWrapper) {
-                    prevSelected.removeAttribute('data-selected');
-                }
-                imageWrapper.setAttribute('data-selected', 'true');
-                imageWrapper.classList.add('dragging'); // 드래그 중 클래스 추가
-                
-                // 드래그 이미지 설정 (시각적 피드백용)
-                try {
-                    const img = imageWrapper.querySelector('img');
-                    if (img) {
-                        event.dataTransfer.setDragImage(img, 10, 10);
-                    }
-                } catch (e) {
-                    // setDragImage 실패해도 계속 진행
-                }
-                
-                // 드래그 효과 설정
-                event.dataTransfer.effectAllowed = 'move';
-            }
-        });
-
-        // 드래그 오버 시 드롭 허용
-        editor.addEventListener('dragover', (event) => {
-            if (draggedImage) {
-                event.preventDefault(); // 드롭 허용 (이 부분은 필수, 제거하면 드롭이 안됨)
-            }
-        });
-
-        // 드롭 처리
-        editor.addEventListener('drop', (event) => {
-            if (draggedImage) {
-                event.preventDefault(); // 기본 동작 방지
-                event.stopPropagation();
-                
-                // 드래그 클래스 제거
-                draggedImage.classList.remove('dragging');
-                
-                // 드롭 위치에 Range 생성
-                let range;
-                
-                if (document.caretRangeFromPoint) {
-                    // 표준 방식 (Chrome, Safari, Edge)
-                    range = document.caretRangeFromPoint(event.clientX, event.clientY);
-                } else if (document.caretPositionFromPoint) {
-                    // Firefox 방식
-                    const position = document.caretPositionFromPoint(event.clientX, event.clientY);
-                    range = document.createRange();
-                    range.setStart(position.offsetNode, position.offset);
-                    range.collapse(true);
-                }
-                
-                if (range) {
-                    // data-selectable 속성 보존 확인
-                    if (!draggedImage.hasAttribute('data-selectable')) {
-                        draggedImage.setAttribute('data-selectable', 'true');
-                    }
-                    
-                    // 원본 이미지를 새 위치로 이동
-                    range.insertNode(draggedImage);
-                    
-                    // 커서 위치 설정
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    
-                    const newRange = document.createRange();
-                    newRange.setStartAfter(draggedImage);
-                    newRange.collapse(true);
-                    selection.addRange(newRange);
-                    
-                    // 에디터 변경 이벤트 발생
-                    util.editor.dispatchEditorEvent(editor);
-                }
-                
-                // 드래그 작업 완료
-                draggedImage = null;
-            }
-        });
-
-        // 드래그 종료 처리
-        editor.addEventListener('dragend', (event) => {
-            // 드래그 클래스 제거
-            if (draggedImage) {
-                draggedImage.classList.remove('dragging');
-            }
-            
-            draggedImage = null;
-        });
     }
 
     // 플러그인 등록
@@ -1018,9 +713,6 @@
         customRender: (toolbar, contentArea) => {
             // 스타일 로드
             loadStyles();
-            
-            // 이미지 선택 기능 초기화 (지연 실행)
-            setTimeout(initImageSelection, 500);
 
             // 버튼 생성
             const button = util.dom.createElement('button', {

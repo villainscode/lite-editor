@@ -215,7 +215,7 @@ LiteEditor 프로젝트에 기여하는 방법:
 
 ## 라이센스
 
-이 프로젝트는 BSL 라이센스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
+이 프로젝트는 Modified Apache License 2.0 라이센스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
 
 ## 문의
 
