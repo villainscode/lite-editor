@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Numbered List Editor</title>
+  <style>
+    /* 에디터 전체 레이아웃 */
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    /* 툴바 스타일 */
+    #toolbar {
+      background: #f9f9f9;
+      border-bottom: 1px solid #ccc;
+      padding: 8px;
+    }
+    #toolbar button {
+      margin-right: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    /* 에디터 영역 스타일 */
+    #editor {
+      flex: 1;
+      padding: 16px;
+      overflow: auto;
+    }
+    /* 깊이에 따른 리스트 스타일 지정 (3depth까지 고유, 4depth부터 순환) */
+    #editor ol { list-style-type: decimal; }
+    #editor ol ol { list-style-type: lower-alpha; }
+    #editor ol ol ol { list-style-type: lower-roman; }
+    #editor ol ol ol ol { list-style-type: decimal; }
+    /* 단락 기본 여백 */
+    #editor p {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- 툴바: 번호 리스트 토글, 들여쓰기/내어쓰기 버튼 -->
+  <div id="toolbar">
+    <button id="toggle-numbered-list">1. 번호 리스트 토글</button>
+    <button id="indent">들여쓰기 (Tab)</button>
+    <button id="outdent">내어쓰기 (Shift+Tab)</button>
+  </div>
+
+  <!-- contenteditable 영역: 리스트 및 문단 편집 가능 -->
+  <div id="editor" contenteditable="true">
+    <p>첫 번째 단락 예시입니다.</p>
+    <p>두 번째 단락 예시입니다.</p>
+    <p>세 번째 단락 예시입니다.</p>
+  </div>
+
+  <script>
+    // DOM 요소 참조
+    const editor = document.getElementById('editor');
+    const btnToggle = document.getElementById('toggle-numbered-list');
+    const btnIndent = document.getElementById('indent');
+    const btnOutdent = document.getElementById('outdent');
+
+    /**
+     * 1. 번호 리스트 토글: 선택 영역에 ordered list 적용/해제
+     * document.execCommand('insertOrderedList') 사용
+     */
+    btnToggle.addEventListener('click', () => {
+      document.execCommand('insertOrderedList');
+      editor.focus(); // 토글 후 포커스 유지
+    });
+
+    /**
+     * 2. 들여쓰기(Indent)와 내어쓰기(Outdent) 버튼 클릭 처리
+     * document.execCommand('indent'/'outdent') 사용
+     */
+    btnIndent.addEventListener('click', () => {
+      document.execCommand('indent');
+      editor.focus();
+    });
+    btnOutdent.addEventListener('click', () => {
+      document.execCommand('outdent');
+      editor.focus();
+    });
+
+    /**
+     * 3. 키보드 Tab/Shift+Tab 눌렀을 때도 들여쓰기/내어쓰기 처리
+     * preventDefault로 기본 탭 이동 방지
+     */
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          document.execCommand('outdent');
+        } else {
+          document.execCommand('indent');
+        }
+      }
+      // Enter 키: contenteditable의 기본 동작이
+      // - 리스트 아이템에서 Enter: 새 아이템 생성
+      // - 빈 아이템에서 Enter: 리스트 해제 후 새 문단
+      // 이 동작을 그대로 사용
+    });
+
+    /**
+     * 4. 에디터 포커스가 벗어났다가 돌아올 때
+     * 버튼 클릭 등으로 선택 영역이 사라질 수 있으므로
+     * 에디터에 포커스를 다시 주어 선택 유지
+     */
+    editor.addEventListener('blur', () => {
+      setTimeout(() => {
+        editor.focus();
+      }, 0);
+    });
+  </script>
+</body>
+</html>
