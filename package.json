@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest --config=jest.config.js",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "start": "http-server"
   },
   "keywords": [
     "editor",
