@@ -97,12 +97,23 @@
 
 /* 기본 타이포그래피 - 인용구 */
 .lite-editor-content blockquote {
-  margin: 1em 0;
-  padding-left: 5px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  margin : 10px 0;
-  border-left: 3px solid #a8a8a8;
+  /* p-3: padding 0.75rem (12px) */
+  padding: 0.75rem;
+  
+  /* bg-blue-50: 연한 파란색 배경 */
+  background-color: #eff6ff;
+  
+  /* border-l-4: 왼쪽 테두리 4px */
+  border-left-width: 4px;
+  
+  /* border-blue-500: 파란색 테두리 */
+  border-left-color: #3b82f6;
+  
+  /* text-gray-700: 진한 회색 텍스트 */
+  color: #374151;
+  
+  /* mb-4: 하단 마진 1rem (16px) */
+  margin-bottom: 1rem;
 }
 
 /* 기본 타이포그래피 - 코드 블록 */

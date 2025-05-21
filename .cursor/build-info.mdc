@@ -1,0 +1,348 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: LiteEditor CDN 배포 및 빌드 가이드
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# LiteEditor CDN 배포 가이드
+
+이 문서는 LiteEditor를 CDN으로 배포하기 위한 상세 프로세스를 설명합니다.
+
+## 1. 프로젝트 구조 이해
+
+현재 LiteEditor는 다음과 같은 주요 파일들로 구성되어 있습니다:
+
+### 1.1 JavaScript 파일
+- `js/core.js`: 에디터 코어 기능
+- `js/loader.js`: 모든 JS 파일을 로드하는 로더
+- `js/error-handler.js`: 오류 처리 모듈
+- `js/modal.js`: 모달 관련 기능
+- `js/security-manager.js`: 보안 관련 기능
+- `js/data/`: 버전, 폰트, 색상 등의 데이터
+- `js/plugins/`: 다양한 에디터 플러그인들
+
+### 1.2 CSS 파일
+- `css/core.css`: 핵심 스타일
+- `css/loader.css`: CSS 로드 스크립트
+- `css/plugins/`: 플러그인별 스타일
+
+## 2. 빌드 시스템 설정
+
+### 2.1 필요한 패키지 설치
+```bash
+# 필요한 npm 패키지 설치
+npm install webpack webpack-cli mini-css-extract-plugin css-loader terser-webpack-plugin babel-loader @babel/core @babel/preset-env --save-dev
+```
+
+### 2.2 package.json 생성
+```json
+{
+  "name": "lite-editor",
+  "version": "1.0.0",
+  "description": "경량 웹 에디터 라이브러리",
+  "main": "dist/lite-editor.min.js",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.5",
+    "@babel/preset-env": "^7.23.5",
+    "babel-loader": "^9.1.3",
+    "css-loader": "^6.8.1",
+    "mini-css-extract-plugin": "^2.7.6",
+    "terser-webpack-plugin": "^5.3.9",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
+```
+
+### 2.3 webpack.config.js 생성
+```javascript
+const path = require('path');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+
+module.exports = {
+  entry: {
+    'lite-editor': './src/index.js'
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].min.js',
+    library: 'LiteEditor',
+    libraryTarget: 'umd',
+    globalObject: 'this'
+  },
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
+      },
+      {
+        test: /\.css$/,
+        use: [MiniCssExtractPlugin.loader, 'css-loader']
+      }
+    ]
+  },
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: '[name].min.css'
+    })
+  ],
+  optimization: {
+    minimize: true,
+    minimizer: [new TerserPlugin({
+      extractComments: false,
+      terserOptions: {
+        format: {
+          comments: false
+        }
+      }
+    })]
+  }
+};
+```
+
+### 2.4 src/index.js 생성
+```javascript
+// 버전 정보
+import './js/data/version.js';
+
+// 핵심 모듈
+import './js/error-handler.js';
+import './js/core.js';
+import './js/security-manager.js';
+
+// 플러그인 유틸리티
+import './js/plugins/plugin-util.js';
+
+// 유틸리티 및 기본 기능
+import './js/plugins/history.js';
+import './js/plugins/format-utils.js';
+import './js/plugins/reset.js';
+
+// 텍스트 서식 관련 플러그인
+import './js/plugins/bold.js';
+import './js/plugins/italic.js';
+import './js/plugins/underline.js';
+import './js/plugins/strike.js';
+import './js/plugins/code.js';
+import './js/plugins/blockquote.js';
+
+// 코드 블록 플러그인
+import './js/plugins/codeBlock.js';
+
+// 폰트 및 색상 관련 플러그인
+import './js/plugins/fontFamily.js';
+import './js/plugins/fontColor.js';
+import './js/plugins/emphasis.js';
+import './js/plugins/heading.js';
+
+// 구조 및 정렬 관련 플러그인
+import './js/plugins/align.js';
+import './js/plugins/formatIndent.js';
+
+// 삽입 관련 플러그인
+import './js/plugins/link.js';
+import './js/plugins/imageUpload.js';
+import './js/plugins/table.js';
+import './js/plugins/media.js';
+import './js/plugins/line.js';
+
+// 체크리스트 및 목록 플러그인
+import './js/plugins/checkList.js';
+import './js/plugins/bulletList.js';
+import './js/plugins/numberedList.js';
+
+// 모달 플러그인
+import './js/modal.js';
+
+// CSS 스타일
+import './css/core.css';
+import './css/plugins/library.css';
+import './css/plugins/plugins.css';
+import './css/plugins/media.css';
+import './css/plugins/modal.css';
+import './css/plugins/codeBlock.css';
+import './css/plugins/link.css';
+import './css/plugins/table.css';
+import './css/plugins/imageUpload.css';
+import './css/plugins/fontFamily.css';
+
+// 로드 완료 이벤트 발생
+document.addEventListener('DOMContentLoaded', function() {
+  const event = new Event('lite-editor-loaded');
+  document.dispatchEvent(event);
+});
+```
+
+## 3. 파일 준비 및 복사
+
+### 3.1 디렉토리 구조 준비
+```bash
+# src 디렉토리 생성
+mkdir -p src/js/data src/js/plugins src/css/plugins
+
+# 현재 파일들을 src 디렉토리로 복사
+cp js/*.js src/js/
+cp js/data/*.js src/js/data/
+cp js/plugins/*.js src/js/plugins/
+cp css/*.css src/css/
+cp css/plugins/*.css src/css/plugins/
+```
+
+### 3.2 IIFE 함수 모듈화 처리
+모든 JS 파일의 즉시 실행 함수(IIFE)를 모듈 내보내기로 변환해야 합니다.
+예를 들어, `js/core.js`의 경우:
+
+```javascript
+// 기존 코드
+const LiteEditor = (function() {
+  // 코드 내용
+  return { /* 공개 API */ };
+})();
+
+// 변환 후
+const LiteEditor = (function() {
+  // 코드 내용
+  return { /* 공개 API */ };
+})();
+
+export default LiteEditor;
+```
+
+각 플러그인 파일도 비슷하게 수정해야 합니다.
+
+## 4. 빌드 실행
+
+```bash
+# 빌드 실행
+npm run build
+```
+
+빌드 후 다음 파일들이 생성됩니다:
+- `dist/lite-editor.min.js`
+- `dist/lite-editor.min.css`
+
+## 5. CDN 배포 프로세스
+
+### 5.1 GitHub 저장소 설정
+1. GitHub에 LiteEditor 저장소 생성
+2. 빌드된 파일을 포함한 프로젝트 푸시
+
+### 5.2 GitHub Releases 설정
+1. 새 릴리즈 생성(예: v1.0.0)
+2. 빌드된 파일 업로드:
+   - `dist/lite-editor.min.js`
+   - `dist/lite-editor.min.css`
+
+### 5.3 jsDelivr CDN 사용
+GitHub 릴리즈가 완료되면 jsDelivr CDN URL을 통해 접근할 수 있습니다:
+
+https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.js
+https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.css
+
+## 6. 사용 방법
+
+### 6.1 HTML에 추가
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LiteEditor 예제</title>
+    
+    <!-- 필수 스타일시트 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.css">
+    
+    <!-- Material Icons (필수) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- 중요: contenteditable="true" 속성은 필수입니다 -->
+    <div id="lite-editor" contenteditable="true"></div>
+    
+    <!-- 스크립트 로드 -->
+    <script src="https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.js"></script>
+    
+    <!-- 초기화 코드 -->
+    <script>
+        document.addEventListener('lite-editor-loaded', function() {
+            const editor = LiteEditor.init('#lite-editor', {
+                plugins: [
+                    'fontFamily', 'heading', 'fontColor', 'emphasis',
+                    'bold', 'italic', 'underline', 'strike',
+                    'link', 'imageUpload', 'table', 'media',
+                    'line', 'blockquote', 'code', 'codeBlock',
+                    'unorderedList', 'orderedList', 'checkList',
+                    'align', 'formatIndent',
+                    'historyInit', 'undo', 'redo', 'reset'
+                ],
+                dividers: [4, 8, 12, 16, 19, 22],
+                dimensions: {
+                    editor: {
+                        width: '100%',
+                        maxWidth: '1020px',
+                        height: '650px'
+                    },
+                    toolbar: {
+                        height: '42px'
+                    },
+                    content: {
+                        height: '608px',
+                        minHeight: '608px'
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+```
+
+### 6.2 중요 사항
+- `contenteditable="true"` 속성은 반드시 포함되어야 합니다.
+- Material Icons는 버튼 아이콘에 필요합니다.
+- 에디터 초기화는 `lite-editor-loaded` 이벤트 발생 후에 진행해야 합니다.
+
+## 7. 버전 관리
+
+### 7.1 버전 업데이트
+1. `js/data/version.js` 파일의 버전 정보 업데이트
+2. `package.json`의 버전 정보 업데이트
+3. GitHub에 새 릴리즈 생성
+
+### 7.2 버전 형식
+- 메이저.마이너.패치 (예: 1.0.0)
+  - 메이저: 호환되지 않는 API 변경
+  - 마이너: 이전 버전과 호환되는 기능 추가
+  - 패치: 버그 수정
+
+## 8. 추가 참고사항
+
+### 8.1 의존성 및 호환성
+- 현재 LiteEditor는 별도의 외부 라이브러리 의존성이 없지만, Material Icons는 필수입니다.
+- 모던 브라우저(Chrome, Firefox, Safari, Edge)와 호환됩니다.
+
+### 8.2 향후 개선사항
+- 초기화 시 `contenteditable="true"` 속성 자동 추가 기능
+- 모듈 번들링 향상
+- 테스트 코드 추가
+- TypeScript 마이그레이션 고려
+
+
+
+
