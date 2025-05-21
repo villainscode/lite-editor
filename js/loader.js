@@ -17,7 +17,6 @@
         
         // 먼저 플러그인 유틸리티를 로드
         'js/plugins/plugin-util.js',
-        'js/debug-utils.js',
         
         // 유틸리티 및 기본 기능
         'js/plugins/history.js',
