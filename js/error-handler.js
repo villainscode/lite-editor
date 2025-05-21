@@ -1,11 +1,11 @@
 /**
- * LiteEditor 오류 관리 모듈 (error-handler.js)
- * 에디터 전체에서 사용되는 중앙화된 오류 처리 시스템
+ * LiteEditor 오류 및 디버그 관리 모듈 (error-handler.js)
+ * 에디터 전체에서 사용되는 중앙화된 오류 처리 및 디버깅 시스템
  */
 
 // 즉시 실행 함수로 캡슐화
 (function() {
-    // 에러 처리 유틸리티
+    // 에러 및 디버그 처리 유틸리티
     const errorHandler = {
         // 에러 코드 정의
         codes: {
@@ -147,10 +147,12 @@
         },
 
         // 디버깅 로깅
-        logDebug: function(context, message) {
-            if (window.DEBUG_MODE) {  // 디버그 모드일 때만 출력
-                console.log(`[${context}] DEBUG: ${message}`);
-            }
+        logDebug: function(context, message, data) {
+            if (!window.DEBUG_MODE) return;
+            console.log(
+                `[${context}] DEBUG: ${message}`,
+                data || ''
+            );
         },
         
         // 경고 로깅
@@ -160,10 +162,9 @@
         
         // 성능 로깅 (타이밍 측정)
         logPerformance: function(context, operation, startTime) {
-            if (window.DEBUG_MODE) {
+            if (!window.DEBUG_MODE) return;
                 const duration = performance.now() - startTime;
                 console.log(`[${context}] PERFORMANCE: ${operation} - ${duration.toFixed(2)}ms`);
-            }
         },
         
         // 오류 코드 생성 헬퍼
@@ -177,27 +178,227 @@
         
         // 개발 모드에서만 상세 로그 출력
         logDev: function(context, message, data) {
-            if (window.DEBUG_MODE && window.DEVELOPER_MODE) {
+            if (!window.DEBUG_MODE || !window.DEVELOPER_MODE) return;
                 console.log(
                     `%c[DEV: ${context}] ${message}`, 
                     'color: #9C27B0; font-weight: bold;', 
                     data || ''
                 );
+        },
+
+        // debug-utils.js에서 통합되는 기능들
+        
+        /**
+         * 색상 로그 출력 함수 (debug-utils.js의 debugLog와 동일)
+         * @param {string} module 모듈명 (예: 'ALIGN', 'LINK' 등)
+         * @param {string} message 출력할 메시지
+         * @param {any} data 추가 데이터 (선택사항)
+         * @param {string} color 로그 색상 (CSS 색상값)
+         */
+        colorLog: function(module, message, data, color = '#2196f3') {
+            if (!window.DEBUG_MODE) return;
+            
+            console.log(
+                `%c[${module}] ${message}`,
+                `color:${color};font-weight:bold;`,
+                data || ''
+            );
+        },
+
+        /**
+         * 화면에 디버깅 요소 표시
+         * @param {string} message 표시할 메시지
+         * @param {number} duration 표시 시간 (ms)
+         * @param {string} bgColor 배경색
+         * @param {string} textColor 텍스트 색상
+         */
+        showDebugElement: function(message, duration = 3000, bgColor = 'red', textColor = 'white') {
+            if (!window.DEBUG_MODE) return;
+            
+            const debugElement = document.createElement('div');
+            debugElement.textContent = message;
+            debugElement.style.position = 'fixed';
+            debugElement.style.top = '10px';
+            debugElement.style.right = '10px';
+            debugElement.style.backgroundColor = bgColor;
+            debugElement.style.color = textColor;
+            debugElement.style.padding = '10px';
+            debugElement.style.zIndex = '999999';
+            debugElement.style.fontWeight = 'bold';
+            debugElement.style.borderRadius = '4px';
+            document.body.appendChild(debugElement);
+            
+            setTimeout(() => {
+                if (debugElement.parentNode) {
+                    debugElement.parentNode.removeChild(debugElement);
+                }
+            }, duration);
+        },
+
+        /**
+         * 에디터 선택 영역 정보 반환 유틸
+         * @param {HTMLElement|string} target 편집 영역 요소 또는 CSS 선택자(기본 '#lite-editor')
+         * @returns {{ start:number, end:number, text:string }|null}
+         */
+        getSelectionInfo: function(target = '#lite-editor') {
+            const editor = typeof target === 'string' ? document.querySelector(target) : target;
+            const sel = window.getSelection();
+            if (!editor || !sel || sel.rangeCount === 0) return null;
+
+            const range = sel.getRangeAt(0);
+            if (range.collapsed) return null; // 선택 없으면 종료
+
+            // ── 절대 시작 오프셋 ──
+            const startRange = range.cloneRange();
+            startRange.selectNodeContents(editor);
+            startRange.setEnd(range.startContainer, range.startOffset);
+            const start = startRange.toString().length;
+
+            // ── 절대 종료 오프셋 ──
+            const endRange = range.cloneRange();
+            endRange.selectNodeContents(editor);
+            endRange.setEnd(range.endContainer, range.endOffset);
+            const end = endRange.toString().length;
+
+            const text = range.toString();
+
+            this.colorLog('SELECTION', `start=${start}, end=${end}, text="${text}"`);
+
+            return { start, end, text };
+        },
+
+        /**
+         * 선택 영역 정보 상세 출력
+         * @param {Range} range 선택 영역 Range 객체
+         */
+        logSelectionDetails: function(range) {
+            if (!window.DEBUG_MODE || !range) return;
+            
+            const details = {
+                startContainer: range.startContainer,
+                startOffset: range.startOffset,
+                endContainer: range.endContainer,
+                endOffset: range.endOffset,
+                commonAncestorContainer: range.commonAncestorContainer,
+                text: range.toString()
+            };
+            
+            this.colorLog('SELECTION_DETAILS', '선택 영역 상세 정보', details);
+            return details;
+        },
+
+        /**
+         * TreeWalker를 사용한 선택 영역 오프셋 계산
+         * @param {HTMLElement|string} target 편집 영역 요소 또는 CSS 선택자(기본 '#lite-editor')
+         * @returns {{ start:number, end:number }|null}
+         */
+        getSelectionOffsets: function(target = '#lite-editor') {
+            const container = typeof target === 'string' ? document.querySelector(target) : target;
+            if (!container) return null;
+            
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return null;
+            const range = sel.getRangeAt(0);
+
+            // container 내 전체 텍스트 노드를 순회하며 오프셋 누적
+            let charIndex = 0, startOffset = -1, endOffset = -1;
+            const treeWalker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            while (treeWalker.nextNode()) {
+                const node = treeWalker.currentNode;
+                if (node === range.startContainer) {
+                    startOffset = charIndex + range.startOffset;
+                }
+                if (node === range.endContainer) {
+                    endOffset = charIndex + range.endOffset;
+                    break;
+                }
+                charIndex += node.textContent.length;
             }
+            
+            // 선택이 커서(비선택)인 경우
+            if (startOffset >= 0 && endOffset < 0) {
+                endOffset = startOffset;
+            }
+            
+            return startOffset >= 0 ? { start: startOffset, end: endOffset } : null;
+        },
+
+        /**
+         * 선택 영역 정보를 콘솔에 출력
+         * @param {HTMLElement|string} target 편집 영역 요소 또는 CSS 선택자(기본 '#lite-editor')
+         */
+        logSelectionOffsets: function(target = '#lite-editor') {
+            if (!window.DEBUG_MODE) return;
+            
+            const offsets = this.getSelectionOffsets(target);
+            if (!offsets) {
+                this.colorLog('SELECTION', '선택된 영역이 없습니다.', null, '#f44336');
+                return;
+            }
+            
+            const selectedText = window.getSelection().toString();
+            this.colorLog(
+                'SELECTION', 
+                `📌 selectionStart: ${offsets.start}, selectionEnd: ${offsets.end}`, 
+                { text: selectedText }, 
+                '#4caf50'
+            );
+            
+            return { ...offsets, text: selectedText };
+        },
+
+        // 디버그 모드 설정 함수
+        enableDebug: function() { 
+            window.DEBUG_MODE = true;
+            console.log('%c[Debug] 디버그 모드가 활성화되었습니다.', 'color: #4CAF50; font-weight: bold;');
+        },
+        
+        disableDebug: function() { 
+            window.DEBUG_MODE = false; 
+            console.log('%c[Debug] 디버그 모드가 비활성화되었습니다.', 'color: #f44336; font-weight: bold;');
+        },
+        
+        // 개발자 모드 설정
+        enableDevMode: function() { 
+            window.DEVELOPER_MODE = true;
+            console.log('%c[Debug] 개발자 모드가 활성화되었습니다.', 'color: #9C27B0; font-weight: bold;');
+        },
+        
+        disableDevMode: function() { 
+            window.DEVELOPER_MODE = false;
+            console.log('%c[Debug] 개발자 모드가 비활성화되었습니다.', 'color: #E91E63; font-weight: bold;');
         }
     };
 
     // 전역으로 노출
     window.errorHandler = errorHandler;
     
-    // 디버깅 모드 설정
+    // 이전 debug-utils.js와의 호환성을 위한 별칭
+    window.DebugUtils = {
+        debugLog: errorHandler.colorLog.bind(errorHandler),
+        showDebugElement: errorHandler.showDebugElement.bind(errorHandler),
+        getEditorSelectionInfo: errorHandler.getSelectionInfo.bind(errorHandler),
+        logSelectionDetails: errorHandler.logSelectionDetails.bind(errorHandler),
+        getSelectionOffsetsWithTreeWalker: errorHandler.getSelectionOffsets.bind(errorHandler),
+        logSelectionOffsets: errorHandler.logSelectionOffsets.bind(errorHandler),
+        enableDebug: errorHandler.enableDebug.bind(errorHandler),
+        disableDebug: errorHandler.disableDebug.bind(errorHandler)
+    };
+    
+    // 디버깅 모드 설정 (이전 설정 유지)
     window.DEBUG_MODE = window.DEBUG_MODE !== undefined ? window.DEBUG_MODE : true;
     
-    // 개발자 모드 설정 (더 상세한 로그)
+    // 개발자 모드 설정 (이전 설정 유지)
     window.DEVELOPER_MODE = window.DEVELOPER_MODE !== undefined ? window.DEVELOPER_MODE : false;
     
     // 초기화 메시지
     if (window.DEBUG_MODE) {
-        console.log('%c[ErrorHandler] 오류 처리 시스템 초기화 완료', 'color: #4CAF50; font-weight: bold;');
+        console.log('%c[ErrorHandler] 오류 및 디버깅 시스템 초기화 완료', 'color: #4CAF50; font-weight: bold;');
     }
 })();

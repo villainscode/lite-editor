@@ -620,31 +620,125 @@ const LiteEditor = (function() {
       isActive: isSelectionActive
     };
     
-    // 키 입력 이벤트
+    // 선택 영역 디바운싱을 위한 타이머 변수
+    let selectionDebounceTimer = null;
+    let lastSelectionText = '';
+
+    // 선택 시작 감지 (mousedown)
+    contentArea.addEventListener('mousedown', (e) => {
+      // 링크 클릭 처리 (기존 코드 유지)
+      const clickedLink = e.target.closest('a');
+      if (clickedLink) {
+        // 단순 클릭인 경우(선택하려는 것이 아닌 경우)에만 링크 열기
+        // 선택 기능을 방해하지 않기 위해 mousedown에서 처리
+        const href = clickedLink.getAttribute('href');
+        if (href && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+          // 이벤트를 즉시 처리하고 기본 동작 방지
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 약간의 지연을 두고 링크 열기 (선택 작업과 충돌 방지)
+          setTimeout(() => {
+            window.open(href, '_blank');
+          }, 10);
+        }
+      } else {
+        // 새로운 선택이 시작될 때 이전 선택 정보 초기화
+        lastSelectionText = '';
+        
+        // 마우스 버튼을 좌클릭으로 누른 경우에만 선택 시작으로 간주
+        if (e.button === 0) {
+          // 선택 시작 메시지 출력 (텍스트가 비어있는 상태)
+          if (window.DEBUG_MODE) {
+            errorHandler.colorLog(
+              'SELECTION', 
+              '📝 선택 시작됨', 
+              null, 
+              '#ff9800'
+            );
+          }
+        }
+      }
+    });
+
+    // 선택 종료 감지 (mouseup)
+    contentArea.addEventListener('mouseup', (e) => {
+      // 링크가 아닌 곳에서 마우스 버튼을 뗀 경우 처리
+      if (!e.target.closest('a') && e.button === 0) {
+        // 마우스를 뗐을 때 바로 선택 정보 출력하지 않고, 약간의 지연 적용
+        // 이렇게 하면 선택 작업이 완전히 완료된 후 정보가 출력됨
+        setTimeout(() => {
+          const sel = getSafeSelection();
+          if (sel && sel.rangeCount > 0) {
+            const currentText = sel.toString().trim();
+            
+            // 선택된 텍스트가 있고, 이전에 출력한 것과 다른 경우에만 출력
+            if (currentText !== '' && currentText !== lastSelectionText) {
+              lastSelectionText = currentText;
+              
+              // 선택 영역 정보 계산 및 출력
+              const offsets = calculateEditorOffsets(contentArea);
+              if (offsets && window.DEBUG_MODE) {
+                errorHandler.colorLog(
+                  'SELECTION', 
+                  `📌 selectionStart: ${offsets.start}, selectionEnd: ${offsets.end}`, 
+                  { text: currentText }, 
+                  '#4caf50'
+                );
+              }
+            }
+          }
+        }, 10);
+      }
+    });
+
+    // 키보드 선택 감지 (shift+화살표 등)
     contentArea.addEventListener('keyup', (e) => {
-      // TextArea인 경우 원본 요소 업데이트
+      // 선택에 영향을 주는 키인지 확인
+      const selectionKeys = [
+        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 
+        'Home', 'End', 'PageUp', 'PageDown'
+      ];
+      
+      // Shift 키와 함께 사용된 화살표 키나 'a'와 함께 사용된 Ctrl/Cmd 키 검사
+      const isSelectionKey = 
+        (e.shiftKey && selectionKeys.includes(e.key)) || 
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a');
+      
+      if (isSelectionKey) {
+        // 키보드 선택이 끝난 후 지연 시간을 두고 선택 정보 출력
+        clearTimeout(selectionDebounceTimer);
+        selectionDebounceTimer = setTimeout(() => {
+          const sel = getSafeSelection();
+          if (sel && sel.rangeCount > 0) {
+            const currentText = sel.toString().trim();
+            
+            // 선택된 텍스트가 있고, 이전에 출력한 것과 다른 경우에만 출력
+            if (currentText !== '' && currentText !== lastSelectionText) {
+              lastSelectionText = currentText;
+              
+              // 선택 영역 정보 계산 및 출력
+              const offsets = calculateEditorOffsets(contentArea);
+              if (offsets && window.DEBUG_MODE) {
+                errorHandler.colorLog(
+                  'SELECTION', 
+                  `📌 selectionStart: ${offsets.start}, selectionEnd: ${offsets.end}`, 
+                  { text: currentText }, 
+                  '#4caf50'
+                );
+              }
+            }
+          }
+        }, 100); // 키보드 입력의 경우 더 긴 지연 시간 적용
+      }
+
+      // 기존 코드 (TextArea 업데이트 등) 유지
       if (originalElement.tagName === 'TEXTAREA') {
         originalElement.value = contentArea.innerHTML;
       }
       
       // 현재 선택 영역 저장
       saveSelection();
-    });
-    
-    // 마우스 업 이벤트 (텍스트 선택 완료 시)
-    contentArea.addEventListener('mouseup', () => {
-      // 현재 선택 영역 저장
-      saveSelection();
-    });
-    
-    // 포커스 이벤트
-    contentArea.addEventListener('focus', () => {
-      if (savedSelection) {
-        // 이전에 저장된 선택 영역이 있으면 복원 시도
-        setTimeout(() => {
-          restoreSelection();
-        }, 0);
-      }
     });
     
     // 붙여넣기 이벤트 (서식 없는 텍스트만 허용)
@@ -674,30 +768,41 @@ const LiteEditor = (function() {
       }
     });
     
-    // 링크 클릭 이벤트 핸들러 (추가할 코드)
-    contentArea.addEventListener('mousedown', (e) => {
-      // 클릭된 요소가 링크인지 확인
-      const clickedLink = e.target.closest('a');
-      
-      if (clickedLink) {
-        // 단순 클릭인 경우(선택하려는 것이 아닌 경우)에만 링크 열기
-        // 선택 기능을 방해하지 않기 위해 mousedown에서 처리
-        const href = clickedLink.getAttribute('href');
-        if (href && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
-          // 이벤트를 즉시 처리하고 기본 동작 방지
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // 약간의 지연을 두고 링크 열기 (선택 작업과 충돌 방지)
-          setTimeout(() => {
-            window.open(href, '_blank');
-          }, 10);
-        }
-      }
-    });
-    
     // 단축키 리스너 설정
     setupShortcutListener(contentArea);
+  }
+  
+  // 에디터 내부 기준으로 오프셋 계산 함수 추가
+  function calculateEditorOffsets(editor) {
+    const sel = getSafeSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    
+    let charIndex = 0, startOffset = -1, endOffset = -1;
+    const treeWalker = document.createTreeWalker(
+      editor,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    while (treeWalker.nextNode()) {
+      const node = treeWalker.currentNode;
+      if (node === range.startContainer) {
+        startOffset = charIndex + range.startOffset;
+      }
+      if (node === range.endContainer) {
+        endOffset = charIndex + range.endOffset;
+        break;
+      }
+      charIndex += node.textContent.length;
+    }
+    
+    if (startOffset >= 0 && endOffset < 0) {
+      endOffset = startOffset;
+    }
+    
+    return startOffset >= 0 ? { start: startOffset, end: endOffset } : null;
   }
   
   /**

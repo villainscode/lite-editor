@@ -16,8 +16,8 @@
    * @param {any} data - 출력할 추가 데이터
    */
   const log = (message, data) => {
-    if (window.DebugUtils) {
-      window.DebugUtils.debugLog('RESET', message, data);
+    if (window.errorHandler) {
+      window.errorHandler.colorLog('RESET', message, data);
     }
     // 직접 콘솔에 로그 출력 (테스트용)
     console.log(`[RESET] ${message}`, data || '');
