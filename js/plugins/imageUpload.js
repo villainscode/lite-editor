@@ -105,7 +105,7 @@
         container.style.display = 'inline-block';
         container.style.position = 'relative';
         container.style.margin = '10px 0';
-        container.style.maxWidth = '100%';
+        container.style.maxWidth = '95%';
         container.style.resize = 'both';
         container.style.overflow = 'hidden';
 
@@ -115,10 +115,23 @@
         img.style.width = '100%';
         img.style.height = 'auto';
         img.style.display = 'block';
+
+        // 사용자 정의 리사이즈 핸들 추가
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'image-resize-handle';
+        resizeHandle.style.position = 'absolute';
+        resizeHandle.style.right = '0';
+        resizeHandle.style.bottom = '0';
+        resizeHandle.style.width = '10px'; // 핸들 크기 조절
+        resizeHandle.style.height = '10px'; // 핸들 크기 조절
+        resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
+        resizeHandle.style.cursor = 'nwse-resize';
+        resizeHandle.style.zIndex = '10';
+
         
         // 이미지를 컨테이너에 추가
         container.appendChild(img);
-        
+        container.appendChild(resizeHandle);
         // 현재 선택 영역 가져오기
         let selection = window.getSelection();
         // 만약 선택 영역이 없으면, 저장해둔 선택 영역이 있다면 복원합니다.

@@ -1,6 +1,17 @@
 /**
  * LiteEditor imageUpload Plugin
  * 이미지 업로드 플러그인
+ * - 4월 14일 작업한 기본 이미지 업로드 플러그인 백업이고 아래의 요구사항을 추가 해야 함 (커서 채팅 명령어로 구현한 버전이 20250523-image-upload.md 파일)
+ * 	1.	빈 영역 전용 로직 추가
+	•	getClientRects().length === 0일 때는,
+	•	바로 위/아래 텍스트 노드를 찾아서 그 위치를 쓰거나
+	•	임시 <span style="display:inline-block;width:0;height:1em"></span>를 삽입해 정확한 좌표를 구하도록 합니다.
+	2.	throttle/debounce
+	•	dragover 핸들러에서 매 프레임마다 showDropIndicator를 직접 호출하지 말고 requestAnimationFrame이나 lodash.throttle로 호출 빈도를 조절하면 훨씬 부드러워집니다.
+	3.	인디케이터 스타일 조정
+	•	position: absolute로 body에 붙이는 대신, 에디터 컨테이너를 기준으로 position: relative 안에 넣으면 픽셀 오프셋 계산이 더 안정적입니다.
+
+    이후 완성된 버전으로 푸시 완료 
  */
 (function() {
     // 1. 상수 및 변수 선언 영역
