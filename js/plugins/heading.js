@@ -188,11 +188,7 @@
     const range = selection.getRangeAt(0);
     let currentElement = findCurrentHeadingElement(range);
     
-    // 디버깅 로그
-    console.log('applyHeadingSimple - currentElement:', currentElement ? currentElement.nodeName : 'null');
-    
     if (!currentElement) {
-      console.log('No valid element found, aborting heading application');
       return;
     }
     
@@ -256,32 +252,18 @@
   function findCurrentHeadingElement(range) {
     let container = range.commonAncestorContainer;
     
-    // 디버깅 로그 추가
-    console.log('=== findCurrentHeadingElement DEBUG ===');
-    console.log('Initial container:', container);
-    console.log('Container nodeName:', container.nodeName);
-    console.log('Container nodeType:', container.nodeType);
-    console.log('Container textContent:', JSON.stringify(container.textContent));
-    
     if (container.nodeType === 3) {
       container = container.parentNode;
-      console.log('After moving to parent:', container.nodeName);
     }
     
-    console.log('Final container:', container.nodeName);
-    console.log('Container innerHTML:', container.innerHTML);
-    
     if (['H1', 'H2', 'H3', 'P'].includes(container.nodeName)) {
-      console.log('Found direct match:', container.nodeName);
       return container;
     }
     
     const closest = container.closest('h1, h2, h3, p');
-    console.log('Found via closest():', closest ? closest.nodeName : 'null');
     
     // 만약 헤딩/단락 요소를 찾지 못했다면, 새 P 태그로 감싸기
     if (!closest) {
-      console.log('No heading/paragraph found, creating new P wrapper');
       return wrapInNewParagraph(range, container);
     }
     
@@ -291,7 +273,7 @@
   // 새 P 태그로 감싸는 함수
   function wrapInNewParagraph(range, container) {
     // 선택된 텍스트가 div나 다른 컨테이너에 직접 있는 경우
-    if (container.nodeName === 'DIV' || container.classList?.contains('lite-editor-content')) {
+    if (container.nodeName === 'DIV' || (container.classList && container.classList.contains('lite-editor-content'))) {
       // 선택된 텍스트 노드들을 P로 감싸기
       const selectedContent = range.extractContents();
       const newP = document.createElement('P');
@@ -305,7 +287,6 @@
       selection.removeAllRanges();
       selection.addRange(newRange);
       
-      console.log('Created new P wrapper:', newP);
       return newP;
     }
     

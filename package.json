@@ -4,13 +4,8 @@
   "description": "경량 웹 에디터 라이브러리",
   "main": "js/core.js",
   "scripts": {
-    "test": "jest --config=jest.config.js",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "start": "http-server"
   },
-  "_scripts_comment": "start는 개발용 로컬 서버 실행, test는 npm test -- tests/plugins/align-plugin.test.js",
-
   "keywords": [
     "editor",
     "wysiwyg",
@@ -18,14 +13,5 @@
     "javascript"
   ],
   "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "@babel/core": "^7.23.5",
-    "@babel/preset-env": "^7.23.5",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@types/node": "^22.14.1",
-    "babel-jest": "^29.7.0",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
-  }
+  "license": "MIT"
 }
