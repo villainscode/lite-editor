@@ -15,7 +15,7 @@
     document.execCommand('underline', false, null);
   }
   
-  // Mac용 단축키 (Cmd+U)
+  // Mac용 단축키 (⌘+U)
   LiteEditor.registerShortcut('underline', {
     key: 'u',
     meta: true,
@@ -33,12 +33,4 @@
     }
   });
 
-  // Underline 단축키 (Alt+U)
-  LiteEditor.registerShortcut('underline', {
-    key: 'u',
-    alt: true,
-    action: function(contentArea) {
-      document.execCommand('underline', false, null);
-    }
-  });
 })();

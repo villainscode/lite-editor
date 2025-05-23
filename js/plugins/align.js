@@ -8,128 +8,153 @@
 // @[js/debug-utils.js]
 
 (function() {
-  // PluginUtil 참조
   const util = window.PluginUtil || {};
   
-  // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
   let isDropdownOpen = false;     // 드롭다운 열림 상태
   
-  // 선택 영역 저장/복원 함수
+  let selectionSaveTimeout = null;
+
+  // 함수들을 전역 스코프로 이동 (customRender 외부)
   function saveSelection() {
-    savedRange = util.selection.saveSelection();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    savedRange = selection.getRangeAt(0).cloneRange();
+    return savedRange;
   }
 
-  function restoreSelection() {
-    if (!savedRange) return false;
-    return util.selection.restoreSelection(savedRange);
+  function applyAlignment(alignType, contentArea) {
+    try {
+      // 선택 영역 복원
+      if (!window.liteEditorSelection.restore()) {
+        throw new Error('No selection to restore');
+      }
+      
+      // document.execCommand를 사용하여 정렬 적용
+      const commands = {
+        'Left': 'justifyLeft',
+        'Center': 'justifyCenter', 
+        'Right': 'justifyRight',
+        'Full': 'justifyFull'
+      };
+      
+      const command = commands[alignType];
+      if (command) {
+        document.execCommand(command, false, null);
+        console.log('Applied alignment:', alignType, 'using command:', command);
+      }
+      
+      // 에디터 이벤트 발생
+      util.editor.dispatchEditorEvent(contentArea);
+      
+    } catch (e) {
+      errorHandler.logError('AlignPlugin', e);
+    }
   }
-  
-  /**
-   * 더블클릭 선택 정규화 함수
-   * 브라우저의 더블클릭 선택 범위를 정확한 단어 경계로 조정
-   * @param {HTMLElement} contentArea - 편집 영역 요소
-   * @returns {Range|null} - 정규화된 선택 범위
-   */
-  function normalizeDoubleClickSelection(contentArea) {
+
+  // 선택 영역 정규화 함수
+  function normalizeSelectionRange() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return null;
     
     const range = selection.getRangeAt(0);
     const text = range.toString();
     
-    // 선택된 텍스트에서 줄바꿈과 후발 공백 제거
-    const cleanText = text.split('\n')[0].trim();
-    
-    // 줄바꿈이나 후발 공백이 있는지 확인
-    const hasExtraWhitespace = text.length > cleanText.length;
-    
-    // 더블클릭 선택이거나 공백이 포함된 경우 처리
-    if ((text.length < 50 || hasExtraWhitespace) && range.startContainer.nodeType === 3) {
-      // 텍스트 노드의 전체 내용
-      const fullText = range.startContainer.textContent;
+    // 줄바꿈이 포함된 경우 Range를 줄바꿈 전까지로 제한
+    if (text.includes('\n')) {
+      const textBeforeNewline = text.split('\n')[0];
       
-      // 정확한 위치 찾기
-      let startPos = -1;
-      let searchStart = Math.max(0, range.startOffset - cleanText.length);
-      
-      // 정확한 위치를 찾기 위해 여러 방법 시도
-      while (startPos === -1 && searchStart <= range.startOffset) {
-        startPos = fullText.indexOf(cleanText, searchStart);
-        searchStart++;
+      if (textBeforeNewline.trim().length > 0) {
+        // 새로운 Range 생성 (줄바꿈 제외)
+        const newRange = document.createRange();
+        newRange.setStart(range.startContainer, range.startOffset);
+        
+        // 줄바꿈 전까지의 길이로 endOffset 설정
+        if (range.startContainer.nodeType === 3) { // 텍스트 노드
+          const newEndOffset = range.startOffset + textBeforeNewline.length;
+          newRange.setEnd(range.startContainer, newEndOffset);
+        } else {
+          newRange.setEnd(range.endContainer, range.startOffset + textBeforeNewline.length);
+        }
+        
+        // 선택 영역 업데이트
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+        
+        console.log('Range normalized:', {
+          original: text,
+          normalized: newRange.toString(),
+          startOffset: newRange.startOffset,
+          endOffset: newRange.endOffset
+        });
+        
+        return newRange.cloneRange();
       }
-      
-      // 여전히 찾지 못한 경우 전체 텍스트에서 검색
-      if (startPos === -1) {
-        startPos = fullText.indexOf(cleanText);
-      }
-      
-      // 여전히 찾지 못한 경우 원래 시작점 사용
-      if (startPos === -1) {
-        startPos = range.startOffset;
-      }
-      
-      // 정확한 끝 위치 계산
-      const endPos = startPos + cleanText.length;
-      
-      // 새 범위 생성
-      const newRange = document.createRange();
-      newRange.setStart(range.startContainer, startPos);
-      newRange.setEnd(range.startContainer, endPos);
-      
-      // 선택 영역 업데이트
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      
-      return newRange;
     }
     
-    // 일반 선택이거나 조정할 필요 없는 경우 원래 범위 반환
-    return range;
+    // 줄바꿈이 없거나 유효하지 않은 경우 원본 반환
+    return range.cloneRange();
   }
-  
-  /**
-   * 정렬 적용 함수
-   * @param {string} alignType - 정렬 유형 (Left/Center/Right/Full)
-   * @param {HTMLElement} contentArea - 편집 영역 요소
-   */
-  function applyAlignment(alignType, contentArea) {
-    try {
-      // 현재 스크롤 위치 저장
-      const currentScrollY = window.scrollY;
-      const currentScrollX = window.scrollX;
-      
-      // 포커스 설정 (스크롤 방지)
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
-      // 선택 영역 복원
-      restoreSelection();
-      
-      // 선택 영역 정규화 (더블클릭 처리)
-      normalizeDoubleClickSelection(contentArea);
-      
-      // 정렬 명령 실행
-      document.execCommand('justify' + alignType);
-      
-      // 선택 영역 재저장
-      saveSelection();
-      
-      // 에디터 변경 이벤트 발생
-      util.editor.dispatchEditorEvent(contentArea);
-      
-      // 스크롤 위치 복원
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.scrollTo(currentScrollX, currentScrollY);
-        }, 50);
-      });
-    } catch (e) {
-      errorHandler.logError('AlignPlugin', errorHandler.codes.PLUGINS.ALIGN.APPLY, e);
+
+  // 선택 영역 변경 감지
+  document.addEventListener('selectionchange', () => {
+    // 연속 이벤트 방지를 위한 디바운싱
+    if (selectionSaveTimeout) {
+      clearTimeout(selectionSaveTimeout);
     }
+    
+    selectionSaveTimeout = setTimeout(() => {
+      const normalizedRange = normalizeSelectionRange();
+      
+      if (normalizedRange && normalizedRange.toString().trim().length > 0) {
+        savedRange = normalizedRange;
+        console.log('Valid normalized selection saved:', {
+          startOffset: savedRange.startOffset,
+          endOffset: savedRange.endOffset,
+          text: savedRange.toString(),
+          hasNewline: savedRange.toString().includes('\n')
+        });
+      }
+    }, 100); // 100ms 지연으로 더블클릭 완료 대기
+  });
+  
+  // window.liteEditorSelection 통합 관리
+  if (!window.liteEditorSelection) {
+    window.liteEditorSelection = {
+      save: function() {
+        return savedRange;
+      },
+      restore: function() {
+        if (!savedRange || savedRange.toString().trim().length === 0) {
+          return false;
+        }
+        
+        try {
+          // 복원 전에 다시 한번 정규화
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          
+          // 줄바꿈이 없는 깨끗한 Range인지 확인
+          const text = savedRange.toString();
+          if (text.includes('\n')) {
+            console.warn('Saved range still contains newline, re-normalizing');
+            return false;
+          }
+          
+          selection.addRange(savedRange.cloneRange());
+          
+          console.log('Restored clean range:', {
+            text: savedRange.toString(),
+            hasNewline: false
+          });
+          
+          return true;
+        } catch (e) {
+          console.error('Selection restore failed:', e);
+          return false;
+        }
+      }
+    };
   }
   
   // 정렬 플러그인 등록
@@ -258,17 +283,26 @@
           e.preventDefault();
           e.stopPropagation();
           
+          // 저장된 선택 영역 검증
+          if (savedRange && savedRange.toString().trim().length > 0) {
+            console.log('Using saved selection:', {
+              text: savedRange.toString(),
+              valid: true
+            });
+          } else {
+            console.log('No valid selection saved');
+            return; // 유효한 선택 영역이 없으면 드롭다운 열지 않음
+          }
+          
+          // 정렬 적용
+          applyAlignment(option.align, contentArea);
+          
           // 드롭다운 닫기
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
           alignButton.classList.remove('active');
           isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
           util.activeModalManager.unregister(dropdownMenu);
-          
-          // 정렬 적용
-          applyAlignment(option.align, contentArea);
         });
         
         buttonContainer.appendChild(alignBtn);
@@ -277,22 +311,20 @@
       // 5. 드롭다운을 document.body에 추가
       document.body.appendChild(dropdownMenu);
       
-      // 6. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
+      // 6. 드롭다운 버튼에 mousedown 이벤트 추가 (click 이벤트 전에 실행됨)
+      alignButton.addEventListener('mousedown', (e) => {
+        // 마우스가 내려가는 순간 즉시 선택 영역 저장
+        window.liteEditorSelection.save();
+      });
+      
+      // 드롭다운 버튼 클릭 이벤트 (기존 코드 유지)
       alignButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
-        
-        // 선택 영역 저장
-        saveSelection();
-        
-        // 현재 드롭다운의 상태 확인
+        // 드롭다운 토글 로직만 수행
         const isVisible = dropdownMenu.classList.contains('show');
         
-        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
-        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
         if (!isVisible) {
           util.activeModalManager.closeAll();
         }
@@ -303,8 +335,6 @@
           dropdownMenu.style.display = 'none';
           alignButton.classList.remove('active');
           isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
           util.activeModalManager.unregister(dropdownMenu);
         } else {
           // 열기
@@ -318,17 +348,7 @@
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = buttonRect.left + 'px';
           
-          // 활성 모달 등록 (관리 시스템에 추가)
-          dropdownMenu.closeCallback = () => {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            alignButton.classList.remove('active');
-            isDropdownOpen = false;
-          };
-          
           util.activeModalManager.register(dropdownMenu);
-          
-          // 외부 클릭 시 닫기 설정 - 열 때만 등록
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -337,47 +357,18 @@
             util.activeModalManager.unregister(dropdownMenu);
           }, [alignButton]);
         }
-        
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
+      });
+      
+      // 에디터 영역 mousedown 이벤트에서 선택 영역 저장
+      contentArea.addEventListener('mousedown', () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          savedRange = selection.getRangeAt(0).cloneRange();
+          errorHandler.selectionLog.save(contentArea);
+        }
       });
       
       return alignButton;
-    }
-  });
-  
-  // 전역 단축키 이벤트 처리
-  document.addEventListener('keydown', function(e) {
-    // 에디터 영역 찾기
-    const contentArea = document.querySelector('[contenteditable="true"]');
-    if (!contentArea) return;
-    
-    // 왼쪽 정렬 (Ctrl+Alt+L)
-    if ((e.key === 'l' || e.key === 'ㅣ') && e.ctrlKey && e.altKey) {
-      e.preventDefault();
-      contentArea.focus();
-      saveSelection();
-      applyAlignment('Left', contentArea);
-    }
-    
-    // 가운데 정렬 (Ctrl+Alt+C)
-    if ((e.key === 'c' || e.key === 'ㅊ') && e.ctrlKey && e.altKey) {
-      e.preventDefault();
-      contentArea.focus();
-      saveSelection();
-      applyAlignment('Center', contentArea);
-    }
-    
-    // 오른쪽 정렬 (Ctrl+Alt+R)
-    if ((e.key === 'r' || e.key === 'ㄱ') && e.ctrlKey && e.altKey) {
-      e.preventDefault();
-      contentArea.focus();
-      saveSelection();
-      applyAlignment('Right', contentArea);
     }
   });
 })();

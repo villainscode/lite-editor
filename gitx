@@ -12,6 +12,11 @@ set -euo pipefail
 #   ./gitx checkout [branch명]                 # 새 브랜치 생성 및 체크아웃 - ./gitx checkout feature/login
 #   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시 - ./gitx merge-from develop
 #   ./gitx abort                              # 현재 진행 중인 병합 취소 (git merge --abort) - ./gitx abort
+# 로컬 브랜치 삭제 (안전)
+# git branch -d feature/2025-05-23
+
+# 병합 여부 무시하고 강제로 삭제
+# git branch -D feature/2025-05-23
 # ──────────────────────────────────────────────────────────────
 
 do_commit() {

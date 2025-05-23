@@ -33,13 +33,4 @@
     meta: true,  // Mac은 ⌘+B
     action: boldAction
   });
-
-  // Bold 단축키 (Alt+B)
-  LiteEditor.registerShortcut('bold', {
-    key: 'b',
-    alt: true,
-    action: function(contentArea) {
-      document.execCommand('bold', false, null);
-    }
-  });
 })();
