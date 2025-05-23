@@ -12,6 +12,7 @@
   
   // 전역 상태 변수
   let savedRange = null;
+  let savedCursorPosition = null;
   let isDropdownOpen = false;
   
   // 선택 영역 저장/복원 함수
@@ -22,13 +23,67 @@
   function restoreSelection() {
     if (!savedRange) return false;
     return util.selection.restoreSelection(savedRange);
-  }  
+  }
+
+  /**
+   * Enter 키 처리 함수 - heading 블럭에서 나가기
+   */
+  function setupEnterKeyHandling(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const selection = util.selection.getSafeSelection();
+        if (!selection || !selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const startContainer = range.startContainer;
+        
+        let headingElement = null;
+        if (startContainer.nodeType === Node.TEXT_NODE) {
+          headingElement = startContainer.parentElement;
+        } else {
+          headingElement = startContainer;
+        }
+        
+        // heading 요소 찾기
+        while (headingElement && headingElement !== contentArea) {
+          if (['H1', 'H2', 'H3'].includes(headingElement.tagName)) {
+            break;
+          }
+          headingElement = headingElement.parentElement;
+        }
+        
+        if (headingElement && ['H1', 'H2', 'H3'].includes(headingElement.tagName)) {
+          if (e.shiftKey) {
+            // Shift + Enter: heading 유지 (기본 동작)
+            return;
+          } else {
+            // Enter: heading 블럭 밖으로 나가기
+            e.preventDefault();
+            
+            const newP = util.dom.createElement('p');
+            newP.appendChild(document.createTextNode('\u00A0'));
+            
+            const parentBlock = util.dom.findClosestBlock(headingElement, contentArea);
+            if (parentBlock && parentBlock.parentNode) {
+              parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+              util.selection.moveCursorTo(newP.firstChild, 0);
+            }
+            
+            util.editor.dispatchEditorEvent(contentArea);
+          }
+        }
+      }
+    });
+  }
 
   // 제목 플러그인
   LiteEditor.registerPlugin('heading', {
     title: 'Heading',
     icon: 'title',
     customRender: function(toolbar, contentArea) {
+      // 🔧 Enter 키 처리 설정
+      setupEnterKeyHandling(contentArea);
+      
       // 제목 버튼 생성
       const headingButton = util.dom.createElement('button', {
         className: 'lite-editor-button lite-editor-heading-button',
@@ -91,8 +146,8 @@
             break;
         }
         
-        // 클릭 이벤트 - 공통 유틸리티 사용
-        option.addEventListener('click', util.scroll.preservePosition((e) => {
+        // 클릭 이벤트 - execCommand 사용
+        option.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
           
@@ -102,27 +157,56 @@
             contentArea.focus();
           }
           
-          restoreSelection();
+          // 🔧 heading 적용 (execCommand 사용)
+          applyHeading(level.tag, contentArea);
           
-          const selection = util.selection.getSafeSelection();
-          if (selection && selection.rangeCount > 0) {
-            applyHeadingSimple(level.tag, selection, contentArea);
-          }
-
           closeDropdown();
-        }));
+        });
         
         dropdownMenu.appendChild(option);
       });
       
       document.body.appendChild(dropdownMenu);
       
-      // 버튼 클릭 이벤트 - 공통 유틸리티 사용
-      headingButton.addEventListener('click', util.scroll.preservePosition((e) => {
+      // 🔧 mousedown에서 선택 영역/커서 위치 저장
+      headingButton.addEventListener('mousedown', (e) => {
+        const selection = util.selection.getSafeSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const selectedText = range.toString().trim();
+          
+          if (selectedText) {
+            savedRange = util.selection.saveSelection();
+            savedCursorPosition = null;
+          } else {
+            savedRange = null;
+            // 커서 위치 저장
+            savedCursorPosition = {
+              startContainer: range.startContainer,
+              startOffset: range.startOffset,
+              endContainer: range.endContainer,
+              endOffset: range.endOffset
+            };
+          }
+        } else {
+          savedRange = null;
+          savedCursorPosition = null;
+        }
+      });
+      
+      // 버튼 클릭 이벤트
+      headingButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        saveSelection();
+        // 🔧 포커스 강제 복원
+        if (document.activeElement !== contentArea) {
+          try {
+            contentArea.focus({ preventScroll: true });
+          } catch (e) {
+            contentArea.focus();
+          }
+        }
         
         const isVisible = dropdownMenu.classList.contains('show');
         
@@ -138,9 +222,7 @@
           headingButton.classList.add('active');
           isDropdownOpen = true;
           
-          const buttonRect = headingButton.getBoundingClientRect();
-          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
+          util.layer.setLayerPosition(dropdownMenu, headingButton);
           
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
@@ -154,7 +236,7 @@
             closeDropdown();
           }, [headingButton]);
         }
-      }));
+      });
 
       function closeDropdown() {
         dropdownMenu.classList.remove('show');
@@ -168,136 +250,86 @@
     }
   });
 
-  // 헤딩 적용 함수
-  function applyHeadingSimple(targetTag, selection, contentArea) {
-    const range = selection.getRangeAt(0);
-    let currentElement = findCurrentHeadingElement(range);
-    
-    if (!currentElement) {
-      return;
+  // 🔧 새로운 heading 적용 함수 (execCommand 기반)
+  function applyHeading(tag, contentArea) {
+    try {
+      if (savedRange) {
+        // 선택 영역이 있는 경우
+        const restored = util.selection.restoreSelection(savedRange);
+        if (!restored) return;
+        
+        // formatBlock execCommand 사용
+        document.execCommand('formatBlock', false, tag.toLowerCase());
+        
+      } else {
+        // 커서 위치 모드
+        if (savedCursorPosition) {
+          try {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            
+            if (savedCursorPosition.startContainer && 
+                savedCursorPosition.startContainer.parentNode &&
+                contentArea.contains(savedCursorPosition.startContainer)) {
+              
+              range.setStart(savedCursorPosition.startContainer, savedCursorPosition.startOffset);
+              range.setEnd(savedCursorPosition.endContainer, savedCursorPosition.endOffset);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          } catch (e) {
+            // 에러 시 에디터 끝으로 이동
+            const lastTextNode = getLastTextNode(contentArea);
+            if (lastTextNode) {
+              const range = document.createRange();
+              const sel = window.getSelection();
+              range.setStart(lastTextNode, lastTextNode.length);
+              range.setEnd(lastTextNode, lastTextNode.length);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+        }
+        
+        // formatBlock execCommand 사용
+        document.execCommand('formatBlock', false, tag.toLowerCase());
+      }
+      
+      util.editor.dispatchEditorEvent(contentArea);
+      
+    } catch (e) {
+      console.error('Heading 적용 실패:', e);
     }
-    
-    const isFullSelection = isFullElementSelected(range, currentElement);
-    
-    if (isFullSelection) {
-      changeEntireElement(currentElement, targetTag);
-    } else {
-      changeSelectedPortion(range, targetTag);
-    }
-    
-    contentArea.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  
-  // 전체 요소가 선택되었는지 판단
-  function isFullElementSelected(range, element) {
-    if (range.collapsed) return true;
-    
-    const selectedText = range.toString();
-    const elementText = element.textContent;
-    
-    if (selectedText === elementText) return true;
-    if (selectedText.replace(/\s+/g, '') === elementText.replace(/\s+/g, '')) return true;
-    
-    return false;
-  }
-  
-  // 전체 요소 변경
-  function changeEntireElement(currentElement, targetTag) {
-    let newTag = targetTag;
-    if (currentElement.nodeName === targetTag.toUpperCase()) {
-      newTag = 'p';
-    }
-    
-    const newElement = document.createElement(newTag.toUpperCase());
-    newElement.innerHTML = currentElement.innerHTML;
-    currentElement.parentNode.replaceChild(newElement, currentElement);
-    
-    const selection = util.selection.getSafeSelection();
-    const newRange = document.createRange();
-    newRange.selectNodeContents(newElement);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-  
-  // 선택된 부분만 변경
-  function changeSelectedPortion(range, targetTag) {
-    const selectedContent = range.extractContents();
-    const headingElement = document.createElement(targetTag.toUpperCase());
-    headingElement.appendChild(selectedContent);
-    range.insertNode(headingElement);
-    
-    const selection = util.selection.getSafeSelection();
-    const newRange = document.createRange();
-    newRange.selectNodeContents(headingElement);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-  
-  // 현재 헤딩/단락 요소 찾기
-  function findCurrentHeadingElement(range) {
-    let container = range.commonAncestorContainer;
-    
-    if (container.nodeType === 3) {
-      container = container.parentNode;
-    }
-    
-    if (['H1', 'H2', 'H3', 'P'].includes(container.nodeName)) {
-      return container;
-    }
-    
-    const closest = container.closest('h1, h2, h3, p');
-    
-    // 만약 헤딩/단락 요소를 찾지 못했다면, 새 P 태그로 감싸기
-    if (!closest) {
-      return wrapInNewParagraph(range, container);
-    }
-    
-    return closest;
   }
 
-  // 새 P 태그로 감싸는 함수
-  function wrapInNewParagraph(range, container) {
-    // 선택된 텍스트가 div나 다른 컨테이너에 직접 있는 경우
-    if (container.nodeName === 'DIV' || (container.classList && container.classList.contains('lite-editor-content'))) {
-      // 선택된 텍스트 노드들을 P로 감싸기
-      const selectedContent = range.extractContents();
-      const newP = document.createElement('P');
-      newP.appendChild(selectedContent);
-      range.insertNode(newP);
-      
-      // 새 range 설정
-      const newRange = document.createRange();
-      newRange.selectNodeContents(newP);
-      const selection = util.selection.getSafeSelection();
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      
-      return newP;
+  // 🔧 헬퍼 함수: 마지막 텍스트 노드 찾기
+  function getLastTextNode(element) {
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let lastNode = null;
+    while (walker.nextNode()) {
+      lastNode = walker.currentNode;
     }
     
-    return null;
+    return lastNode;
   }
 
-  // 단축키로 사용할 헤딩 적용 함수 - 공통 유틸리티 사용
+  // 단축키로 사용할 헤딩 적용 함수
   function applyHeadingByShortcut(tag, contentArea) {
-    const applyWithScroll = util.scroll.preservePosition(() => {
-      saveSelection();
-      
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
-      restoreSelection();
-      
-      const selection = util.selection.getSafeSelection();
-      if (selection && selection.rangeCount > 0) {
-        applyHeadingSimple(tag, selection, contentArea);
-      }
-    });
+    try {
+      contentArea.focus({ preventScroll: true });
+    } catch (e) {
+      contentArea.focus();
+    }
     
-    applyWithScroll();
+    // formatBlock execCommand 사용
+    document.execCommand('formatBlock', false, tag.toLowerCase());
+    util.editor.dispatchEditorEvent(contentArea);
   }
   
   // 단축키 등록
