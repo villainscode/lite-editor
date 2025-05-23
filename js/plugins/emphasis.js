@@ -1,45 +1,28 @@
 /**
  * LiteEditor Emphasis Plugin
  * 텍스트 배경색(하이라이트) 플러그인
- * 수정: 선택 블록 유지 기능 추가
+ * 수정: 선택 블록 유지 기능 추가 + Enter/Shift+Enter 처리
  */
 
 (function() {
-  // PluginUtil 참조
   const util = window.PluginUtil || {};
+
   if (!util.selection) {
     console.error('EmphasisPlugin: PluginUtil.selection이 필요합니다.');
   }
   
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
+  let savedCursorPosition = null;  // 커서 위치 저장용
   let isDropdownOpen = false;     // 드롭다운 열림 상태
-  
-  // 선택 영역 저장 함수
-  function saveSelection() {
-    savedRange = util.selection.saveSelection();
-  }
-
-  // 선택 영역 복원 함수
-  function restoreSelection() {
-    if (!savedRange) return false;
-    return util.selection.restoreSelection(savedRange);
-  }
   
   /**
    * 색상 데이터 스크립트 로드 함수
-   * 외부 색상 데이터 파일을 동적으로 로드
-   * @param {Function} callback - 로드 후 실행할 콜백 함수
    */
   function loadColorScript(callback) {
     util.dataLoader.loadExternalScript('js/data/colors.js', 'LiteEditorColorData', callback);
   }
   
-  /**
-   * 하이라이트 색상 데이터 로드 함수
-   * 다국어 지원이 포함된 외부 데이터 파일에서 색상 목록 가져오기
-   * @returns {Array} 색상 목록 배열
-   */
   function loadHighlightColorData() {
     const defaultColors = [
       '#ffffcc', '#ffff00', '#ffecb3', '#ffcc00', '#d0f0c0', '#daf2f9', '#b1d6f7',
@@ -48,86 +31,162 @@
     return util.dataLoader.loadColorData('highlight', defaultColors);
   }
   
-  /**
-   * 배경색(하이라이트) 적용 함수 - 공통 유틸리티 사용
-   * @param {string} color - 적용할 색상 (hex 코드)
-   * @param {HTMLElement} contentArea - 편집 영역 요소
-   * @param {HTMLElement} colorIndicator - 색상 표시기 요소
-   */
-  function applyHighlightColor(color, contentArea, colorIndicator) {
-    const applyWithScroll = util.scroll.preservePosition(() => {
-      try {
-        // 색상 인디케이터 업데이트
-        if (colorIndicator) {
-          colorIndicator.style.backgroundColor = color;
-          colorIndicator.style.border = 'none';
+  function setupEnterKeyHandling(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const selection = util.selection.getSafeSelection();
+        if (!selection || !selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const startContainer = range.startContainer;
+        
+        let emphasisSpan = null;
+        if (startContainer.nodeType === Node.TEXT_NODE) {
+          emphasisSpan = startContainer.parentElement;
+        } else {
+          emphasisSpan = startContainer;
         }
         
-        // 포커스 설정 (스크롤 방지)
+        while (emphasisSpan && emphasisSpan !== contentArea) {
+          if (emphasisSpan.tagName === 'SPAN' && 
+              emphasisSpan.style.backgroundColor) {
+            break;
+          }
+          emphasisSpan = emphasisSpan.parentElement;
+        }
+        
+        if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+          if (e.shiftKey) {
+            // 🔧 Shift + Enter: emphasis 유지 (기본 동작)
+            return;  // fontColor.js와 동일하게 단순화
+          } else {
+            // Enter: emphasis 영역 밖으로 나가기
+            e.preventDefault();
+            
+            const newP = util.dom.createElement('p');
+            newP.appendChild(document.createTextNode('\u00A0'));
+            
+            const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
+            if (parentBlock && parentBlock.parentNode) {
+              parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+              util.selection.moveCursorTo(newP.firstChild, 0);
+            }
+            
+            util.editor.dispatchEditorEvent(contentArea);
+          }
+        }
+      }
+    });
+  }
+  
+  /**
+   * 배경색(하이라이트) 적용 함수
+   */
+  function applyHighlightColor(color, contentArea, colorIndicator) {
+    try {
+      if (colorIndicator) {
+        colorIndicator.style.backgroundColor = color;
+        colorIndicator.style.border = 'none';
+      }
+      
+      if (savedRange) {
+        // 선택 영역이 있는 경우
+        const scrollPosition = util.scroll.savePosition();
+        
         try {
           contentArea.focus({ preventScroll: true });
         } catch (e) {
           contentArea.focus();
         }
         
-        // 선택 영역 복원
-        restoreSelection();
-        
-        // 현재 선택된 범위 가져오기
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          
-          // 선택 영역이 포함된 공통 조상 컨테이너 찾기
-          let container = range.commonAncestorContainer;
-          if (container.nodeType === 3) { // 텍스트 노드인 경우
-            container = container.parentNode;
-          }
-          
-          // 텍스트 컨텐츠를 복제하고 <span> 태그로 래핑
-          const fragment = range.extractContents();
-          const spanElement = util.dom.createElement('span', {}, {
-            backgroundColor: color
-          });
-          spanElement.appendChild(fragment);
-          
-          // 새 <span> 요소를 DOM에 삽입
-          range.insertNode(spanElement);
-          
-          // 방금 추가한 <span> 요소 전체를 선택
-          const newRange = document.createRange();
-          newRange.selectNodeContents(spanElement);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-          
-          // 에디터 변경 이벤트 발생 (이전 오류 수정: styles -> editor)
-          util.editor.dispatchEditorEvent(contentArea);
+        const restored = util.selection.restoreSelection(savedRange);
+        if (!restored) {
+          errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, '선택 영역 복원 실패');
+          return;
         }
-      } catch (e) {
-        errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
+        
+        // 🔧 execCommand 사용 (fontColor.js와 동일한 방식)
+        document.execCommand('hiliteColor', false, color);
+        
+        util.scroll.restorePosition(scrollPosition);
+        
+      } else {
+        // 커서 위치 모드
+        if (document.activeElement !== contentArea) {
+          try {
+            contentArea.focus({ preventScroll: true });
+          } catch (e) {
+            contentArea.focus();
+          }
+        }
+        
+        // 저장된 커서 위치로 복원
+        if (savedCursorPosition) {
+          try {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            
+            if (savedCursorPosition.startContainer && 
+                savedCursorPosition.startContainer.parentNode &&
+                contentArea.contains(savedCursorPosition.startContainer)) {
+              
+              range.setStart(savedCursorPosition.startContainer, savedCursorPosition.startOffset);
+              range.setEnd(savedCursorPosition.endContainer, savedCursorPosition.endOffset);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          } catch (e) {
+            errorHandler.colorLog('EMPHASIS', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
+          }
+        }
+        
+        // 🔧 execCommand 사용 (fontColor.js와 동일)
+        const success = document.execCommand('hiliteColor', false, color);
+        
+        errorHandler.colorLog('EMPHASIS', 'execCommand hiliteColor 결과', {
+          success: success
+        }, success ? '#4caf50' : '#f44336');
       }
-    });
-    
-    applyWithScroll();
+      
+      util.editor.dispatchEditorEvent(contentArea);
+      
+    } catch (e) {
+      errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, e);
+    }
   }
   
-  // 하이라이트(배경색) 플러그인 등록
+  // 🔧 헬퍼 함수: 마지막 텍스트 노드 찾기
+  function getLastTextNode(element) {
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let lastNode = null;
+    while (walker.nextNode()) {
+      lastNode = walker.currentNode;
+    }
+    
+    return lastNode;
+  }
+  
   LiteEditor.registerPlugin('emphasis', {
     customRender: function(toolbar, contentArea) {
-      // 1. 하이라이트 버튼 컨테이너 생성
+      setupEnterKeyHandling(contentArea);
+      
       const highlightContainer = util.dom.createElement('div', {
         className: 'lite-editor-button',
         title: 'Emphasis'
       });
       
-      // 2. 버튼 아이콘 추가
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
         textContent: 'format_color_fill'
       });
       highlightContainer.appendChild(icon);
       
-      // 3. 색상 표시기 추가
       const colorIndicator = util.dom.createElement('span', {
         className: 'lite-editor-color-indicator'
       }, {
@@ -136,7 +195,6 @@
       });
       highlightContainer.appendChild(colorIndicator);
       
-      // 4. 드롭다운 메뉴 생성
       const dropdownMenu = util.dom.createElement('div', {
         className: 'lite-editor-dropdown-menu',
         id: 'highlight-dropdown-' + Math.random().toString(36).substr(2, 9)
@@ -151,18 +209,14 @@
         padding: '8px 0'
       });
       
-      // 5. 색상 그리드 생성
       const colorGrid = util.dom.createElement('div', {
         className: 'lite-editor-color-grid'
       });
       dropdownMenu.appendChild(colorGrid);
       
-      // 6. 외부 색상 데이터 파일 로드 후 드롭다운 구성
       loadColorScript(function() {
-        // 색상 목록 가져오기
         const highlightColors = loadHighlightColorData();
         
-        // 색상 셀 생성
         highlightColors.forEach(color => {
           const colorCell = util.dom.createElement('div', {
             className: 'lite-editor-color-cell',
@@ -171,70 +225,142 @@
             backgroundColor: color
           });
           
-          // 색상 클릭 이벤트 - 공통 유틸리티 사용
-          colorCell.addEventListener('click', util.scroll.preservePosition((e) => {
+          colorCell.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
-            // 드롭다운 닫기
+            // 🔧 디버깅: 색상 셀 클릭
+            errorHandler.colorLog('EMPHASIS', '🎨 색상 셀 클릭', {
+              color: color,
+              hasSelection: !!savedRange,
+              hasCursorPosition: !!savedCursorPosition
+            }, '#9c27b0');
+            
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             highlightContainer.classList.remove('active');
             isDropdownOpen = false;
             
-            // 모달 관리 시스템에서 제거
             util.activeModalManager.unregister(dropdownMenu);
             
-            // 하이라이트 색상 적용
+            // 🔧 하이라이트 적용 (스크롤 복원 없이)
             applyHighlightColor(color, contentArea, colorIndicator);
-          }));
+          });
           
           colorGrid.appendChild(colorCell);
         });
       });
       
-      // 7. 드롭다운을 document.body에 직접 추가
       document.body.appendChild(dropdownMenu);
       
-      // 8. 버튼 클릭 이벤트 - 공통 유틸리티 사용
-      highlightContainer.addEventListener('click', util.scroll.preservePosition((e) => {
+      highlightContainer.addEventListener('mousedown', (e) => {
+        // 🔧 디버깅: mousedown 시점 상태
+        errorHandler.colorLog('EMPHASIS', '🖱️ mousedown 이벤트', {
+          activeElement: document.activeElement?.tagName,
+          contentAreaFocused: document.activeElement === contentArea,
+          hasFocus: document.hasFocus()
+        }, '#ff9800');
+        
+        const selection = util.selection.getSafeSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const selectedText = range.toString().trim();
+          
+          if (selectedText) {
+            savedRange = util.selection.saveSelection();
+            savedCursorPosition = null; // 선택 영역이 있으면 커서 위치는 저장하지 않음
+            errorHandler.colorLog('EMPHASIS', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
+          } else {
+            savedRange = null;
+            
+            // 🔧 현재 커서 위치 정확히 저장
+            savedCursorPosition = {
+              startContainer: range.startContainer,
+              startOffset: range.startOffset,
+              endContainer: range.endContainer,
+              endOffset: range.endOffset
+            };
+            
+            errorHandler.colorLog('EMPHASIS', '✅ 커서 위치 저장됨', {
+              startContainer: range.startContainer?.nodeName,
+              startOffset: range.startOffset,
+              collapsed: range.collapsed
+            }, '#9c27b0');
+          }
+        } else {
+          savedRange = null;
+          savedCursorPosition = null;
+          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
+        }
+      });
+      
+      highlightContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 선택 영역 저장
-        saveSelection();
+        // 🔧 디버깅: click 이벤트 시점 상태
+        errorHandler.colorLog('EMPHASIS', '🖱️ click 이벤트', {
+          hasSelection: !!savedRange,
+          hasCursorPosition: !!savedCursorPosition,
+          activeElement: document.activeElement?.tagName,
+          contentAreaFocused: document.activeElement === contentArea,
+          hasFocus: document.hasFocus()
+        }, '#ff9800');
         
-        // 현재 드롭다운의 상태 확인
+        // 🔧 선택 영역이 없어도 커서 위치가 있으면 드롭다운 열기
+        if (!savedRange && !savedCursorPosition) {
+          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
+          return;
+        }
+        
+        // 🔧 포커스 강제 복원 (fontColor.js와 동일)
+        if (document.activeElement !== contentArea) {
+          errorHandler.colorLog('EMPHASIS', '🔧 포커스 강제 복원', {
+            from: document.activeElement?.tagName,
+            to: 'DIV'
+          }, '#ff5722');
+          
+          try {
+            contentArea.focus({ preventScroll: true });
+          } catch (e) {
+            contentArea.focus();
+          }
+        }
+        
+        // 🔧 디버깅: 포커스 복원 후 상태
+        errorHandler.colorLog('EMPHASIS', '포커스 복원 후', {
+          activeElement: document.activeElement?.tagName,
+          contentAreaFocused: document.activeElement === contentArea,
+          hasFocus: document.hasFocus()
+        }, '#4caf50');
+        
         const isVisible = dropdownMenu.classList.contains('show');
         
-        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
-        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
         if (!isVisible) {
-          util.activeModalManager.closeAll();
+          // 🔧 다른 모달을 닫되, 포커스는 유지
+          const otherModals = document.querySelectorAll('.lite-editor-dropdown-menu.show');
+          otherModals.forEach(modal => {
+            if (modal !== dropdownMenu) {
+              modal.classList.remove('show');
+              modal.style.display = 'none';
+            }
+          });
         }
         
         if (isVisible) {
-          // 닫기
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
           highlightContainer.classList.remove('active');
           isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
           util.activeModalManager.unregister(dropdownMenu);
         } else {
-          // 열기
           dropdownMenu.classList.add('show');
           dropdownMenu.style.display = 'block';
           highlightContainer.classList.add('active');
           isDropdownOpen = true;
           
-          // 위치 설정
-          const buttonRect = highlightContainer.getBoundingClientRect();
-          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
+          util.layer.setLayerPosition(dropdownMenu, highlightContainer);
           
-          // 활성 모달 등록 (관리 시스템에 추가)
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -244,16 +370,28 @@
           
           util.activeModalManager.register(dropdownMenu);
           
-          // 외부 클릭 시 닫기 설정 - 열 때만 등록
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             highlightContainer.classList.remove('active');
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
+            
+            // 🔧 드롭다운 닫힐 때도 포커스 유지
+            if (document.activeElement !== contentArea) {
+              contentArea.focus({ preventScroll: true });
+            }
           }, [highlightContainer]);
         }
-      }));
+        
+        // 🔧 디버깅: click 이벤트 완료 후 상태
+        errorHandler.colorLog('EMPHASIS', '✅ click 이벤트 완료', {
+          dropdownVisible: !isVisible,
+          activeElement: document.activeElement?.tagName,
+          contentAreaFocused: document.activeElement === contentArea,
+          hasFocus: document.hasFocus()
+        }, '#4caf50');
+      });
       
       return highlightContainer;
     }

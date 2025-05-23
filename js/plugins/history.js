@@ -109,6 +109,9 @@
     }
   }();
   
+  // 인스턴스별 정리 함수 저장
+  const cleanupFunctions = new Map();
+  
   // 키보드 단축키 핸들러 설정
   function setupKeyboardShortcuts(editorId, contentArea) {
     contentArea.addEventListener('keydown', function(e) {
@@ -132,26 +135,37 @@
     // 초기 상태 기록
     historyManager.setInitialState(editorId, contentArea);
     
-    // 입력 및 붙여넣기 이벤트에서 상태 기록
-    const recordEvents = ['input', 'paste'];
+    // 이벤트 핸들러 함수들을 변수에 저장 (나중에 제거하기 위해)
+    const inputHandler = function() {
+      historyManager.recordState(editorId, contentArea);
+    };
     
-    recordEvents.forEach(eventType => {
-      contentArea.addEventListener(eventType, function() {
-        historyManager.recordState(editorId, contentArea);
-      });
-    });
+    const pasteHandler = function() {
+      historyManager.recordState(editorId, contentArea);
+    };
     
-    // 포맷 이벤트 후 상태 기록을 위한 MutationObserver 설정
+    // 이벤트 리스너 등록
+    contentArea.addEventListener('input', inputHandler);
+    contentArea.addEventListener('paste', pasteHandler);
+    
+    // MutationObserver 설정
     const observer = new MutationObserver(function(mutations) {
       historyManager.recordState(editorId, contentArea);
     });
     
-    // DOM 변경 감시 시작
     observer.observe(contentArea, {
       childList: true,
       attributes: true,
       characterData: true,
       subtree: true
+    });
+    
+    // ✅ 정리 함수 등록
+    cleanupFunctions.set(editorId, function() {
+      observer.disconnect();
+      contentArea.removeEventListener('input', inputHandler);
+      contentArea.removeEventListener('paste', pasteHandler);
+      historyManager.instances.delete(editorId);
     });
   }
   
@@ -198,4 +212,15 @@
       historyManager.redo(editorContainer.id, contentArea);
     }
   });
+  
+  // ✅ 공개 정리 함수 추가
+  window.LiteEditorHistory = {
+    cleanup: function(editorId) {
+      const cleanup = cleanupFunctions.get(editorId);
+      if (cleanup) {
+        cleanup();
+        cleanupFunctions.delete(editorId);
+      }
+    }
+  };
 })();
