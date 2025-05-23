@@ -11,15 +11,14 @@
   }
   
   // 전역 상태 변수
-  let savedRange = null;          // 임시로 저장된 선택 영역
-  let isDropdownOpen = false;     // 드롭다운 상태 추적
+  let savedRange = null;
+  let isDropdownOpen = false;
   
-  // 선택 영역 저장 함수 (util 사용)
+  // 선택 영역 저장/복원 함수
   function saveSelection() {
     savedRange = util.selection.saveSelection();
   }
 
-  // 선택 영역 복원 함수 (util 사용)
   function restoreSelection() {
     if (!savedRange) return false;
     return util.selection.restoreSelection(savedRange);
@@ -97,185 +96,61 @@
           e.preventDefault();
           e.stopPropagation();
           
-          // 현재 스크롤 위치 저장
           const currentScrollY = window.scrollY;
           
-          // API를 통해 드롭다운 닫기
-          if (headingButton._dropdownAPI) {
-            headingButton._dropdownAPI.close();
-          }
-          
-          // 에디터에 포커스 (스크롤 방지 옵션 추가)
           try {
             contentArea.focus({ preventScroll: true });
           } catch (e) {
-            // 일부 구형 브라우저에서는 preventScroll 옵션을 지원하지 않음
             contentArea.focus();
           }
           
-          // 선택 영역 복원
           restoreSelection();
           
-          // Range API를 사용한 heading 적용 (직접 DOM 조작)
           const selection = util.selection.getSafeSelection();
           if (selection && selection.rangeCount > 0) {
-            // 선택한 영역의 범위 가져오기
-            const range = selection.getRangeAt(0);
-            let container = range.commonAncestorContainer;
-            
-            // 텍스트 노드인 경우 부모 노드 확인
-            if (container.nodeType === 3) { // Text node
-              container = container.parentNode;
-            }
-            
-            // 헤딩 또는 단락 태그 가져오기 (업데이트된 로직)
-            let headingElement = null;
-            
-            // 현재 요소가 텍스트 노드인 경우 부모 요소 확인
-            if (container.nodeType === 3) { // Text node
-              container = container.parentNode;
-            }
-            
-            // 현재 요소가 헤딩 또는 단락 태그인지 확인
-            if (container.nodeName === 'H1' || container.nodeName === 'H2' || 
-                container.nodeName === 'H3' || container.nodeName === 'P') {
-              headingElement = container;
-            } else {
-              // 부모 요소 중에서 헤딩 태그 찾기
-              const closestH1 = container.closest('h1');
-              const closestH2 = container.closest('h2');
-              const closestH3 = container.closest('h3');
-              const closestP = container.closest('p');
-              
-              if (closestH1) headingElement = closestH1;
-              else if (closestH2) headingElement = closestH2;
-              else if (closestH3) headingElement = closestH3;
-              else if (closestP) headingElement = closestP;
-            }
-            
-            // 기존 헤딩 태그가 있는 경우 처리
-            if (headingElement) {
-              // 1. 현재 태그와 동일한 태그를 적용하려는 경우 (토글)
-              if (headingElement.nodeName.toLowerCase() === level.tag) {
-                // 기본 단락(p)으로 변환
-                const content = headingElement.innerHTML;
-                const p = document.createElement('P');
-                p.innerHTML = content;
-                
-                // 기존 헤딩 태그를 새 p 태그로 교체
-                headingElement.parentNode.replaceChild(p, headingElement);
-                
-                // 선택 영역 재설정
-                const newRange = document.createRange();
-                newRange.selectNodeContents(p);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
-              } 
-              // 2. paragraph를 적용하려는 경우 (헤딩 -> 단락)
-              else if (level.tag === 'p') {
-                // 헤딩 태그의 내용을 가져와서 p 태그로 변경
-                const content = headingElement.innerHTML;
-                const p = document.createElement('P');
-                p.innerHTML = content;
-                
-                // 기존 헤딩 태그를 새 p 태그로 교체
-                headingElement.parentNode.replaceChild(p, headingElement);
-                
-                // 선택 영역 재설정
-                const newRange = document.createRange();
-                newRange.selectNodeContents(p);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
-              }
-              // 3. 다른 헤딩 태그를 적용하려는 경우 (헤딩 -> 다른 헤딩)
-              else {
-                // 현재 헤딩 태그의 내용을 가져와서 새 헤딩 태그로 변경
-                const content = headingElement.innerHTML;
-                const newHeading = document.createElement(level.tag.toUpperCase());
-                newHeading.innerHTML = content;
-                
-                // 기존 헤딩 태그를 새 헤딩 태그로 교체
-                headingElement.parentNode.replaceChild(newHeading, headingElement);
-                
-                // 선택 영역 재설정
-                const newRange = document.createRange();
-                newRange.selectNodeContents(newHeading);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
-              }
-            } else {
-              // 새 태그 요소 생성 (H1, H2, H3, P)
-              const heading = document.createElement(level.tag.toUpperCase());
-              
-              // 선택한 내용을 사용하여 새 요소에 추가
-              heading.appendChild(range.extractContents());
-              
-              // 새 요소를 DOM에 삽입
-              range.insertNode(heading);
-            }
-            
-            // 에디터 상태 업데이트
-            contentArea.dispatchEvent(new Event('input', { bubbles: true }));
-          } else {
-            errorHandler.logError('HeadingPlugin', errorHandler.codes.COMMON.SELECTION_GET, e);
+            applyHeadingSimple(level.tag, selection, contentArea);
           }
           
-          // 스크롤 위치 복원 (애니메이션 프레임 사용)
           requestAnimationFrame(() => {
             setTimeout(() => {
               window.scrollTo(window.scrollX, currentScrollY);
             }, 50);
           });
+
+          closeDropdown();
         });
         
         dropdownMenu.appendChild(option);
       });
       
-      // 드롭다운을 document.body에 직접 추가
       document.body.appendChild(dropdownMenu);
       
-      // 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
+      // 버튼 클릭 이벤트
       headingButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 현재 스크롤 위치 저장
         const currentScrollY = window.scrollY;
-        
-        // 선택 영역 저장
         saveSelection();
         
-        // 현재 드롭다운의 상태 확인
         const isVisible = dropdownMenu.classList.contains('show');
         
-        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
-        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
         if (!isVisible) {
           util.activeModalManager.closeAll();
         }
         
         if (isVisible) {
-          // 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          headingButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
-          util.activeModalManager.unregister(dropdownMenu);
+          closeDropdown();
         } else {
-          // 열기
           dropdownMenu.classList.add('show');
           dropdownMenu.style.display = 'block';
           headingButton.classList.add('active');
           isDropdownOpen = true;
           
-          // 위치 설정
           const buttonRect = headingButton.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = buttonRect.left + 'px';
           
-          // 활성 모달 등록 (관리 시스템에 추가)
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -284,128 +159,178 @@
           };
           
           util.activeModalManager.register(dropdownMenu);
-          
-          // 외부 클릭 시 닫기 설정 - 열 때만 등록
           util.setupOutsideClickHandler(dropdownMenu, () => {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            headingButton.classList.remove('active');
-            isDropdownOpen = false;
-            util.activeModalManager.unregister(dropdownMenu);
+            closeDropdown();
           }, [headingButton]);
         }
         
-        // 스크롤 위치 복원
         requestAnimationFrame(() => {
           setTimeout(() => {
             window.scrollTo(window.scrollX, currentScrollY);
           }, 50);
         });
       });
-      
-      // 버튼 반환
+
+      function closeDropdown() {
+        dropdownMenu.classList.remove('show');
+        dropdownMenu.style.display = 'none';
+        headingButton.classList.remove('active');
+        isDropdownOpen = false;
+        util.activeModalManager.unregister(dropdownMenu);
+      }
+
       return headingButton;
     }
   });
 
+  // 헤딩 적용 함수
+  function applyHeadingSimple(targetTag, selection, contentArea) {
+    const range = selection.getRangeAt(0);
+    let currentElement = findCurrentHeadingElement(range);
+    
+    // 디버깅 로그
+    console.log('applyHeadingSimple - currentElement:', currentElement ? currentElement.nodeName : 'null');
+    
+    if (!currentElement) {
+      console.log('No valid element found, aborting heading application');
+      return;
+    }
+    
+    const isFullSelection = isFullElementSelected(range, currentElement);
+    
+    if (isFullSelection) {
+      changeEntireElement(currentElement, targetTag);
+    } else {
+      changeSelectedPortion(range, targetTag);
+    }
+    
+    contentArea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  
+  // 전체 요소가 선택되었는지 판단
+  function isFullElementSelected(range, element) {
+    if (range.collapsed) return true;
+    
+    const selectedText = range.toString();
+    const elementText = element.textContent;
+    
+    if (selectedText === elementText) return true;
+    if (selectedText.replace(/\s+/g, '') === elementText.replace(/\s+/g, '')) return true;
+    
+    return false;
+  }
+  
+  // 전체 요소 변경
+  function changeEntireElement(currentElement, targetTag) {
+    let newTag = targetTag;
+    if (currentElement.nodeName === targetTag.toUpperCase()) {
+      newTag = 'p';
+    }
+    
+    const newElement = document.createElement(newTag.toUpperCase());
+    newElement.innerHTML = currentElement.innerHTML;
+    currentElement.parentNode.replaceChild(newElement, currentElement);
+    
+    const selection = util.selection.getSafeSelection();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(newElement);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
+  
+  // 선택된 부분만 변경
+  function changeSelectedPortion(range, targetTag) {
+    const selectedContent = range.extractContents();
+    const headingElement = document.createElement(targetTag.toUpperCase());
+    headingElement.appendChild(selectedContent);
+    range.insertNode(headingElement);
+    
+    const selection = util.selection.getSafeSelection();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(headingElement);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
+  
+  // 현재 헤딩/단락 요소 찾기
+  function findCurrentHeadingElement(range) {
+    let container = range.commonAncestorContainer;
+    
+    // 디버깅 로그 추가
+    console.log('=== findCurrentHeadingElement DEBUG ===');
+    console.log('Initial container:', container);
+    console.log('Container nodeName:', container.nodeName);
+    console.log('Container nodeType:', container.nodeType);
+    console.log('Container textContent:', JSON.stringify(container.textContent));
+    
+    if (container.nodeType === 3) {
+      container = container.parentNode;
+      console.log('After moving to parent:', container.nodeName);
+    }
+    
+    console.log('Final container:', container.nodeName);
+    console.log('Container innerHTML:', container.innerHTML);
+    
+    if (['H1', 'H2', 'H3', 'P'].includes(container.nodeName)) {
+      console.log('Found direct match:', container.nodeName);
+      return container;
+    }
+    
+    const closest = container.closest('h1, h2, h3, p');
+    console.log('Found via closest():', closest ? closest.nodeName : 'null');
+    
+    // 만약 헤딩/단락 요소를 찾지 못했다면, 새 P 태그로 감싸기
+    if (!closest) {
+      console.log('No heading/paragraph found, creating new P wrapper');
+      return wrapInNewParagraph(range, container);
+    }
+    
+    return closest;
+  }
+
+  // 새 P 태그로 감싸는 함수
+  function wrapInNewParagraph(range, container) {
+    // 선택된 텍스트가 div나 다른 컨테이너에 직접 있는 경우
+    if (container.nodeName === 'DIV' || container.classList?.contains('lite-editor-content')) {
+      // 선택된 텍스트 노드들을 P로 감싸기
+      const selectedContent = range.extractContents();
+      const newP = document.createElement('P');
+      newP.appendChild(selectedContent);
+      range.insertNode(newP);
+      
+      // 새 range 설정
+      const newRange = document.createRange();
+      newRange.selectNodeContents(newP);
+      const selection = util.selection.getSafeSelection();
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+      
+      console.log('Created new P wrapper:', newP);
+      return newP;
+    }
+    
+    return null;
+  }
+
   // 단축키로 사용할 헤딩 적용 함수
   function applyHeadingByShortcut(tag, contentArea) {
-    // 현재 스크롤 위치 저장
     const currentScrollY = window.scrollY;
     
-    // 선택 영역 저장
     saveSelection();
     
-    // 에디터에 포커스
     try {
       contentArea.focus({ preventScroll: true });
     } catch (e) {
       contentArea.focus();
     }
     
-    // 선택 영역 복원
     restoreSelection();
     
-    // Range API를 사용한 heading 적용
     const selection = util.selection.getSafeSelection();
     if (selection && selection.rangeCount > 0) {
-      // 선택한 영역의 범위 가져오기
-      const range = selection.getRangeAt(0);
-      let container = range.commonAncestorContainer;
-      
-      // 텍스트 노드인 경우 부모 노드 확인
-      if (container.nodeType === 3) {
-        container = container.parentNode;
-      }
-      
-      // 헤딩 또는 단락 태그 가져오기
-      let headingElement = null;
-      
-      // 현재 요소가 헤딩 또는 단락 태그인지 확인
-      if (container.nodeName === 'H1' || container.nodeName === 'H2' || 
-          container.nodeName === 'H3' || container.nodeName === 'P') {
-        headingElement = container;
-      } else {
-        // 부모 요소 중에서 헤딩 태그 찾기
-        const closestH1 = container.closest('h1');
-        const closestH2 = container.closest('h2');
-        const closestH3 = container.closest('h3');
-        const closestP = container.closest('p');
-        
-        if (closestH1) headingElement = closestH1;
-        else if (closestH2) headingElement = closestH2;
-        else if (closestH3) headingElement = closestH3;
-        else if (closestP) headingElement = closestP;
-      }
-      
-      // 기존 헤딩 태그가 있는 경우 처리
-      if (headingElement) {
-        // 현재 태그와 동일한 태그를 적용하려는 경우 (토글)
-        if (headingElement.nodeName.toLowerCase() === tag) {
-          // 기본 단락(p)으로 변환
-          const content = headingElement.innerHTML;
-          const p = document.createElement('P');
-          p.innerHTML = content;
-          
-          // 기존 헤딩 태그를 새 p 태그로 교체
-          headingElement.parentNode.replaceChild(p, headingElement);
-          
-          // 선택 영역 재설정
-          const newRange = document.createRange();
-          newRange.selectNodeContents(p);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-        } else {
-          // 현재 헤딩 태그의 내용을 가져와서 새 헤딩 태그로 변경
-          const content = headingElement.innerHTML;
-          const newHeading = document.createElement(tag.toUpperCase());
-          newHeading.innerHTML = content;
-          
-          // 기존 헤딩 태그를 새 헤딩 태그로 교체
-          headingElement.parentNode.replaceChild(newHeading, headingElement);
-          
-          // 선택 영역 재설정
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newHeading);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-        }
-      } else {
-        // 새 태그 요소 생성
-        const heading = document.createElement(tag.toUpperCase());
-        
-        // 선택한 내용을 사용하여 새 요소에 추가
-        heading.appendChild(range.extractContents());
-        
-        // 새 요소를 DOM에 삽입
-        range.insertNode(heading);
-      }
-      
-      // 에디터 상태 업데이트
-      contentArea.dispatchEvent(new Event('input', { bubbles: true }));
+      applyHeadingSimple(tag, selection, contentArea);
     }
     
-    // 스크롤 위치 복원
     requestAnimationFrame(() => {
       setTimeout(() => {
         window.scrollTo(window.scrollX, currentScrollY);
@@ -413,8 +338,7 @@
     });
   }
   
-  // 단순한 Alt 키 조합으로 변경
-  // H1 (Alt+1)
+  // 단축키 등록
   LiteEditor.registerShortcut('heading', {
     key: '1',
     alt: true,
@@ -423,7 +347,6 @@
     }
   });
   
-  // H2 (Alt+2)
   LiteEditor.registerShortcut('heading', {
     key: '2',
     alt: true,
@@ -432,7 +355,6 @@
     }
   });
   
-  // H3 (Alt+3)
   LiteEditor.registerShortcut('heading', {
     key: '3',
     alt: true,
@@ -441,7 +363,6 @@
     }
   });
   
-  // Paragraph (Alt+4)
   LiteEditor.registerShortcut('heading', {
     key: '4',
     alt: true,
