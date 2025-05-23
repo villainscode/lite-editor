@@ -350,6 +350,7 @@
     }
     
     function showModal() {
+        const scrollPosition = util.scroll.savePosition();
         const modal = createModal();
         
         const button = document.querySelector('.lite-editor-image-upload-button');
@@ -376,6 +377,7 @@
             modal.style.removeProperty('opacity');
             modal.style.removeProperty('visibility');
             modal.classList.add('show');
+            util.scroll.restorePosition(scrollPosition);
         }, 10);
 
         // 전역 이벤트 핸들러 설정

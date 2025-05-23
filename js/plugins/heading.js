@@ -91,12 +91,10 @@
             break;
         }
         
-        // 클릭 이벤트
-        option.addEventListener('click', (e) => {
+        // 클릭 이벤트 - 공통 유틸리티 사용
+        option.addEventListener('click', util.scroll.preservePosition((e) => {
           e.preventDefault();
           e.stopPropagation();
-          
-          const currentScrollY = window.scrollY;
           
           try {
             contentArea.focus({ preventScroll: true });
@@ -110,27 +108,20 @@
           if (selection && selection.rangeCount > 0) {
             applyHeadingSimple(level.tag, selection, contentArea);
           }
-          
-          requestAnimationFrame(() => {
-            setTimeout(() => {
-              window.scrollTo(window.scrollX, currentScrollY);
-            }, 50);
-          });
 
           closeDropdown();
-        });
+        }));
         
         dropdownMenu.appendChild(option);
       });
       
       document.body.appendChild(dropdownMenu);
       
-      // 버튼 클릭 이벤트
-      headingButton.addEventListener('click', (e) => {
+      // 버튼 클릭 이벤트 - 공통 유틸리티 사용
+      headingButton.addEventListener('click', util.scroll.preservePosition((e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        const currentScrollY = window.scrollY;
         saveSelection();
         
         const isVisible = dropdownMenu.classList.contains('show');
@@ -163,13 +154,7 @@
             closeDropdown();
           }, [headingButton]);
         }
-        
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
-      });
+      }));
 
       function closeDropdown() {
         dropdownMenu.classList.remove('show');
@@ -293,30 +278,26 @@
     return null;
   }
 
-  // 단축키로 사용할 헤딩 적용 함수
+  // 단축키로 사용할 헤딩 적용 함수 - 공통 유틸리티 사용
   function applyHeadingByShortcut(tag, contentArea) {
-    const currentScrollY = window.scrollY;
-    
-    saveSelection();
-    
-    try {
-      contentArea.focus({ preventScroll: true });
-    } catch (e) {
-      contentArea.focus();
-    }
-    
-    restoreSelection();
-    
-    const selection = util.selection.getSafeSelection();
-    if (selection && selection.rangeCount > 0) {
-      applyHeadingSimple(tag, selection, contentArea);
-    }
-    
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.scrollTo(window.scrollX, currentScrollY);
-      }, 50);
+    const applyWithScroll = util.scroll.preservePosition(() => {
+      saveSelection();
+      
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
+      
+      restoreSelection();
+      
+      const selection = util.selection.getSafeSelection();
+      if (selection && selection.rangeCount > 0) {
+        applyHeadingSimple(tag, selection, contentArea);
+      }
     });
+    
+    applyWithScroll();
   }
   
   // 단축키 등록

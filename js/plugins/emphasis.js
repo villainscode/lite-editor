@@ -49,73 +49,66 @@
   }
   
   /**
-   * 배경색(하이라이트) 적용 함수
+   * 배경색(하이라이트) 적용 함수 - 공통 유틸리티 사용
    * @param {string} color - 적용할 색상 (hex 코드)
    * @param {HTMLElement} contentArea - 편집 영역 요소
    * @param {HTMLElement} colorIndicator - 색상 표시기 요소
    */
   function applyHighlightColor(color, contentArea, colorIndicator) {
-    try {
-      // 현재 스크롤 위치 저장
-      const currentScrollY = window.scrollY;
-      const currentScrollX = window.scrollX;
-      
-      // 색상 인디케이터 업데이트
-      if (colorIndicator) {
-        colorIndicator.style.backgroundColor = color;
-        colorIndicator.style.border = 'none';
-      }
-      
-      // 포커스 설정 (스크롤 방지)
+    const applyWithScroll = util.scroll.preservePosition(() => {
       try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
-      // 선택 영역 복원
-      restoreSelection();
-      
-      // 현재 선택된 범위 가져오기
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        
-        // 선택 영역이 포함된 공통 조상 컨테이너 찾기
-        let container = range.commonAncestorContainer;
-        if (container.nodeType === 3) { // 텍스트 노드인 경우
-          container = container.parentNode;
+        // 색상 인디케이터 업데이트
+        if (colorIndicator) {
+          colorIndicator.style.backgroundColor = color;
+          colorIndicator.style.border = 'none';
         }
         
-        // 텍스트 컨텐츠를 복제하고 <span> 태그로 래핑
-        const fragment = range.extractContents();
-        const spanElement = util.dom.createElement('span', {}, {
-          backgroundColor: color
-        });
-        spanElement.appendChild(fragment);
+        // 포커스 설정 (스크롤 방지)
+        try {
+          contentArea.focus({ preventScroll: true });
+        } catch (e) {
+          contentArea.focus();
+        }
         
-        // 새 <span> 요소를 DOM에 삽입
-        range.insertNode(spanElement);
+        // 선택 영역 복원
+        restoreSelection();
         
-        // 방금 추가한 <span> 요소 전체를 선택
-        const newRange = document.createRange();
-        newRange.selectNodeContents(spanElement);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-        
-        // 에디터 변경 이벤트 발생 (이전 오류 수정: styles -> editor)
-        util.editor.dispatchEditorEvent(contentArea);
+        // 현재 선택된 범위 가져오기
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // 선택 영역이 포함된 공통 조상 컨테이너 찾기
+          let container = range.commonAncestorContainer;
+          if (container.nodeType === 3) { // 텍스트 노드인 경우
+            container = container.parentNode;
+          }
+          
+          // 텍스트 컨텐츠를 복제하고 <span> 태그로 래핑
+          const fragment = range.extractContents();
+          const spanElement = util.dom.createElement('span', {}, {
+            backgroundColor: color
+          });
+          spanElement.appendChild(fragment);
+          
+          // 새 <span> 요소를 DOM에 삽입
+          range.insertNode(spanElement);
+          
+          // 방금 추가한 <span> 요소 전체를 선택
+          const newRange = document.createRange();
+          newRange.selectNodeContents(spanElement);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          // 에디터 변경 이벤트 발생 (이전 오류 수정: styles -> editor)
+          util.editor.dispatchEditorEvent(contentArea);
+        }
+      } catch (e) {
+        errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
       }
-      
-      // 스크롤 위치 복원
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.scrollTo(currentScrollX, currentScrollY);
-        }, 50);
-      });
-    } catch (e) {
-      errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
-    }
+    });
+    
+    applyWithScroll();
   }
   
   // 하이라이트(배경색) 플러그인 등록
@@ -178,13 +171,10 @@
             backgroundColor: color
           });
           
-          // 색상 클릭 이벤트
-          colorCell.addEventListener('click', (e) => {
+          // 색상 클릭 이벤트 - 공통 유틸리티 사용
+          colorCell.addEventListener('click', util.scroll.preservePosition((e) => {
             e.preventDefault();
             e.stopPropagation();
-            
-            // 현재 스크롤 위치 저장
-            const currentScrollY = window.scrollY;
             
             // 드롭다운 닫기
             dropdownMenu.classList.remove('show');
@@ -197,14 +187,7 @@
             
             // 하이라이트 색상 적용
             applyHighlightColor(color, contentArea, colorIndicator);
-            
-            // 스크롤 위치 복원
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                window.scrollTo(window.scrollX, currentScrollY);
-              }, 50);
-            });
-          });
+          }));
           
           colorGrid.appendChild(colorCell);
         });
@@ -213,13 +196,10 @@
       // 7. 드롭다운을 document.body에 직접 추가
       document.body.appendChild(dropdownMenu);
       
-      // 8. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
-      highlightContainer.addEventListener('click', (e) => {
+      // 8. 버튼 클릭 이벤트 - 공통 유틸리티 사용
+      highlightContainer.addEventListener('click', util.scroll.preservePosition((e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
         
         // 선택 영역 저장
         saveSelection();
@@ -273,14 +253,7 @@
             util.activeModalManager.unregister(dropdownMenu);
           }, [highlightContainer]);
         }
-        
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
-      });
+      }));
       
       return highlightContainer;
     }

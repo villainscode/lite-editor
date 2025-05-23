@@ -440,6 +440,9 @@
         e.preventDefault();
         e.stopPropagation();
         
+        // 스크롤 위치 저장 추가
+        const scrollPosition = util.scroll.savePosition();
+        
         // 선택 영역 저장
         saveSelection();
         
@@ -496,6 +499,9 @@
             util.activeModalManager.unregister(dropdownMenu);
           }, [mediaButton]);
         }
+        
+        // 스크롤 위치 복원 추가
+        util.scroll.restorePosition(scrollPosition);
       });
       
       return mediaButton;

@@ -200,13 +200,10 @@
           });
           
           // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
-          fontItem.addEventListener('click', (e) => {
+          fontItem.addEventListener('click', util.scroll.preservePosition((e) => {
             e.preventDefault();
             e.stopPropagation();
             errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
-            
-            // 현재 스크롤 위치 저장
-            const currentScrollY = window.scrollY;
             
             // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
@@ -234,14 +231,7 @@
             
             // UI 업데이트
             fontText.textContent = font.name;
-            
-            // 스크롤 위치 복원
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                window.scrollTo(window.scrollX, currentScrollY);
-              }, 50);
-            });
-          });
+          }));
           
           dropdownMenu.appendChild(fontItem);
         });
@@ -251,12 +241,9 @@
       document.body.appendChild(dropdownMenu);
       
       // 7. 직접 구현한 드롭다운 토글 로직
-      fontContainer.addEventListener('click', (e) => {
+      fontContainer.addEventListener('click', util.scroll.preservePosition((e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
         
         // 선택 영역 저장
         saveSelection();
@@ -314,14 +301,7 @@
             util.activeModalManager.unregister(dropdownMenu);
           }, [fontContainer]);
         }
-        
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
-      });
+      }));
       
       return fontContainer;
     }

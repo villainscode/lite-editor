@@ -53,65 +53,68 @@
    * @param {HTMLElement} colorIndicator - 색상 표시기 요소
    */
   function applyFontColor(color, contentArea, colorIndicator) {
-    try {
-      // 현재 스크롤 위치 저장
-      const currentScrollY = window.scrollY;
-      
-      // 색상 인디케이터 업데이트
-      if (colorIndicator) {
-        colorIndicator.style.backgroundColor = color;
-      }
-      
-      // 포커스 설정 (스크롤 방지)
+    const applyWithScroll = util.scroll.preservePosition(() => {
       try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
-      // 선택 영역 복원
-      restoreSelection();
-      
-      // 현재 선택된 범위 가져오기
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
+        // 현재 스크롤 위치 저장
+        const currentScrollY = window.scrollY;
         
-        // 선택 영역이 포함된 공통 조상 컨테이너 찾기
-        let container = range.commonAncestorContainer;
-        if (container.nodeType === 3) { // 텍스트 노드인 경우
-          container = container.parentNode;
+        // 색상 인디케이터 업데이트
+        if (colorIndicator) {
+          colorIndicator.style.backgroundColor = color;
         }
         
-        // 텍스트 컨텐츠를 복제하고 <font> 태그로 래핑
-        const fragment = range.extractContents();
-        const fontElement = util.dom.createElement('font', {
-          color: color
+        // 포커스 설정 (스크롤 방지)
+        try {
+          contentArea.focus({ preventScroll: true });
+        } catch (e) {
+          contentArea.focus();
+        }
+        
+        // 선택 영역 복원
+        restoreSelection();
+        
+        // 현재 선택된 범위 가져오기
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // 선택 영역이 포함된 공통 조상 컨테이너 찾기
+          let container = range.commonAncestorContainer;
+          if (container.nodeType === 3) { // 텍스트 노드인 경우
+            container = container.parentNode;
+          }
+          
+          // 텍스트 컨텐츠를 복제하고 <font> 태그로 래핑
+          const fragment = range.extractContents();
+          const fontElement = util.dom.createElement('font', {
+            color: color
+          });
+          fontElement.appendChild(fragment);
+          
+          // 새 <font> 요소를 DOM에 삽입
+          range.insertNode(fontElement);
+          
+          // 방금 추가한 <font> 요소 전체를 선택
+          const newRange = document.createRange();
+          newRange.selectNodeContents(fontElement);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          // 에디터 변경 이벤트 발생
+          util.editor.dispatchEditorEvent(contentArea);
+        }
+        
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo(window.scrollX, currentScrollY);
+          }, 50);
         });
-        fontElement.appendChild(fragment);
-        
-        // 새 <font> 요소를 DOM에 삽입
-        range.insertNode(fontElement);
-        
-        // 방금 추가한 <font> 요소 전체를 선택
-        const newRange = document.createRange();
-        newRange.selectNodeContents(fontElement);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-        
-        // 에디터 변경 이벤트 발생
-        util.editor.dispatchEditorEvent(contentArea);
+      } catch (e) {
+        errorHandler.logError('FontColorPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
       }
-      
-      // 스크롤 위치 복원
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.scrollTo(window.scrollX, currentScrollY);
-        }, 50);
-      });
-    } catch (e) {
-      errorHandler.logError('FontColorPlugin', errorHandler.codes.PLUGINS.FONT.APPLY, e);
-    }
+    });
+    applyWithScroll();
   }
   
   // 글자 색상 플러그인 등록

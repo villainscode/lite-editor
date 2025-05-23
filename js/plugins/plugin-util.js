@@ -1000,6 +1000,72 @@ const PluginUtil = (function() {
         return button;
     };
 
+    // 스크롤 관리 유틸리티 추가
+    const scroll = {
+        /**
+         * 현재 스크롤 위치 저장
+         * @returns {Object} 저장된 스크롤 위치 {x, y}
+         */
+        savePosition() {
+            return {
+                x: window.scrollX,
+                y: window.scrollY
+            };
+        },
+
+        /**
+         * 스크롤 위치 복원
+         * @param {Object} position - 복원할 스크롤 위치 {x, y}
+         * @param {number} delay - 복원 지연 시간(ms, 기본값: 50)
+         */
+        restorePosition(position, delay = 50) {
+            if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
+                return;
+            }
+            
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    window.scrollTo(position.x, position.y);
+                }, delay);
+            });
+        },
+
+        /**
+         * 함수 실행 시 스크롤 위치 보존
+         * @param {Function} fn - 실행할 함수
+         * @param {number} delay - 복원 지연 시간(ms, 기본값: 50)
+         * @returns {Function} 스크롤 보존이 적용된 함수
+         */
+        preservePosition(fn, delay = 50) {
+            return function(...args) {
+                const scrollPosition = scroll.savePosition();
+                const result = fn.apply(this, args);
+                scroll.restorePosition(scrollPosition, delay);
+                return result;
+            };
+        },
+
+        /**
+         * 비동기 함수 실행 시 스크롤 위치 보존
+         * @param {Function} fn - 실행할 비동기 함수
+         * @param {number} delay - 복원 지연 시간(ms, 기본값: 50)
+         * @returns {Function} 스크롤 보존이 적용된 비동기 함수
+         */
+        preservePositionAsync(fn, delay = 50) {
+            return async function(...args) {
+                const scrollPosition = scroll.savePosition();
+                try {
+                    const result = await fn.apply(this, args);
+                    scroll.restorePosition(scrollPosition, delay);
+                    return result;
+                } catch (error) {
+                    scroll.restorePosition(scrollPosition, delay);
+                    throw error;
+                }
+            };
+        }
+    };
+
     // 공개 API
     return {
         dom,
@@ -1009,6 +1075,7 @@ const PluginUtil = (function() {
         styles,
         editor,
         layer,
+        scroll,
         layerManager,
         registerPlugin,
         registerInlineFormatPlugin,

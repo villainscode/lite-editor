@@ -62,71 +62,64 @@
     }
     
     /**
-     * 선택된 텍스트에 링크를 적용
+     * 선택된 텍스트에 링크를 적용 - 공통 유틸리티 사용
      * @param {string} url - 적용할 URL
      * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
      */
     function applyLink(url, contentArea) {
-        try {
-            url = url.trim();
-            if (!url) return;
-            
-            // 현재 스크롤 위치 저장
-            const currentScrollY = window.scrollY;
-            const currentScrollX = window.scrollX;
-            
-            // URL 정규화 (PluginUtil 활용)
-            const finalUrl = util.url.normalizeUrl(url);
-            
-            // 포커스 설정 (스크롤 방지)
+        const applyWithScroll = util.scroll.preservePosition(() => {
             try {
-                contentArea.focus({ preventScroll: true });
-            } catch (e) {
-                contentArea.focus();
-            }
-            
-            // 선택 영역 복원
-            restoreSelection();
-            
-            // 선택 영역이 있는 경우
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
-                document.execCommand('createLink', false, finalUrl);
+                url = url.trim();
+                if (!url) return;
                 
+                // URL 정규화 (PluginUtil 활용)
+                const finalUrl = util.url.normalizeUrl(url);
+                
+                // 포커스 설정 (스크롤 방지)
+                try {
+                    contentArea.focus({ preventScroll: true });
+                } catch (e) {
+                    contentArea.focus();
+                }
+                
+                // 선택 영역 복원
+                restoreSelection();
+                
+                // 선택 영역이 있는 경우
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+                    document.execCommand('createLink', false, finalUrl);
+                    
+                    const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
+                    if (newLink) {
+                        newLink.setAttribute('target', '_blank');
+                    }
+                } else {
+                    // 선택 영역이 없는 경우 현재 커서 위치에 링크 삽입
+                    const linkText = url.replace(/^https?:\/\//i, '');
+                    const linkElement = `<a href="${finalUrl}" target="_blank">${linkText}</a>`;
+                    document.execCommand('insertHTML', false, linkElement);
+                }
+                
+                // 커서를 링크 뒤로 이동
                 const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
                 if (newLink) {
-                    newLink.setAttribute('target', '_blank');
+                    const range = document.createRange();
+                    range.setStartAfter(newLink);
+                    range.collapse(true);
+                    
+                    selection.removeAllRanges();
+                    selection.addRange(range);
                 }
-            } else {
-                // 선택 영역이 없는 경우 현재 커서 위치에 링크 삽입
-                const linkText = url.replace(/^https?:\/\//i, '');
-                const linkElement = `<a href="${finalUrl}" target="_blank">${linkText}</a>`;
-                document.execCommand('insertHTML', false, linkElement);
-            }
-            
-            // 커서를 링크 뒤로 이동
-            const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
-            if (newLink) {
-                const range = document.createRange();
-                range.setStartAfter(newLink);
-                range.collapse(true);
                 
-                selection.removeAllRanges();
-                selection.addRange(range);
+                // 에디터 이벤트 발생
+                util.editor.dispatchEditorEvent(contentArea);
+            } catch (e) {
+                errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.APPLY, e);
             }
-            
-            // 에디터 이벤트 발생
-            util.editor.dispatchEditorEvent(contentArea);
-            
-            // 스크롤 위치 복원
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    window.scrollTo(currentScrollX, currentScrollY);
-                }, 50);
-            });
-        } catch (e) {
-            errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.APPLY, e);
-        }
+        });
+        
+        applyWithScroll();
     }
 
     // 플러그인 등록
@@ -231,13 +224,10 @@
                 }
             });
             
-            // 7. 직접 구현한 드롭다운 토글 로직
-            linkButton.addEventListener('click', (e) => {
+            // 7. 직접 구현한 드롭다운 토글 로직 - 공통 유틸리티 사용
+            linkButton.addEventListener('click', util.scroll.preservePosition((e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // 현재 스크롤 위치 저장
-                const currentScrollY = window.scrollY;
                 
                 // 선택 영역 저장
                 saveSelection();
@@ -295,14 +285,7 @@
                         util.activeModalManager.unregister(dropdownMenu);
                     }, [linkButton]);
                 }
-                
-                // 스크롤 위치 복원
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        window.scrollTo(window.scrollX, currentScrollY);
-                    }, 50);
-                });
-            });
+            }));
             
             return linkButton;
         }
