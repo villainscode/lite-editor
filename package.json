@@ -9,6 +9,8 @@
     "test:coverage": "jest --coverage",
     "start": "http-server"
   },
+  "_scripts_comment": "start는 개발용 로컬 서버 실행, test는 npm test -- tests/plugins/align-plugin.test.js",
+
   "keywords": [
     "editor",
     "wysiwyg",

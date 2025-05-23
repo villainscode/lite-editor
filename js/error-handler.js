@@ -246,23 +246,19 @@
             if (!editor || !sel || sel.rangeCount === 0) return null;
 
             const range = sel.getRangeAt(0);
-            if (range.collapsed) return null; // 선택 없으면 종료
+            if (range.collapsed) return { start: 0, end: 0, text: '' };
 
-            // ── 절대 시작 오프셋 ──
             const startRange = range.cloneRange();
             startRange.selectNodeContents(editor);
             startRange.setEnd(range.startContainer, range.startOffset);
             const start = startRange.toString().length;
 
-            // ── 절대 종료 오프셋 ──
             const endRange = range.cloneRange();
             endRange.selectNodeContents(editor);
             endRange.setEnd(range.endContainer, range.endOffset);
             const end = endRange.toString().length;
 
             const text = range.toString();
-
-            this.colorLog('SELECTION', `start=${start}, end=${end}, text="${text}"`);
 
             return { start, end, text };
         },
@@ -373,6 +369,64 @@
         disableDevMode: function() { 
             window.DEVELOPER_MODE = false;
             console.log('%c[Debug] 개발자 모드가 비활성화되었습니다.', 'color: #E91E63; font-weight: bold;');
+        },
+
+        // 선택 영역 변경 추적을 위한 새로운 메서드들
+        selectionLog: {
+            // 선택 영역 시작 로깅
+            start: function(contentArea) {
+                if (!window.DEBUG_MODE) return;
+                errorHandler.colorLog(
+                    'SELECTION',
+                    '📝 선택 시작됨',
+                    errorHandler.getSelectionInfo(contentArea),
+                    '#ff9800'
+                );
+            },
+
+            // 선택 영역 저장 시점 로깅
+            save: function(contentArea) {
+                if (!window.DEBUG_MODE) return;
+                errorHandler.colorLog(
+                    'SELECTION',
+                    '💾 선택 영역 저장:',
+                    errorHandler.getSelectionInfo(contentArea),
+                    '#2196f3'
+                );
+            },
+
+            // 선택 영역 복원 시점 로깅
+            restore: function(contentArea) {
+                if (!window.DEBUG_MODE) return;
+                errorHandler.colorLog(
+                    'SELECTION',
+                    '🔄 선택 영역 복원:',
+                    errorHandler.getSelectionInfo(contentArea),
+                    '#4caf50'
+                );
+            },
+
+            // 선택 영역 변경 시점 로깅
+            change: function(contentArea, action) {
+                if (!window.DEBUG_MODE) return;
+                errorHandler.colorLog(
+                    'SELECTION',
+                    `✏️ ${action}:`,
+                    errorHandler.getSelectionInfo(contentArea),
+                    '#9c27b0'
+                );
+            },
+
+            // 선택 영역 최종 상태 로깅
+            final: function(contentArea) {
+                if (!window.DEBUG_MODE) return;
+                errorHandler.colorLog(
+                    'SELECTION',
+                    '📌 최종 선택 영역:',
+                    errorHandler.getSelectionInfo(contentArea),
+                    '#795548'
+                );
+            }
         }
     };
 
