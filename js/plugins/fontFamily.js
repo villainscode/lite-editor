@@ -15,6 +15,7 @@
   // 전역 상태 변수
   let savedRange = null;          // 임시로 저장된 선택 영역
   let isDropdownOpen = false;
+  let currentSelectedFontItem = null;
   
   // 선택 영역 저장 함수 (util 사용)
   function saveSelection() {
@@ -114,21 +115,6 @@
       });
       fontContainer.appendChild(fontText);
       
-      // 4. 드롭다운 화살표 추가 - 오른쪽에 표시되도록 수정
-      const arrowIcon = util.dom.createElement('i', {
-        className: 'material-icons arrow-icon', // 특별한 클래스 추가
-        textContent: 'expand_more'
-      }, {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        position: 'absolute',
-        right: '1px', // 오른쪽에 배치
-        top: '50%', 
-        transform: 'translateY(-50%)', // 수직 중앙 정렬
-        left: 'auto' // 왼쪽 위치 속성 제거
-      });
-      fontContainer.appendChild(arrowIcon);
-      
       // 5. 드롭다운 메뉴 생성 - 정렬 플러그인처럼 처리
       const dropdownMenu = util.dom.createElement('div', {
         id: 'font-family-dropdown',
@@ -187,7 +173,7 @@
             padding: '5px 10px',
             cursor: 'pointer',
             fontFamily: font.value,
-            fontSize: '13px'  // 글꼴 크기를 12px로 설정
+            fontSize: '13px'
           });
           
           // 호버 이벤트
@@ -196,22 +182,32 @@
           });
           
           fontItem.addEventListener('mouseout', () => {
-            fontItem.style.backgroundColor = '';
+            if (fontItem !== currentSelectedFontItem) {
+              fontItem.style.backgroundColor = '';
+            }
           });
           
           // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
-          fontItem.addEventListener('click', (e) => {
+          fontItem.addEventListener('click', util.scroll.preservePosition((e) => {
             e.preventDefault();
             e.stopPropagation();
             errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
             
-            // 현재 스크롤 위치 저장
-            const currentScrollY = window.scrollY;
+            if (currentSelectedFontItem) {
+              currentSelectedFontItem.style.backgroundColor = '';
+            }
+            
+            currentSelectedFontItem = fontItem;
+            fontItem.style.backgroundColor = '#e9e9e9';
+            
+            // 🔧 CSS에서 정의된 호버 효과와 정확히 동일한 스타일 적용
+            fontContainer.style.backgroundColor = '#e9e9e9';  // CSS 호버 배경색
+            fontContainer.style.color = '#1a73e8';            // CSS 호버 텍스트색 (파란색)
+            icon.style.color = '#1a73e8';                     // 아이콘도 파란색
             
             // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
             dropdownMenu.classList.remove('show');
-            arrowIcon.textContent = 'expand_more';
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
             
@@ -234,14 +230,7 @@
             
             // UI 업데이트
             fontText.textContent = font.name;
-            
-            // 스크롤 위치 복원
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                window.scrollTo(window.scrollX, currentScrollY);
-              }, 50);
-            });
-          });
+          }));
           
           dropdownMenu.appendChild(fontItem);
         });
@@ -251,12 +240,9 @@
       document.body.appendChild(dropdownMenu);
       
       // 7. 직접 구현한 드롭다운 토글 로직
-      fontContainer.addEventListener('click', (e) => {
+      fontContainer.addEventListener('click', util.scroll.preservePosition((e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // 현재 스크롤 위치 저장
-        const currentScrollY = window.scrollY;
         
         // 선택 영역 저장
         saveSelection();
@@ -275,7 +261,6 @@
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
           fontContainer.classList.remove('active');
-          arrowIcon.textContent = 'expand_more';
           isDropdownOpen = false;
           
           // 모달 관리 시스템에서 제거
@@ -285,7 +270,6 @@
           dropdownMenu.classList.add('show');
           dropdownMenu.style.display = 'block';
           fontContainer.classList.add('active');
-          arrowIcon.textContent = 'expand_less';
           isDropdownOpen = true;
           
           // 위치 설정
@@ -298,7 +282,6 @@
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             fontContainer.classList.remove('active');
-            arrowIcon.textContent = 'expand_more';
             isDropdownOpen = false;
           };
           
@@ -309,19 +292,11 @@
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             fontContainer.classList.remove('active');
-            arrowIcon.textContent = 'expand_more';
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
           }, [fontContainer]);
         }
-        
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo(window.scrollX, currentScrollY);
-          }, 50);
-        });
-      });
+      }));
       
       return fontContainer;
     }
