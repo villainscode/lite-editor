@@ -181,8 +181,8 @@
       resizeHandle.style.position = 'absolute';
       resizeHandle.style.right = '0';
       resizeHandle.style.bottom = '0';
-      resizeHandle.style.width = '20px';
-      resizeHandle.style.height = '20px';
+      resizeHandle.style.width = '10px';
+      resizeHandle.style.height = '10px';
       resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
       resizeHandle.style.cursor = 'nwse-resize';
       resizeHandle.style.zIndex = '10';
