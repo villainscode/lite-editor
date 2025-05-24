@@ -135,7 +135,7 @@
 
   // 공통 헬퍼 함수: 아이콘이 있는 타이틀 생성
   function createIconTitle(icon, titleText, options = {}) {
-    const iconSize = options.iconSize || '18px';
+    const iconSize = options.iconSize || '15px';
     const textSize = options.textSize || '16px';
     
     return `

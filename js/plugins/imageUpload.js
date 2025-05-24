@@ -145,7 +145,7 @@
         console.log('[IMAGE_UPLOAD] insertImage 완료');
     }
 
-    // 모달 템플릿 - 기존과 동일
+    // 🔧 모달 템플릿 - Close 버튼 제거
     const template = `
     <div class="modal-overlay">
         <div class="modal-content">            
@@ -182,11 +182,6 @@
             </div>
             
             <div style="display: flex; justify-content: flex-end;">
-                <button type="button" data-action="close"
-                        style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
-                        title="Cancel">
-                    <span class="material-icons" style="font-size: 18px; color: #5f6368;">close</span>
-                </button>
                 <button type="submit"
                         style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
                         title="Insert">
@@ -226,14 +221,12 @@
         return modal;
     }
 
+    // 🔧 setupModalEvents - Close 버튼 관련 코드 제거
     function setupModalEvents(modal) {
-        const closeButton = modal.querySelector('button[data-action="close"]');
         const insertButton = modal.querySelector('button[type="submit"]');
         const urlInput = modal.querySelector('#image-url-input');
         const fileInput = modal.querySelector('#image-file-input');
 
-        closeButton.addEventListener('click', () => closeModal(modal));
-        
         const button = document.querySelector('.lite-editor-image-upload-button');
         if (util.setupOutsideClickHandler) {
             util.setupOutsideClickHandler(modal, () => closeModal(modal), [button]);
@@ -267,6 +260,8 @@
             
             if (url || file) {
                 processImageInsertion(url, file, modal);
+            } else {
+                errorHandler.showUserAlert('P803');
             }
         });
     }

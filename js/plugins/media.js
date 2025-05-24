@@ -379,11 +379,7 @@
           
           // 경고 메시지 표시 (지연 적용)
           setTimeout(() => {
-            if (typeof LiteEditorModal !== 'undefined') {
-              LiteEditorModal.alert('유효하지 않은 동영상 URL입니다.<BR>HTML 태그는 허용되지 않습니다.');
-            } else {
-              alert('유효하지 않은 동영상 URL입니다.\nHTML 태그는 허용되지 않습니다.');
-            }
+            errorHandler.showUserAlert('P902');
           }, 300);
           
           return;
@@ -402,11 +398,7 @@
           
           // 경고 메시지 표시 (지연 적용)
           setTimeout(() => {
-            if (typeof LiteEditorModal !== 'undefined') {
-              LiteEditorModal.alert('유효한 YouTube URL을 입력해주세요.<BR>Ex : https://www.youtube.com/watch?v=...');
-            } else {
-              alert('유효한 YouTube URL을 입력해주세요.\nEx : https://www.youtube.com/watch?v=...');
-            }
+            errorHandler.showUserAlert('P903');
           }, 300);
           
           return;
