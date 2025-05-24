@@ -187,11 +187,7 @@
             // 7. 버튼 이벤트 설정
             const processUrl = (url) => {
                 if (!isValidUrl(url)) {
-                    if (typeof LiteEditorModal !== 'undefined') {
-                        LiteEditorModal.alert('유효한 URL을 입력해주세요.<BR>예시: https://example.com');
-                    } else {
-                        alert('유효한 URL을 입력해주세요.\n예시: https://example.com');
-                    }
+                    errorHandler.showUserAlert('P703');
                     return;
                 }
                 

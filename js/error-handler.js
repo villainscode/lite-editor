@@ -50,7 +50,8 @@
                     APPLY: 'P401',
                     EXECUTE: 'P402',
                     LOAD: 'P403',
-                    INSERT: 'P404'
+                    INSERT: 'P404',
+                    EMPTY_CODE: 'P405'
                 },
                 COLOR: {
                     LOAD: 'P501'
@@ -62,14 +63,18 @@
                 },
                 LINK: {
                     APPLY: 'P701',
-                    DEBUG: 'P702'
+                    DEBUG: 'P702',
+                    INVALID_URL: 'P703'
                 },
                 IMAGE: {
                     DEBUG: 'P801',
-                    EDITOR_NOT_FOUND: 'P802'
+                    EDITOR_NOT_FOUND: 'P802',
+                    INVALID_URL: 'P803'
                 },
                 MEDIA: {
-                    INSERT: 'P901'
+                    INSERT: 'P901',
+                    INVALID_URL: 'P902',
+                    INVALID_YOUTUBE: 'P903'
                 },
                 RESET: {
                     FORMAT: 'P1001',
@@ -116,23 +121,29 @@
             P303: '서식 적용 실패 - 선택된 텍스트 없음',
             P401: '코드 서식 적용 실패',
             P402: '코드 서식 실행 실패',
-            P403: '코드 데이터 로드 실패',
-            P404: '코드 삽입 실패',
+            P403: '코드 하이라이트 라이브러리를 로드할 수 없습니다.',
+            P404: '코드 블록을 삽입하는 중 오류가 발생했습니다.',
+            P405: '코드를 입력해주세요.',
             P501: '색상 데이터 로드 실패',
             P601: '리스트 적용 실패',
             P602: '리스트 들여쓰기 실패',
             P603: '리스트 내어쓰기 실패',
             P701: '링크 적용 실패',
             P702: '링크 디버그 정보',
+            P703: '유효한 URL을 입력해주세요.<BR>예시: https://example.com',
             P801: '이미지 디버그 정보',
             P802: '에디터 요소를 찾을 수 없음',
+            P803: '유효한 이미지 URL을 입력해주세요',
             P901: '미디어 삽입 실패',
+            P902: '유효하지 않은 동영상 URL입니다.<BR>HTML 태그는 허용되지 않습니다.',
+            P903: '유효한 YouTube URL을 입력해주세요.<BR>Ex : https://www.youtube.com/watch?v=...',
             P1001: '서식 초기화 실패',
             P1002: '블록 요소 처리 실패',
             P1003: '노드 제거 오류',
             P1004: '선택 영역 없음',
             P1005: '선택된 텍스트 없음',
-            P1006: '커서 위치 설정 실패'
+            P1006: '커서 위치 설정 실패',
+            
         },
 
         // 에러 로깅
@@ -426,6 +437,22 @@
                     errorHandler.getSelectionInfo(contentArea),
                     '#795548'
                 );
+            }
+        },
+
+        // 사용자 알림 (LiteEditorModal 래퍼)
+        showUserAlert: function(errorCode, customMessage) {
+            const message = customMessage || this.messages[errorCode] || '알 수 없는 오류가 발생했습니다.';
+            
+            if (typeof LiteEditorModal !== 'undefined' && LiteEditorModal.alert) {
+                // HTML 지원 여부와 관계없이 LiteEditorModal 우선 사용
+                const finalMessage = message.includes('<BR>') ? 
+                    message.replace(/<BR>/gi, '\n').replace(/<[^>]*>/g, '') : message;
+                LiteEditorModal.alert(finalMessage);
+            } else {
+                // 최후 fallback: 기본 alert
+                const textMessage = message.replace(/<BR>/gi, '\n').replace(/<[^>]*>/g, '');
+                alert(textMessage);
             }
         }
     };

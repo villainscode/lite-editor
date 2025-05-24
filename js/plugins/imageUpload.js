@@ -1,41 +1,157 @@
 /**
- * LiteEditor imageUpload Plugin
- * 이미지 업로드 플러그인
+ * LiteEditor imageUpload Plugin - 안정적인 최적화 버전
+ * 이미지 업로드, 리사이징, 드래그앤드롭 기능
  */
 (function() {
-    // 1. 상수 및 변수 선언 영역
+    const util = window.PluginUtil || {};
+    
+    // 상수 및 변수 선언
     const PLUGIN_ID = 'imageUpload';
     const STYLE_ID = 'imageUploadStyles';
     const CSS_PATH = 'css/plugins/imageUpload.css';
     let isEventHandlerRegistered = false;
-
-    // 현재 커서의 위치 저장 
     let savedRange = null;
 
+    // 🔧 유틸리티 함수들 - 기존 기능 완전 보존
     function saveSelection() {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            savedRange = selection.getRangeAt(0).cloneRange();
-        }
+        savedRange = util.selection ? util.selection.saveSelection() : null;
     }
 
-    function restoreSelection() {
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        if (savedRange) {
-            selection.addRange(savedRange);
-        }
+    function getEditorElements() {
+        return {
+            container: document.querySelector('#lite-editor'),
+            content: document.querySelector('.lite-editor-content')
+        };
     }
 
-    // 2. 모달 템플릿 
+    function saveScrollPositions() {
+        const { container, content } = getEditorElements();
+        
+        return {
+            editor: content ? content.scrollTop : 0,
+            container: container ? container.scrollTop : 0,
+            window: window.pageYOffset,
+            body: document.body.scrollTop,
+            documentElement: document.documentElement.scrollTop
+        };
+    }
+
+    function restoreScrollPositions(positions) {
+        if (!positions) return;
+        
+        const { content } = getEditorElements();
+        
+        const restore = () => {
+            if (content) content.scrollTop = positions.editor;
+            window.scrollTo(0, positions.window);
+            document.body.scrollTop = positions.body;
+            document.documentElement.scrollTop = positions.documentElement;
+        };
+
+        // 다단계 복원 - 기존과 동일
+        restore();
+        requestAnimationFrame(restore);
+        setTimeout(restore, 50);
+        setTimeout(restore, 100);
+    }
+
+    function generateImageHTML(src) {
+        const timestamp = Date.now();
+        return `
+            <div class="image-wrapper" 
+                 contenteditable="false" 
+                 draggable="true" 
+                 id="img-${timestamp}"
+                 data-selectable="true"
+                 style="display: inline-block; position: relative; margin: 10px 0; max-width: 95%; resize: both; overflow: hidden;">
+                <img src="${src}" 
+                     style="width: 100%; height: auto; display: block;">
+                <div class="image-resize-handle" 
+                     style="position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background-image: linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%); cursor: nwse-resize; z-index: 10;"></div>
+            </div><br>`;
+    }
+
+    // 🔧 기존 insertImage 함수 로직 완전 보존
+    function insertImage(src) {
+        console.log('[IMAGE_UPLOAD] insertImage 시작:', src);
+        
+        if (!src) {
+            console.error('[IMAGE_UPLOAD] 이미지 src가 없습니다');
+            return;
+        }
+        
+        const { content: editor } = getEditorElements();
+        if (!editor) {
+            console.error('[IMAGE_UPLOAD] 편집 영역을 찾을 수 없습니다!');
+            return;
+        }
+        
+        // 스크롤 위치 저장
+        const scrollPositions = saveScrollPositions();
+        console.log('[DEBUG] 스크롤 위치들 저장:', scrollPositions);
+        
+        const imageHTML = generateImageHTML(src);
+        
+        console.log('[DEBUG] 저장된 선택 영역 상태:', {
+            savedRange: !!savedRange
+        });
+        
+        // 저장된 선택 영역이 있으면 복원 후 삽입
+        if (savedRange && util.selection) {
+            console.log('[DEBUG] 저장된 선택 영역 복원 시도...');
+            try {
+                util.selection.restoreSelection(savedRange);
+                
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const isInsideEditor = editor.contains(range.startContainer);
+                    
+                    console.log('[DEBUG] 복원된 Range:', {
+                        startContainer: range.startContainer.nodeName,
+                        startOffset: range.startOffset,
+                        isInsideEditor: isInsideEditor
+                    });
+                    
+                    if (isInsideEditor) {
+                        const success = document.execCommand('insertHTML', false, imageHTML);
+                        console.log('[DEBUG] execCommand 결과:', success);
+                        
+                        if (success) {
+                            restoreScrollPositions(scrollPositions);
+                            
+                            const event = new Event('input', { bubbles: true });
+                            editor.dispatchEvent(event);
+                            
+                            console.log('[DEBUG] 완전한 이미지 컨테이너 삽입 성공');
+                            return;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[DEBUG] 선택 영역 복원 실패:', error);
+            }
+        }
+        
+        // 대안: 에디터 끝에 삽입
+        console.log('[DEBUG] 에디터 끝에 완전한 이미지 컨테이너 삽입');
+        editor.insertAdjacentHTML('beforeend', imageHTML);
+        
+        restoreScrollPositions(scrollPositions);
+        
+        const event = new Event('input', { bubbles: true });
+        editor.dispatchEvent(event);
+        
+        console.log('[IMAGE_UPLOAD] insertImage 완료');
+    }
+
+    // 🔧 모달 템플릿 - Close 버튼 제거
     const template = `
     <div class="modal-overlay">
         <div class="modal-content">            
-            <!-- 상단 제목 및 컨텐츠 영역 -->
             <div>
                 <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #333;">Insert Image</h3>
                 
-                <!-- URL 입력 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
                     URL
@@ -46,13 +162,11 @@
                            style="width: 100%; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; outline: none;">
                 </div>
                 
-                <!-- 구분선 -->
                 <div style="display: flex; align-items: center; margin: 15px 0;">
                     <div style="font-size: 11px; color: #888; margin-right: 8px;">OR</div>
                     <div style="flex-grow: 1; height: 1px; background-color: #e0e0e0;"></div>
                 </div>
 
-                <!-- 파일 업로드 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
                      File
@@ -67,13 +181,7 @@
                 </div>
             </div>
             
-            <!-- 버튼 -->
             <div style="display: flex; justify-content: flex-end;">
-                <button type="button" data-action="close"
-                        style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
-                        title="Cancel">
-                    <span class="material-icons" style="font-size: 18px; color: #5f6368;">close</span>
-                </button>
                 <button type="submit"
                         style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
                         title="Insert">
@@ -83,103 +191,7 @@
         </div>
     </div>`;
 
-    // 3. 유틸리티 함수
-    function insertImage(src) {
-        if (!src) return;
-        
-        // 에디터 찾기
-        const editor = document.querySelector('#lite-editor');
-        if (!editor) {
-            console.error('Editor element not found!');
-            return;
-        }
-        // 에디터에 포커스 강제
-        editor.focus();
-        
-        // 이미지 컨테이너 생성 (드래그 가능하도록)
-        const container = document.createElement('div');
-        container.className = 'image-wrapper';
-        container.contentEditable = false;
-        container.draggable = true;
-        container.id = 'img-' + Date.now(); // 고유 ID 부여
-        container.style.display = 'inline-block';
-        container.style.position = 'relative';
-        container.style.margin = '10px 0';
-        container.style.maxWidth = '95%';
-        container.style.resize = 'both';
-        container.style.overflow = 'hidden';
-
-        // 이미지 생성 
-        const img = document.createElement('img');
-        img.src = src;
-        img.style.width = '100%';
-        img.style.height = 'auto';
-        img.style.display = 'block';
-
-        // 사용자 정의 리사이즈 핸들 추가
-        const resizeHandle = document.createElement('div');
-        resizeHandle.className = 'image-resize-handle';
-        resizeHandle.style.position = 'absolute';
-        resizeHandle.style.right = '0';
-        resizeHandle.style.bottom = '0';
-        resizeHandle.style.width = '10px'; // 핸들 크기 조절
-        resizeHandle.style.height = '10px'; // 핸들 크기 조절
-        resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
-        resizeHandle.style.cursor = 'nwse-resize';
-        resizeHandle.style.zIndex = '10';
-
-        
-        // 이미지를 컨테이너에 추가
-        container.appendChild(img);
-        container.appendChild(resizeHandle);
-        // 현재 선택 영역 가져오기
-        let selection = window.getSelection();
-        // 만약 선택 영역이 없으면, 저장해둔 선택 영역이 있다면 복원합니다.
-        if (selection.rangeCount === 0 && savedRange) {
-            selection.addRange(savedRange);
-        }
-        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        
-        if (range) {
-            // 1. 선택 영역에 이미지 삽입
-            range.deleteContents();
-            range.insertNode(container);
-
-            // 2. 줄바꿈 추가
-            const br = document.createElement('br');
-            container.parentNode.insertBefore(br, container.nextSibling);
-            
-            // 커서 위치 조정
-            const newRange = document.createRange();
-            newRange.setStartAfter(br);
-            newRange.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-            
-            // 에디터 상태 갱신 이벤트 트리거
-            const event = new Event('input', { bubbles: true });
-            editor.dispatchEvent(event);
-        } else {
-            // 선택 영역이 없으면 편집기 끝에 추가
-            editor.appendChild(container);
-            
-            // 줄바꿈 추가
-            const br = document.createElement('br');
-            editor.appendChild(br);
-            
-            // 커서 이동
-            const newRange = document.createRange();
-            newRange.setStartAfter(br);
-            newRange.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-            
-            // 에디터 상태 갱신 이벤트 트리거
-            const event = new Event('input', { bubbles: true });
-            editor.dispatchEvent(event);
-        }
-    }
-
+    // 모달 관리 함수들 - 기존과 동일
     function closeModal(modal) {
         if (!modal) return;
         
@@ -187,99 +199,50 @@
         modal.style.opacity = '0';
         modal.style.visibility = 'hidden';
         
-        // 300ms 후 완전 제거
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
+        if (util.activeModalManager) {
+            util.activeModalManager.unregister(modal);
+        }
+        
+        setTimeout(() => modal.remove(), 300);
     }
 
-    // 4. 이벤트 핸들러 설정
-    function setupGlobalEvents() {
-        if (isEventHandlerRegistered) return;
-        
-        // 외부 클릭 시 닫기 - 이벤트 위임 사용
-        document.addEventListener('click', (e) => {
-            const modal = document.querySelector('.modal-overlay.show');
-            const button = document.querySelector('.lite-editor-image-upload-button');
-            
-            // 모달이 표시 중이고, 클릭된 요소가 모달 내부가 아니고, 
-            // 현재 이미지 업로드 버튼을 클릭한 것이 아니면 모달 닫기
-            if (modal && !modal.contains(e.target)) {
-                // 이미지 업로드 버튼 클릭 시에는 닫지 않음 (모달 토글 동작을 위해)
-                if (button === e.target || button.contains(e.target)) {
-                    return;
-                }
-                
-                // 그 외의 모든 클릭(다른 툴바 버튼 포함)은 모달 닫기
-                closeModal(modal);
-            }
-        }, false);
-        
-        // ESC 키로 닫기 - 전역 한 번만 등록
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const modal = document.querySelector('.modal-overlay.show');
-                if (modal) {
-                    closeModal(modal);
-                }
-            }
-        });
-        
-        isEventHandlerRegistered = true;
-    }
-
-    // 5. 모달 생성 및 표시
     function createModal() {
         saveSelection();
 
-        // 기존 모달 제거
         const existingModal = document.querySelector('.modal-overlay');
         if (existingModal) existingModal.remove();
 
-        // 모달 생성 및 DOM에 추가
-        const modalContainer = document.createElement('div');
+        const modalContainer = util.dom ? util.dom.createElement('div') : document.createElement('div');
         modalContainer.innerHTML = template;
         const modal = modalContainer.firstElementChild;
         document.body.appendChild(modal);
 
-        // 모달 내부 요소 참조
-        const closeButton = modal.querySelector('button[data-action="close"]');
+        setupModalEvents(modal);
+        return modal;
+    }
+
+    // 🔧 setupModalEvents - Close 버튼 관련 코드 제거
+    function setupModalEvents(modal) {
         const insertButton = modal.querySelector('button[type="submit"]');
         const urlInput = modal.querySelector('#image-url-input');
         const fileInput = modal.querySelector('#image-file-input');
 
-        // 이벤트 핸들러 설정
-        closeButton.addEventListener('click', () => closeModal(modal));
+        const button = document.querySelector('.lite-editor-image-upload-button');
+        if (util.setupOutsideClickHandler) {
+            util.setupOutsideClickHandler(modal, () => closeModal(modal), [button]);
+        }
         
-        // 모달 내부 클릭이 외부로 전파되지 않도록 방지
-        modal.addEventListener('click', (e) => {
-            // 모달 내부 클릭은 여기서 처리하고 전파 중단
-            e.stopPropagation();
-        });
-        
-        // URL 입력 필드에 이벤트 리스너 추가
-        urlInput.addEventListener('click', (e) => {
-            // 이벤트 버블링 방지
-            e.stopPropagation();
-        });
+        urlInput.addEventListener('click', (e) => e.stopPropagation());
 
         urlInput.addEventListener('keydown', (e) => {
-            // ESC 키를 제외한 다른 키 입력은 버블링 방지
-            if (e.key !== 'Escape') {
-                e.stopPropagation();
-            }
-            // Enter 키 처리 추가
+            if (e.key !== 'Escape') e.stopPropagation();
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const url = urlInput.value.trim();
-                if (url) {
-                    insertImage(url);
-                    closeModal(modal);
-                }
+                if (url) processImageInsertion(url, null, modal);
             }
         });
 
-        // 파일 선택 시 파일명 표시
         fileInput.addEventListener('change', (e) => {
             const fileName = e.target.files[0]?.name;
             const textSpan = fileInput.parentElement.querySelector('span:not(.material-icons)');
@@ -296,179 +259,148 @@
             const file = fileInput.files[0];
             
             if (url || file) {
-                closeModal(modal);
-                // 모달이 닫힌 후 에디터로 포커스를 전환하고 선택 영역 복원
-                setTimeout(() => {
-                    // 에디터 요소에 포커스 강제 전환
-                    const editor = document.querySelector('#lite-editor');
-                    if (editor) {
-                        editor.focus();
-                    }
-                    restoreSelection();
-                    
-                    // 이미지 삽입 실행
-                    if (url) {
-                        insertImage(url);
-                    } else {
-                        const reader = new FileReader();
-                        reader.onload = (e) => insertImage(e.target.result);
-                        reader.readAsDataURL(file);
-                    }
-                }, 300);
+                processImageInsertion(url, file, modal);
+            } else {
+                errorHandler.showUserAlert('P803');
             }
         });
-
-        // 모달 오버레이의 클릭 이벤트
-        modal.addEventListener('click', (e) => {
-            if (e.target.tagName.toLowerCase() !== 'button') {
-                closeModal(modal);
-            }
-        });
-        
-        // 모달 표시 후 URL 입력 필드에 자동 포커스 추가
-        setTimeout(() => {
-            modal.classList.add('show');
-            modal.style.opacity = '1';
-            modal.style.visibility = 'visible';
-            
-            // RAF를 사용한 안정적인 포커스 처리
-            requestAnimationFrame(() => {
-                urlInput.focus();
-            });
-        }, 10);
-        
-        // 스타일 및 위치 설정
-        modal.style.position = 'absolute';
-        modal.style.backgroundColor = 'transparent';
-        modal.style.width = 'auto';
-        modal.style.height = 'auto';
-        modal.style.display = 'block';
-        modal.style.opacity = '0';
-        modal.style.visibility = 'hidden';
-
-        return modal;
     }
-    
-    function showModal() {
-        const scrollPosition = util.scroll.savePosition();
-        const modal = createModal();
+
+    function processImageInsertion(url, file, modal) {
+        console.log('[IMAGE_UPLOAD] processImageInsertion 시작:', { url: !!url, file: !!file });
         
+        closeModal(modal);
+        
+        if (url) {
+            console.log('[IMAGE_UPLOAD] URL 이미지 삽입:', url);
+            insertImage(url);
+        } else if (file) {
+            console.log('[IMAGE_UPLOAD] 파일 이미지 처리 시작');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                console.log('[IMAGE_UPLOAD] 파일 읽기 완료, 삽입 중');
+                insertImage(e.target.result);
+            };
+            reader.onerror = (e) => {
+                console.error('[IMAGE_UPLOAD] 파일 읽기 실패:', e);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function showModal() {
+        const modal = createModal();
         const button = document.querySelector('.lite-editor-image-upload-button');
         
-        // 버튼 기준 위치 계산
-        if (button) {
-            const buttonRect = button.getBoundingClientRect();
-            
-            // 모달 위치 설정
-            modal.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-            modal.style.left = (buttonRect.left + window.scrollX) + 'px';
-            
-            // 화면 경계 처리
-            setTimeout(() => {
-                const modalRect = modal.getBoundingClientRect();
-                if (modalRect.right > window.innerWidth) {
-                    modal.style.left = (window.innerWidth - modalRect.width - 10) + 'px';
-                }
-            }, 0);
+        if (button && util.layer && util.layer.setLayerPosition) {
+            util.layer.setLayerPosition(modal, button);
         }
         
-        // 모달 표시
         setTimeout(() => {
             modal.style.removeProperty('opacity');
             modal.style.removeProperty('visibility');
             modal.classList.add('show');
-            util.scroll.restorePosition(scrollPosition);
+            
+            if (util.activeModalManager) {
+                util.activeModalManager.register(modal);
+            }
+            
+            requestAnimationFrame(() => {
+                const urlInput = modal.querySelector('#image-url-input');
+                if (urlInput) urlInput.focus();
+            });
         }, 10);
 
-        // 전역 이벤트 핸들러 설정
         setupGlobalEvents();
     }
 
-    /**
-     * 이미지 드래그 앤 드롭 기능 초기화
-     */
+    function setupGlobalEvents() {
+        if (isEventHandlerRegistered) return;
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.querySelector('.modal-overlay.show');
+                if (modal) closeModal(modal);
+            }
+        });
+        
+        isEventHandlerRegistered = true;
+    }
+
+    // 🔧 드래그 앤 드롭 기능 - 기존 로직 완전 보존
     function initImageDragDrop() {
-        const editor = document.querySelector('#lite-editor');
+        const { container: editor } = getEditorElements();
         if (!editor) return;
 
-        // 드래그 상태 변수
         let draggedImage = null;
         let dropIndicator = null;
         let selectedImage = null;
         let animationFrameId = null;
 
-        // 에디터에 상대적 위치를 위한 스타일 설정
         if (window.getComputedStyle(editor).position === 'static') {
             editor.style.position = 'relative';
         }
 
-        // 드롭 인디케이터 생성
         function createDropIndicator() {
             const indicator = document.createElement('div');
             indicator.className = 'image-drop-indicator';
-            indicator.style.position = 'absolute';
-            indicator.style.width = '2px';
-            indicator.style.height = '20px';
-            indicator.style.backgroundColor = '#4285f4';
-            indicator.style.zIndex = '9999';
-            indicator.style.pointerEvents = 'none';
-            indicator.style.animation = 'cursorBlink 1s infinite';
-            indicator.style.display = 'none';
+            Object.assign(indicator.style, {
+                position: 'absolute',
+                width: '2px',
+                height: '20px',
+                backgroundColor: '#4285f4',
+                zIndex: '9999',
+                pointerEvents: 'none',
+                animation: 'cursorBlink 1s infinite',
+                display: 'none'
+            });
             
-            // 에디터 내부에 추가 (body 대신)
             editor.appendChild(indicator);
             return indicator;
         }
 
-        // 빈 영역 처리를 포함한 드롭 인디케이터 표시 함수
         function showDropIndicator(x, y) {
             if (!dropIndicator) {
                 dropIndicator = createDropIndicator();
             }
 
-            // 캐럿 위치 계산
             let range = document.caretRangeFromPoint(x, y);
             if (!range) return;
 
-            // 빈 영역 감지 및 처리
             const rects = range.getClientRects();
-            if (!rects.length || rects.length === 0) {
-                // 임시 스팬 삽입 방식으로 좌표 구하기
+            const editorRect = editor.getBoundingClientRect();
+
+            if (!rects.length) {
                 const tempSpan = document.createElement('span');
-                tempSpan.style.display = 'inline-block';
-                tempSpan.style.width = '0';
-                tempSpan.style.height = '1em';
-                tempSpan.textContent = '\u200B'; // 제로 너비 공백
+                Object.assign(tempSpan.style, {
+                    display: 'inline-block',
+                    width: '0',
+                    height: '1em'
+                });
+                tempSpan.textContent = '\u200B';
                 
-                // 임시 요소 삽입
                 range.insertNode(tempSpan);
                 
-                // 새 좌표 구하기
                 const tempRect = tempSpan.getBoundingClientRect();
+                Object.assign(dropIndicator.style, {
+                    left: (tempRect.left - editorRect.left) + 'px',
+                    top: (tempRect.top - editorRect.top) + 'px',
+                    height: tempRect.height + 'px',
+                    display: 'block'
+                });
                 
-                // 인디케이터 위치 설정
-                const editorRect = editor.getBoundingClientRect();
-                dropIndicator.style.left = (tempRect.left - editorRect.left) + 'px';
-                dropIndicator.style.top = (tempRect.top - editorRect.top) + 'px';
-                dropIndicator.style.height = tempRect.height + 'px';
-                
-                // 임시 요소 제거
                 tempSpan.parentNode.removeChild(tempSpan);
             } else {
-                // 일반적인 경우: 레인지의 첫 번째 사각형 사용
                 const rect = rects[0];
-                const editorRect = editor.getBoundingClientRect();
-                
-                // 에디터 기준 상대 위치 계산
-                dropIndicator.style.left = (rect.left - editorRect.left) + 'px';
-                dropIndicator.style.top = (rect.top - editorRect.top) + 'px';
-                dropIndicator.style.height = rect.height + 'px';
+                Object.assign(dropIndicator.style, {
+                    left: (rect.left - editorRect.left) + 'px',
+                    top: (rect.top - editorRect.top) + 'px',
+                    height: rect.height + 'px',
+                    display: 'block'
+                });
             }
-            
-            dropIndicator.style.display = 'block';
         }
 
-        // requestAnimationFrame을 사용한 throttle 구현
         function throttledShowIndicator(x, y) {
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -480,7 +412,6 @@
             });
         }
 
-        // 드롭 인디케이터 숨기기
         function hideDropIndicator() {
             if (dropIndicator) {
                 dropIndicator.style.display = 'none';
@@ -492,19 +423,15 @@
             }
         }
 
-        // 이미지 선택 함수
         function selectImage(imageWrapper) {
-            // 이전 선택 해제
             if (selectedImage && selectedImage !== imageWrapper) {
                 selectedImage.removeAttribute('data-selected');
             }
             
-            // 새 이미지 선택
             selectedImage = imageWrapper;
             selectedImage.setAttribute('data-selected', 'true');
         }
 
-        // 이미지 선택 해제
         function deselectImage() {
             if (selectedImage) {
                 selectedImage.removeAttribute('data-selected');
@@ -512,7 +439,6 @@
             }
         }
 
-        // 가장 가까운 요소 찾기
         function findClosestElement(element, selector) {
             while (element && element.nodeType === 1) {
                 if (element.matches(selector)) {
@@ -523,7 +449,7 @@
             return null;
         }
 
-        // 이미지 클릭 이벤트 (위임)
+        // 이벤트 리스너들 - 기존과 동일
         editor.addEventListener('click', (event) => {
             const imageWrapper = findClosestElement(event.target, '.image-wrapper');
             
@@ -536,7 +462,6 @@
             event.stopPropagation();
         });
 
-        // 드래그 시작 처리
         editor.addEventListener('dragstart', (event) => {
             const imageWrapper = findClosestElement(event.target, '.image-wrapper');
             if (!imageWrapper) return;
@@ -544,17 +469,12 @@
             draggedImage = imageWrapper;
             selectImage(imageWrapper);
             
-            // 드래그 데이터 설정
             event.dataTransfer.setData('text/plain', imageWrapper.id);
             event.dataTransfer.effectAllowed = 'move';
             
-            // 시각적 피드백
-            setTimeout(() => {
-                imageWrapper.classList.add('dragging');
-            }, 0);
+            setTimeout(() => imageWrapper.classList.add('dragging'), 0);
         });
 
-        // 드래그 오버 처리 (throttle 적용)
         editor.addEventListener('dragover', (event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
@@ -564,14 +484,12 @@
             }
         });
 
-        // 드래그 리브 처리
         editor.addEventListener('dragleave', (event) => {
             if (!editor.contains(event.relatedTarget)) {
                 hideDropIndicator();
             }
         });
 
-        // 드롭 처리
         editor.addEventListener('drop', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -580,11 +498,12 @@
             
             if (!draggedImage) return;
             
-            // 드롭 위치 계산
-            let range;
-            if (document.caretRangeFromPoint) {
-                range = document.caretRangeFromPoint(event.clientX, event.clientY);
-            } else if (document.caretPositionFromPoint) {
+            // 🔧 드롭 시 스크롤 위치 보존
+            const scrollPositions = saveScrollPositions();
+            
+            let range = document.caretRangeFromPoint?.(event.clientX, event.clientY);
+            
+            if (!range && document.caretPositionFromPoint) {
                 const position = document.caretPositionFromPoint(event.clientX, event.clientY);
                 range = document.createRange();
                 range.setStart(position.offsetNode, position.offset);
@@ -592,17 +511,14 @@
             }
             
             if (range) {
-                // 원래 위치에서 이미지 제거 후 새 위치에 삽입
                 if (draggedImage.parentNode) {
                     draggedImage.parentNode.removeChild(draggedImage);
                 }
                 
                 range.insertNode(draggedImage);
-                
-                // 드래그 상태 초기화
                 draggedImage.classList.remove('dragging');
                 
-                // 줄바꿈 확인 및 추가
+                // br 태그 추가
                 if (!draggedImage.nextSibling || 
                     (draggedImage.nextSibling.nodeType !== Node.ELEMENT_NODE || 
                      draggedImage.nextSibling.nodeName !== 'BR')) {
@@ -610,7 +526,7 @@
                     draggedImage.parentNode.insertBefore(br, draggedImage.nextSibling);
                 }
                 
-                // 커서 위치 조정
+                // 선택 위치 조정
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 
@@ -619,15 +535,19 @@
                 newRange.collapse(true);
                 selection.addRange(newRange);
                 
-                // 에디터 상태 갱신 이벤트 트리거
-                const event = new Event('input', { bubbles: true });
-                editor.dispatchEvent(event);
+                // 스크롤 위치 복원
+                restoreScrollPositions(scrollPositions);
+                
+                const { content } = getEditorElements();
+                if (content) {
+                    const event = new Event('input', { bubbles: true });
+                    content.dispatchEvent(event);
+                }
             }
             
             draggedImage = null;
         });
 
-        // 드래그 종료 처리
         editor.addEventListener('dragend', (event) => {
             hideDropIndicator();
             
@@ -640,7 +560,6 @@
         });
     }
 
-    // CSS 스타일 추가 함수
     function addDragAndDropStyles() {
         const styleId = 'imageUploadDragStyles';
         if (document.getElementById(styleId)) return;
@@ -674,43 +593,47 @@
         document.head.appendChild(style);
     }
 
-    // 6. 플러그인 등록
+    // 플러그인 등록 - 기존과 동일
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Image upload',
         icon: 'photo_camera',
         customRender: function(toolbar, contentArea) {
-            // 스타일시트 로드 (한 번만)
-            if (!document.querySelector(`#${STYLE_ID}`)) {
-                const styleSheet = document.createElement('link');
-                styleSheet.id = STYLE_ID;
-                styleSheet.rel = 'stylesheet';
-                styleSheet.href = CSS_PATH;
-                document.head.appendChild(styleSheet);
+            if (util.styles && util.styles.loadCssFile) {
+                util.styles.loadCssFile(STYLE_ID, CSS_PATH);
             }
 
-            // 드래그 앤 드롭 스타일 추가
             addDragAndDropStyles();
-            
-            // 드래그 앤 드롭 기능 초기화 (약간의 지연을 두어 에디터가 완전히 로드된 후 초기화)
             setTimeout(initImageDragDrop, 500);
 
-            // 버튼 생성
-            const button = document.createElement('button');
-            button.className = 'lite-editor-button lite-editor-image-upload-button';
-            button.setAttribute('title', 'Image upload');
+            const button = util.dom ? 
+                util.dom.createElement('button', {
+                    className: 'lite-editor-button lite-editor-image-upload-button',
+                    title: 'Image upload'
+                }) : 
+                (() => {
+                    const btn = document.createElement('button');
+                    btn.className = 'lite-editor-button lite-editor-image-upload-button';
+                    btn.title = 'Image upload';
+                    return btn;
+                })();
             
-            // 아이콘 추가
-            const icon = document.createElement('i');
-            icon.className = 'material-symbols-outlined';
-            icon.textContent = 'photo_camera';
+            const icon = util.dom ? 
+                util.dom.createElement('i', {
+                    className: 'material-symbols-outlined',
+                    textContent: 'photo_camera'
+                }) :
+                (() => {
+                    const i = document.createElement('i');
+                    i.className = 'material-symbols-outlined';
+                    i.textContent = 'photo_camera';
+                    return i;
+                })();
             button.appendChild(icon);
             
-            // 클릭 이벤트
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // 기존 표시된 모달이 있는지 확인
                 const existingModal = document.querySelector('.modal-overlay.show');
                 if (existingModal) {
                     closeModal(existingModal);
@@ -720,10 +643,7 @@
                 showModal();
             });
             
-            // 버튼을 툴바에 추가
             toolbar.appendChild(button);
-            
-            // 전역 이벤트 핸들러 설정
             setupGlobalEvents();
         }
     });

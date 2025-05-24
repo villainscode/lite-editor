@@ -273,7 +273,7 @@
     
     // 스타일 설정
     activeLayer.style.position = 'absolute';
-    activeLayer.style.zIndex = '99999';
+    activeLayer.style.zIndex = '9999';
     activeLayer.style.backgroundColor = '#fff';
     activeLayer.style.border = '1px solid #ccc';
     activeLayer.style.borderRadius = '4px';
@@ -306,7 +306,13 @@
     
     // 코드 삽입 처리 함수
     const processCode = (code, language) => {
-      if (!code.trim()) return;
+      console.log('🔧 processCode 호출됨:', { code: code?.substring(0, 50) + '...', language, codeLength: code?.length });
+      
+      if (!code.trim()) {
+        console.log('⚠️ 코드가 비어있음 - 알림 표시');
+        errorHandler.showUserAlert('P405');
+        return;
+      }
       
       try {
         contentArea.focus({ preventScroll: true });
@@ -314,6 +320,7 @@
         contentArea.focus();
       }
       
+      console.log('🚀 insertCodeBlock 호출 예정');
       setTimeout(() => {
         insertCodeBlock(code, language, contentArea, SpeedHighlight);
       }, 0);
@@ -322,7 +329,13 @@
     // 버튼 클릭 이벤트
     insertButton.addEventListener('click', () => {
       const selectedLanguage = languageDropdown.getValue();
-      processCode(codeInput.value, selectedLanguage);
+      const codeValue = codeInput.value;
+      console.log('🖱️ 삽입 버튼 클릭됨:', { 
+        language: selectedLanguage, 
+        codeLength: codeValue?.length,
+        codePreview: codeValue?.substring(0, 30) + '...'
+      });
+      processCode(codeValue, selectedLanguage);
     });
     
     // 레이어 내부 클릭 시 이벤트 전파 중단
@@ -345,7 +358,17 @@
    * 코드 블록 삽입
    */
   function insertCodeBlock(code, language, contentArea, SpeedHighlight) {
-    if (!code.trim()) return;
+    console.log('📝 insertCodeBlock 함수 시작:', { 
+      code: code?.substring(0, 50) + '...', 
+      language, 
+      contentArea: !!contentArea, 
+      SpeedHighlight: !!SpeedHighlight 
+    });
+    
+    if (!code.trim()) {
+      console.log('⚠️ insertCodeBlock: 코드가 비어있음');
+      return;
+    }
     
     try {
       // 언어 결정
@@ -394,7 +417,11 @@
       }
     } catch (error) {
       errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.INSERT, error);
-      alert('코드 블록을 삽입하는 중 오류가 발생했습니다.');
+      // 디버깅: errorHandler 확인
+      console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
+      console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
+      console.log('P404 메시지:', errorHandler?.messages?.P404);
+      errorHandler.showUserAlert('P404');
     } finally {
       // 레이어 닫기 및 선택 영역 초기화
       clearSelection();
@@ -466,7 +493,11 @@
         // 스크립트 로드
         const SpeedHighlight = await loadScripts();
         if (!SpeedHighlight) {
-          alert('Speed Highlight 라이브러리를 로드할 수 없습니다.');
+          // 디버깅: errorHandler 확인
+          console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
+          console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
+          console.log('P403 메시지:', errorHandler?.messages?.P403);
+          errorHandler.showUserAlert('P403');
           return;
         }
         
