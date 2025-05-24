@@ -220,8 +220,8 @@
             try {
                 insertLine(document.querySelector('[contenteditable="true"]'));
             } catch (err) {
-                errorHandler.logError('LINE', 'P1007', err);
-                errorHandler.showUserAlert('P1007', `수평선 삽입 실패: ${err.message}`);
+                errorHandler.logError('LINE', '<HR> 삽입 실패', err);
+                
             }
             e.preventDefault();
         }
