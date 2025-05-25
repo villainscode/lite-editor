@@ -23,7 +23,7 @@
   function restoreSelection() {
     if (!savedRange) return false;
     return util.selection.restoreSelection(savedRange);
-  }
+  }  
 
   /**
    * Enter 키 처리 함수 - heading 블럭에서 나가기
@@ -159,7 +159,7 @@
           
           // 🔧 heading 적용 (execCommand 사용)
           applyHeading(level.tag, contentArea);
-          
+
           closeDropdown();
         });
         
@@ -267,7 +267,7 @@
           try {
             const range = document.createRange();
             const sel = window.getSelection();
-            
+    
             if (savedCursorPosition.startContainer && 
                 savedCursorPosition.startContainer.parentNode &&
                 contentArea.contains(savedCursorPosition.startContainer)) {
@@ -276,7 +276,7 @@
               range.setEnd(savedCursorPosition.endContainer, savedCursorPosition.endOffset);
               sel.removeAllRanges();
               sel.addRange(range);
-            }
+  }
           } catch (e) {
             // 에러 시 에디터 끝으로 이동
             const lastTextNode = getLastTextNode(contentArea);
@@ -289,12 +289,12 @@
               sel.addRange(range);
             }
           }
-        }
-        
+  }
+  
         // formatBlock execCommand 사용
         document.execCommand('formatBlock', false, tag.toLowerCase());
-      }
-      
+    }
+    
       util.editor.dispatchEditorEvent(contentArea);
       
     } catch (e) {

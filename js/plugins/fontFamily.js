@@ -127,7 +127,7 @@
         borderRadius: '4px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
         maxHeight: '300px',
-        minWidth: '200px',
+        minWidth: '180px',
         overflowY: 'auto',
         padding: '8px 0',
         display: 'none'
@@ -187,23 +187,31 @@
             }
           });
           
-          // 클릭 이벤트 - 글꼴 적용 (수정된 버전)
+          // 클릭 이벤트 - 글꼴 적용 (커서 상태에서도 작동하도록 수정)
           fontItem.addEventListener('click', util.scroll.preservePosition((e) => {
             e.preventDefault();
             e.stopPropagation();
-            errorHandler.logInfo('FontFamilyPlugin', `글꼴 선택: ${font.name}, ${font.value}`);
             
-            if (currentSelectedFontItem) {
-              currentSelectedFontItem.style.backgroundColor = '';
+            // 즉시 contentArea에 포커스를 주어 selection 컨텍스트 유지
+            try {
+                if (contentArea && contentArea.isConnected) {
+                    contentArea.focus({ preventScroll: true });
+                }
+            } catch (e) {
+                console.warn('contentArea focus 실패:', e);
             }
             
+            // UI 업데이트 먼저
+            if (currentSelectedFontItem) {
+                currentSelectedFontItem.style.backgroundColor = '';
+            }
             currentSelectedFontItem = fontItem;
             fontItem.style.backgroundColor = '#e9e9e9';
             
-            // 🔧 CSS에서 정의된 호버 효과와 정확히 동일한 스타일 적용
-            fontContainer.style.backgroundColor = '#e9e9e9';  // CSS 호버 배경색
-            fontContainer.style.color = '#1a73e8';            // CSS 호버 텍스트색 (파란색)
-            icon.style.color = '#1a73e8';                     // 아이콘도 파란색
+            // CSS 호버 효과 적용
+            fontContainer.style.backgroundColor = '#e9e9e9';  
+            fontContainer.style.color = '#1a73e8';            
+            icon.style.color = '#1a73e8';                     
             
             // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
@@ -211,22 +219,57 @@
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
             
-            // 에디터에 포커스 (스크롤 방지 옵션 추가)
-            try {
-              contentArea.focus({ preventScroll: true });
-            } catch (e) {
-              contentArea.focus();
-            }
+            // 🔧 selection 상태 확인 및 복원
+            let hasSelection = false;
+            const currentSelection = window.getSelection();
             
-            // 선택 영역 복원 - 반드시 execCommand 전에 해야 함
-            restoreSelection();
+            if (savedRange) {
+                const restored = restoreSelection();
+                errorHandler.logInfo('FontFamilyPlugin', `저장된 selection 복원: ${restored}`);
+                
+                // 복원 후 다시 확인
+                const restoredSelection = window.getSelection();
+                if (restoredSelection.rangeCount > 0) {
+                    hasSelection = !restoredSelection.isCollapsed;
+                    errorHandler.logInfo('FontFamilyPlugin', `복원된 selection: "${restoredSelection.toString()}", collapsed: ${restoredSelection.isCollapsed}`);
+                }
+            } else if (currentSelection.rangeCount > 0) {
+                hasSelection = !currentSelection.isCollapsed;
+                errorHandler.logInfo('FontFamilyPlugin', `현재 selection: "${currentSelection.toString()}", collapsed: ${currentSelection.isCollapsed}`);
+            }
             
             // 글꼴 적용을 위한 스타일 주입
             injectFontFamilyStyles();
             
-            // 글꼴 적용
-            errorHandler.logInfo('FontFamilyPlugin', `글꼴 적용 중: ${font.name} 값: ${font.value}`);
-            document.execCommand('fontName', false, font.value);
+            // 🔧 글꼴 적용 - collapsed selection에서도 실행
+            errorHandler.logInfo('FontFamilyPlugin', `글꼴 적용 중: ${font.name} 값: ${font.value}, hasSelection: ${hasSelection}`);
+            
+            try {
+                const beforeSelection = window.getSelection();
+                const isCollapsed = beforeSelection.isCollapsed;
+                
+                // scroll position 저장
+                const scrollPosition = util.scroll.savePosition();
+                
+                if (isCollapsed) {
+                    errorHandler.logInfo('FontFamilyPlugin', '커서 위치에서 폰트 설정 - 다음 타이핑에 적용됨');
+                } else {
+                    errorHandler.logInfo('FontFamilyPlugin', `선택된 텍스트에 폰트 적용: "${beforeSelection.toString()}"`);
+                }
+                
+                // execCommand 실행
+                document.execCommand('fontName', false, font.value);
+                
+                // scroll position 복원
+                util.scroll.restorePosition(scrollPosition, 50);
+                
+                // execCommand 후 확인
+                const afterSelection = window.getSelection();
+                errorHandler.logInfo('FontFamilyPlugin', `execCommand 후 selection: "${afterSelection.toString()}"`);
+                
+            } catch (error) {
+                errorHandler.logError('FontFamilyPlugin', 'execCommand 실행 중 오류:', error);
+            }
             
             // UI 업데이트
             fontText.textContent = font.name;
@@ -239,19 +282,31 @@
       // 6. 드롭다운을 document.body에 직접 추가 (정렬 플러그인과 동일)
       document.body.appendChild(dropdownMenu);
       
-      // 7. 직접 구현한 드롭다운 토글 로직
+      // 7. 직접 구현한 드롭다운 토글 로직 - 개선된 버전
+      fontContainer.addEventListener('mousedown', (e) => {
+        // 🔧 mousedown 시점에 미리 selection 저장 (click 전에)
+        const currentSelection = window.getSelection();
+        if (currentSelection.rangeCount > 0 && !currentSelection.isCollapsed) {
+          savedRange = util.selection.saveSelection();
+          errorHandler.logInfo('FontFamilyPlugin', `mousedown에서 selection 저장됨: "${currentSelection.toString()}"`);
+        }
+      });
+
       fontContainer.addEventListener('click', util.scroll.preservePosition((e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 선택 영역 저장
-        saveSelection();
+        // 🔧 클릭 시에도 다시 한번 확인하여 저장
+        const currentSelection = window.getSelection();
+        if (currentSelection.rangeCount > 0 && !currentSelection.isCollapsed && !savedRange) {
+          savedRange = util.selection.saveSelection();
+          errorHandler.logInfo('FontFamilyPlugin', `click에서 추가 selection 저장됨: "${currentSelection.toString()}"`);
+        }
         
         // 현재 드롭다운의 상태 확인
         const isVisible = dropdownMenu.classList.contains('show');
         
         // 다른 모든 드롭다운 닫기 - activeModalManager 사용
-        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
         if (!isVisible) {
           util.activeModalManager.closeAll();
         }
@@ -272,12 +327,12 @@
           fontContainer.classList.add('active');
           isDropdownOpen = true;
           
-          // 위치 설정
+          // 드롭다운 위치 설정
           const buttonRect = fontContainer.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
+          dropdownMenu.style.left = (buttonRect.left - 3) + 'px';
           
-          // 활성 모달 등록 (관리 시스템에 추가)
+          // 활성 모달 등록
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -287,7 +342,7 @@
           
           util.activeModalManager.register(dropdownMenu);
           
-          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          // 외부 클릭 시 닫기 설정
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';

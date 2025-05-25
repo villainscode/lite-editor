@@ -146,175 +146,179 @@
 
         <div class="demo-section">
             <div class="editor-container">
-                <div id="lite-editor" contenteditable="true"><p>첫 번째 항목<br>두 번째 항목<br>세 번째 항목<br>네 번째 항목</p>
-                <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
-                <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
+                <!-- 툴바 영역 (원하는 위치에 배치 가능) -->
+                <div id="lite-editor-toolbar"></div>
 
-                <div class="shortcuts-list">
-                  <h3>텍스트 서식</h3>
-                  <ul>
-                    <li><kbd>Alt+B</kbd>: 굵게</li>
-                    <li><kbd>Alt+I</kbd>: 기울임</li>
-                    <li><kbd>Alt+U</kbd>: 밑줄</li>
-                    <li><kbd>Alt+S</kbd>: 취소선</li>
-                  </ul>
-                  
-                  <h3>헤딩</h3>
-                  <ul>
-                    <li><kbd>Alt+1</kbd>: 제목 1</li>
-                    <li><kbd>Alt+2</kbd>: 제목 2</li>
-                    <li><kbd>Alt+3</kbd>: 제목 3</li>
-                    <li><kbd>Alt+4</kbd>: 본문</li>
-                  </ul>
-                  <br>https://raw.githubusercontent.com/villainscode/tech-interview-for-junior/main/image/comment.png<br>
-                  <h3>정렬</h3>
-                  <ul>
-                    <li><kbd>Ctrl+Alt+L</kbd>: 왼쪽 정렬</li>
-                    <li><kbd>Ctrl+Alt+C</kbd>: 가운데 정렬</li>
-                    <li><kbd>Ctrl+Alt+R</kbd>: 오른쪽 정렬</li>
-                  </ul>
-                  
-                  <h3>목록</h3>
-                  <ul>
-                    <li><kbd>Alt+U</kbd>: 순서 없는 목록</li>
-                    <li><kbd>Alt+O</kbd>: 순서 있는 목록</li>
-                    <li><kbd>Alt+K</kbd>: 체크 목록</li>
-                  </ul>
-                  
-                  <h3>기타</h3>
-                  <ul>
-                    <li><kbd>Alt+Q</kbd>: 인용구</li>
-                    <li><kbd>Alt+H</kbd>: 수평선 삽입</li>
-                    <li><kbd>Alt+C</kbd>: 코드 삽입</li>
-                  </ul>
-                </div>
+                <!-- 에디터 콘텐츠 영역 -->
+                <div id="lite-editor-content" contenteditable="true">
+                    <p>첫 번째 항목<br>두 번째 항목<br>세 번째 항목<br>네 번째 항목</p>
+                    <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
+                    <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
 
-                <p>LiteEditor 기능 테스트용 샘플 텍스트, 이 크기는 h2 태그입니다.</p>
+                    
+                      <h3>텍스트 서식</h3>
+                      <ul>
+                        <li><kbd>Alt+B</kbd>: 굵게</li>
+                        <li><kbd>Alt+I</kbd>: 기울임</li>
+                        <li><kbd>Alt+U</kbd>: 밑줄</li>
+                        <li><kbd>Alt+S</kbd>: 취소선</li>
+                      </ul>
+                      
+                      <h3>헤딩</h3>
+                      <ul>
+                        <li><kbd>Alt+1</kbd>: 제목 1</li>
+                        <li><kbd>Alt+2</kbd>: 제목 2</li>
+                        <li><kbd>Alt+3</kbd>: 제목 3</li>
+                        <li><kbd>Alt+4</kbd>: 본문</li>
+                      </ul>
+                      <br>https://raw.githubusercontent.com/villainscode/tech-interview-for-junior/main/image/comment.png<br>
+                      <h3>정렬</h3>
+                      <ul>
+                        <li><kbd>Ctrl+Alt+L</kbd>: 왼쪽 정렬</li>
+                        <li><kbd>Ctrl+Alt+C</kbd>: 가운데 정렬</li>
+                        <li><kbd>Ctrl+Alt+R</kbd>: 오른쪽 정렬</li>
+                      </ul>
+                      
+                      <h3>목록</h3>
+                      <ul>
+                        <li><kbd>Alt+U</kbd>: 순서 없는 목록</li>
+                        <li><kbd>Alt+O</kbd>: 순서 있는 목록</li>
+                        <li><kbd>Alt+K</kbd>: 체크 목록</li>
+                      </ul>
+                      
+                      <h3>기타</h3>
+                      <ul>
+                        <li><kbd>Alt+Q</kbd>: 인용구</li>
+                        <li><kbd>Alt+H</kbd>: 수평선 삽입</li>
+                        <li><kbd>Alt+C</kbd>: 코드 삽입</li>
+                      </ul>
 
-                <p>기본 서식 테스트, 이 크기는 h3 태그입니다.</p>
-                <p>안녕하세요! 이 텍스트는 굵게 서식을 테스트하기 위한 문장입니다. 기울임체로 작성된 부분도 확인해보세요. 
-                  또한 밑줄과 취소선 기능도 테스트해볼 수 있습니다. 물론 다 적용해볼 수도 있죠.</p>
+                    <p>LiteEditor 기능 테스트용 샘플 텍스트, 이 크기는 h2 태그입니다.</p>
 
-                <p>제목 스타일</p>
-                <p>에디터의 Heading 기능을 사용하여 이 텍스트를 다양한 크기의 제목으로 변경해보세요. H1부터 H3까 크기를 적용할 수 있습니다. 기본값은 일반 Paragraph로 텍스트가 채워집니다. </p>
+                    <p>기본 서식 테스트, 이 크기는 h3 태그입니다.</p>
+                    <p>안녕하세요! 이 텍스트는 굵게 서식을 테스트하기 위한 문장입니다. 기울임체로 작성된 부분도 확인해보세요. 
+                      또한 밑줄과 취소선 기능도 테스트해볼 수 있습니다. 물론 다 적용해볼 수도 있죠.</p>
 
-                <p>글자 색상 및 하이라이트</p>
-                <p>이 부분은 글자 색상을 변경해보세요. 다양한 색상을 선택하여 텍스트에 적용할 수 있습니다. 또한 텍스트 배경에 하이라이트 효과를 주고 싶다면 해당 텍스트를 선택한 후 하이라이트 도구를 사용해보세요.</p>
+                    <p>제목 스타일</p>
+                    <p>에디터의 Heading 기능을 사용하여 이 텍스트를 다양한 크기의 제목으로 변경해보세요. H1부터 H3까 크기를 적용할 수 있습니다. 기본값은 일반 Paragraph로 텍스트가 채워집니다. </p>
 
-                <p>글꼴 변경</p>
-                <p>이 문장의 글꼴을 변경해보세요. 에디터에서 제공하는 다양한 글꼴(굴림체, 바탕체, Noto Sans KR, 나눔고딕, Black Han Sans, 도현체 등)을 적용해볼 수 있습니다.</p>
-                - 도현체 <br>
-                - 나눔고딕 <br>
-                - 바탕체 <br>
-                - 굴림체 <br>
-                - Noto Sans KR <br>
-                - Black Han Sans <br>
+                    <p>글자 색상 및 하이라이트</p>
+                    <p>이 부분은 글자 색상을 변경해보세요. 다양한 색상을 선택하여 텍스트에 적용할 수 있습니다. 또한 텍스트 배경에 하이라이트 효과를 주고 싶다면 해당 텍스트를 선택한 후 하이라이트 도구를 사용해보세요.</p>
+
+                    <p>글꼴 변경</p>
+                    <p>이 문장의 글꼴을 변경해보세요. 에디터에서 제공하는 다양한 글꼴(굴림체, 바탕체, Noto Sans KR, 나눔고딕, Black Han Sans, 도현체 등)을 적용해볼 수 있습니다.</p>
+                    - 도현체 <br>
+                    - 나눔고딕 <br>
+                    - 바탕체 <br>
+                    - 굴림체 <br>
+                    - Noto Sans KR <br>
+                    - Black Han Sans <br>
+                    <br>
+                    코딩 폰트도 적용할 수 있어요. <br>
+                    - Hack<br>
+                    - JetBrains Mono<br><br>
+
+                    영문도 적용합니다.<br><br>
+                    arial <br>
+                    Courier new <br>
+
+                    블록쿼트도 적용합니다.<br>
+                    블록쿼트 아이콘을 누르세요. 엔터를 치면 밖으로 빠져나옵니다.<br><br>
+                    
+                    
+                    <h3>이미지 추가</h3>
+                    <p>이미지를 추가하려면 아래 이미지 URL을 복사하고 Image 버튼을 클릭한 후 URL을 붙여넣으세요:</p>
+                    
+                    이미지 주소는 <br>https://raw.githubusercontent.com/haru-note/harunote.github/main/image/book.jpg <br>입니다.
+                    <br><br>
+                    
+                    <p>순서 있는 리스트</p>
+                    <p>이 부분을 선택하고 순서 있는 리스트(Numbered List) 버튼을 클릭하세요:</p>
+                    <p>첫 번째 항목<br>
+                    두 번째 항목<br>
+                    세 번째 항목<br>
+                    네 번째 항목</p>
+
+                    <p>순서 없는 리스트</p>
+                    <p>이 부분을 선택하고 순서 없는 리스트(Bullet List) 버튼을 클릭하세요:</p>
+                    <p>과일 항목<br>
+                    채소 항목<br>
+                    육류 항목<br>
+                    유제품 항목</p>
+
+                    <p>체크리스트 </p>
+                    <p>체크리스트를 테스트하려면 이 부분을 선택하고 CheckList 버튼을 클릭하세요.</p>
+                    <p>첫 번째 항목<br>
+                    두 번째 항목<br>
+                    세 번째 항목<br>
+                    네 번째 항목</p>
+
+                    <h3>코드 및 코드블럭 하일라이팅, 자동 Syntax 하일라이팅 적용</h3>
+                    <p>인라인 코드를 테스트하려면 이 부분을 선택하고 Code 버튼을 클릭하세요.</p>
+                    <p>코드블럭을 테스트하려면 아래 텍스트를 선택하고 CodeBlock 버튼을 클릭하세요:</p>
+                    
+                function testFunction() {<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;console.log("Hello, LiteEditor!");<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
+                }<br>
                 <br>
-                코딩 폰트도 적용할 수 있어요. <br>
-                - Hack<br>
-                - JetBrains Mono<br><br>
-
-                영문도 적용합니다.<br><br>
-                arial <br>
-                Courier new <br>
-
-                블록쿼트도 적용합니다.<br>
-                블록쿼트 아이콘을 누르세요. 엔터를 치면 밖으로 빠져나옵니다.<br><br>
-                
-                
-                <h3>이미지 추가</h3>
-                <p>이미지를 추가하려면 아래 이미지 URL을 복사하고 Image 버튼을 클릭한 후 URL을 붙여넣으세요:</p>
-                
-                이미지 주소는 <br>https://raw.githubusercontent.com/haru-note/harunote.github/main/image/book.jpg <br>입니다.
-                <br><br>
-                
-                <p>순서 있는 리스트</p>
-                <p>이 부분을 선택하고 순서 있는 리스트(Numbered List) 버튼을 클릭하세요:</p>
-                <p>첫 번째 항목<br>
-                두 번째 항목<br>
-                세 번째 항목<br>
-                네 번째 항목</p>
-
-                <p>순서 없는 리스트</p>
-                <p>이 부분을 선택하고 순서 없는 리스트(Bullet List) 버튼을 클릭하세요:</p>
-                <p>과일 항목<br>
-                채소 항목<br>
-                육류 항목<br>
-                유제품 항목</p>
-
-                <p>체크리스트 </p>
-                <p>체크리스트를 테스트하려면 이 부분을 선택하고 CheckList 버튼을 클릭하세요.</p>
-                <p>첫 번째 항목<br>
-                두 번째 항목<br>
-                세 번째 항목<br>
-                네 번째 항목</p>
-
-                <h3>코드 및 코드블럭 하일라이팅, 자동 Syntax 하일라이팅 적용</h3>
-                <p>인라인 코드를 테스트하려면 이 부분을 선택하고 Code 버튼을 클릭하세요.</p>
-                <p>코드블럭을 테스트하려면 아래 텍스트를 선택하고 CodeBlock 버튼을 클릭하세요:</p>
-                
-            function testFunction() {<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;console.log("Hello, LiteEditor!");<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
-            }<br>
-            <br>
-            const result = testFunction();<br>
-                
+                const result = testFunction();<br>
+                    
 
 
-            핵심 포인트
-📌 ⭐ ❗
-단계 표시
-🔹 🔸 ◾ ▪
-섹션 구분
-───────
-순서/단계
-① ② ③ 🔢
-예시/샘플
-📋 📝 📄
-문서/코드
-📄 🧾 🗒️
-링크
-🔗 🌐
+                핵심 포인트
+            📌 ⭐ ❗
+            단계 표시
+            🔹 🔸 ◾ ▪
+            섹션 구분
+            ───────
+            순서/단계
+            ① ② ③ 🔢
+            예시/샘플
+            📋 📝 📄
+            문서/코드
+            📄 🧾 🗒️
+            링크
+            🔗 🌐
 
-성공/정상
-✅ ✔️ 🟢
-실패/에러
-❌ ⚠️ 🔴
-참고/주의
-⚠️ 🔔 🟡
-정보
-ℹ️ 💡 🔍
-완료
-🏁 🟢 ✅
-진행 중
-⏳ 🔄 🕐
+            성공/정상
+            ✅ ✔️ 🟢
+            실패/에러
+            ❌ ⚠️ 🔴
+            참고/주의
+            ⚠️ 🔔 🟡
+            정보
+            ℹ️ 💡 🔍
+            완료
+            🏁 🟢 ✅
+            진행 중
+            ⏳ 🔄 🕐
 
-코드
-💻 🧑‍💻 🧾
-설정
-⚙️ 🔧 🛠
-경로
-📁 📂
-서버
-🖥️ 🌐 🧱
-인증
-🔐 🔑
-API 호출
-📡 🔄
-버그/오류
-🐛 ❌
-패키지/라이브러리
-📦
+            코드
+            💻 🧑‍💻 🧾
+            설정
+            ⚙️ 🔧 🛠
+            경로
+            📁 📂
+            서버
+            🖥️ 🌐 🧱
+            인증
+            🔐 🔑
+            API 호출
+            📡 🔄
+            버그/오류
+            🐛 ❌
+            패키지/라이브러리
+            📦
 
-통계
-📊 📈 📉
-로그
-📜 🧾
-모니터링
-🔎 👀
-메트릭
-📏 🧮
+            통계
+            📊 📈 📉
+            로그
+            📜 🧾
+            모니터링
+            🔎 👀
+            메트릭
+            📏 🧮
 
 
 
@@ -337,6 +341,7 @@ API 호출
                 <h3>실행 취소 및 재실행</h3>
                 <p>텍스트를 편집한 후 Undo 버튼을 클릭하여 이전 상태로 되돌리거나, Redo 버튼을 클릭하여 취소한 작업을 다시 적용해보세요.</p>
 
+                </div>
             </div>
         </div>
         
@@ -454,9 +459,10 @@ API 호출
         console.log('[DEBUG] 디버그 모드 활성화됨');
         // 모든 스크립트 로드 완료 후 에디터 초기화
         document.addEventListener('lite-editor-loaded', function() {
-            // 기본 에디터 초기화
-            const editor1 = LiteEditor.init('#lite-editor', {
-                // 사용할 플러그인 목록 지정
+            // ✅ 1단계: 기존 HTML 구조 유지 (통합 모드)
+            const editor = LiteEditor.init('#lite-editor-content', {
+                separatedMode: true,
+                toolbarTarget: '#lite-editor-toolbar',
                 plugins: [
                     'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
                     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
@@ -466,9 +472,7 @@ API 호출
                     'align', 'formatIndent',                                  // 정렬과 인덴트
                     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
                 ],
-                // 구분선 위치 정의
                 dividers: [4, 8, 12, 16, 19, 22],
-                // 에디터 크기 설정 (너비와 높이)
                 dimensions: {
                     editor: {
                         width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 960px 이상 권장)
@@ -487,7 +491,24 @@ API 호출
             
             // 디버그 정보 표시
             // console.log('LiteEditor 초기화 완료');
-            errorHandler.logDebug('Core', 'LiteEditor 초기화 완료');
+            errorHandler.logDebug('Core', 'LiteEditor 초기화 완료 - 통합 모드');
+            
+            // 🔄 B모드 테스트를 위한 예시 코드 (현재는 주석 처리)
+            /*
+            // 2단계에서 사용할 분리 모드 예시:
+            // HTML: <div id="toolbar-area"></div> <div id="content-area" contenteditable="true">내용</div>
+            
+            const editor2 = LiteEditor.init('#content-area', {
+                separatedMode: true,           // 분리 모드 활성화
+                toolbarTarget: '#toolbar-area', // 툴바가 들어갈 요소
+                plugins: [...],
+                dividers: [4, 8, 12, 16, 19, 22],
+                dimensions: {
+                    toolbar: { height: '42px' },
+                    content: { height: '400px', minHeight: '400px' }
+                }
+            });
+            */
         });
     </script>
 </body>

@@ -93,12 +93,12 @@
         // 선택 영역이 있는 경우
         const scrollPosition = util.scroll.savePosition();
         
-        try {
-          contentArea.focus({ preventScroll: true });
-        } catch (e) {
-          contentArea.focus();
-        }
-        
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
+      
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
           errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, '선택 영역 복원 실패');
@@ -138,8 +138,8 @@
           } catch (e) {
             errorHandler.colorLog('EMPHASIS', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
           }
-        }
-        
+      }
+      
         // 🔧 execCommand 사용 (fontColor.js와 동일)
         const success = document.execCommand('hiliteColor', false, color);
         
