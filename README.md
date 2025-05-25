@@ -1,222 +1,179 @@
 # LiteEditor
+[![License](https://img.shields.io/badge/license-Custom--Non--Commercial-blue.svg)](LICENSE)
 
-<div align="center">
-  <img src="https://via.placeholder.com/1200x600/1a73e8/ffffff?text=LiteEditor" alt="LiteEditor Logo" width="600">
-  <p><em>경량화된 오픈소스 웹 에디터. 직관적이고 사용이 간편합니다.</em></p>
-</div>
+## 🚀 개발 환경 설정
 
-[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+### 사용 가능한 명령어
 
-## 개요
+```bash
+# 개발 환경 (타임스탬프 캐시 버스팅)
+npm run dev          # 포트 8080에서 개발 서버 시작
+npm start           # 기본 개발 서버 시작
 
-LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다. JavaScript와 CSS만으로 구현되어 다양한 웹 환경에서 높은 호환성을 보장합니다.
+# 프로덕션 환경 (버전 기반 캐시 버스팅)  
+npm run serve:prod  # 포트 3000에서 프로덕션 서버 시작
 
-## 기능
-
-### 텍스트 서식
-- **기본 서식**: 굵게(Bold), 기울임(Italic), 밑줄(Underline), 취소선(Strike)
-- **폰트 설정**: 다양한 폰트 및 크기 지원
-- **텍스트 색상**: 폰트 색상 및 배경 색상(하이라이트) 변경
-- **제목 스타일**: H1부터 H6까지의 제목 태그
-
-### 블록 요소
-- **정렬**: 왼쪽, 가운데, 오른쪽, 양쪽 정렬
-- **인용구**: 블록쿼트 지원
-- **리스트**: 순서 있는 리스트, 순서 없는 리스트, 체크리스트
-- **들여쓰기**: 들여쓰기 및 내어쓰기 기능
-
-### 미디어 및 객체
-- **링크**: 하이퍼링크 삽입 및 수정
-- **이미지**: 이미지 업로드 및 삽입
-- **테이블**: 테이블 생성 및 관리
-- **미디어**: 미디어 파일 관리 및 플레이어 통합
-
-### 코드 관련
-- **인라인 코드**: 코드 서식 적용
-- **코드 블록**: 코드 블록 생성 및 구문 강조
-
-### 기타
-- **실행 취소/다시 실행**: 작업 이력 관리(Undo/Redo)
-- **서식 제거**: 적용된 모든 서식 제거 기능
-
-## 설치 및 사용 방법
-
-### 기본 설치
-
-1. CSS와 JS 파일을 프로젝트에 추가합니다:
-
-```html
-<!-- CSS 통합 로더 -->
-<link rel="stylesheet" href="css/loader.css">
-
-<!-- 에디터가 표시될 영역 정의 -->
-<div id="lite-editor" contenteditable="true">
-    <!-- 초기 콘텐츠 (선택 사항) -->
-    <h2>초기 콘텐츠</h2>
-    <p>여기에 기본 내용을 넣을 수 있습니다.</p>
-</div>
-
-<!-- 통합 스크립트 로더 -->
-<script src="js/loader.js"></script>
+# 빌드
+npm run build       # 프로덕션 빌드 실행
 ```
 
-2. 디버그 모드를 설정하고 에디터를 초기화합니다:
+### 환경별 접속 URL
+
+- **개발 환경**: http://localhost:8080
+- **프로덕션 환경**: http://localhost:3000
+
+### 환경 강제 설정
+
+URL 파라미터로 환경을 강제로 설정할 수 있습니다:
+- `http://localhost:8080?env=development`
+- `http://localhost:8080?env=production`
+
+### 캐시 버스팅 전략
+
+- **개발 환경**: 타임스탬프 기반 (`?t=1234567890`)
+- **프로덕션 환경**: 버전 기반 (`?v=1.0.05`)
+
+## 📋 개요
+
+LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 경량 리치 텍스트 에디터입니다. JavaScript와 CSS만으로 구현되어 높은 호환성을 제공하며, 플러그인 기반 구조로 필요한 기능만 선택하여 사용할 수 있습니다. 에디터 영역의 툴바와 내용을 작성하는 컨텐츠 영역을 통합하거나, 분리해서 사용할 수 있습니다.
+
+## 🛠️ 설치 방법
+
+### 분리 모드 (권장)
 
 ```html
-<script>
-    // 디버그 모드를 활성화 (선택 사항)
-    window.DEBUG_MODE = true;
-    
-    // 모든 스크립트 로드 완료 후 에디터 초기화
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="stylesheet" href="css/loader.css">
+</head>
+<body>
+    <div class="lite-editor" id="main-editor">
+        <div id="lite-editor-toolbar"></div>
+        <div id="lite-editor-content" contenteditable="true">
+            <p>내용을 입력하세요...</p>
+        </div>
+    </div>
+
+    <script src="js/loader.js"></script>
+    <script>
     document.addEventListener('lite-editor-loaded', function() {
-        // 에디터 초기화
-        const editor = LiteEditor.init('#lite-editor', {
-            // 사용할 플러그인 목록 지정
-            plugins: [
-                'fontFamily', 'heading', 'fontColor', 'emphasis',        // 폰트서식 
-                'bold', 'italic', 'underline', 'strike',                 // 폰트포맷 
-                'link', 'imageUpload', 'table', 'media',                 // 오브젝트 삽입 
-                'line','blockquote', 'code', 'codeBlock',                // 인용 및 코드 
-                'unorderedList', 'orderedList', 'checkList',             // 목록 
-                'align', 'formatIndent',                                 // 정렬과 인덴트
-                'historyInit', 'undo', 'redo', 'reset',                  // 실행 취소/되돌리기  
-            ],
-            // 구분선 위치 정의
-            dividers: [4, 8, 12, 16, 19, 22],
-            // 에디터 크기 설정 (너비와 높이)
-            dimensions: {
-                editor: {
-                    width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장)
-                    maxWidth: '100%',   // 최대 너비 (뷰포트보다 크지 않도록)
-                    height: '650px'     // 에디터 전체 높이 (고정)
-                },
-                toolbar: {
-                    height: '42px'      // 툴바 높이 (고정)
-                },
-                content: {
-                    height: '608px',    // 콘텐츠 영역 높이 (650px - 42px)
-                    minHeight: '608px'  // 콘텐츠 영역 최소 높이
-                }
-            }
+        LiteEditor.init('#lite-editor-content', {
+            separatedMode: true,
+            toolbarTarget: '#lite-editor-toolbar',
+            plugins: ['bold', 'italic', 'underline', 'link', 'reset']
         });
     });
-</script>
+    </script>
+</body>
+</html>
 ```
 
-### 간소화된 설치 (최소 기능)
-
-필요한 기능만 선택하여 설치할 수도 있습니다:
+### 통합 모드
 
 ```html
-<!-- CSS 통합 로더 -->
-<link rel="stylesheet" href="css/loader.css">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="stylesheet" href="css/loader.css">
+</head>
+<body>
+    <div id="editor">기존 내용</div>
 
-<!-- 에디터가 표시될 영역 -->
-<div id="simple-editor" contenteditable="true"></div>
-
-<!-- 통합 스크립트 로더 -->
-<script src="js/loader.js"></script>
-
-<script>
+    <script src="js/loader.js"></script>
+    <script>
     document.addEventListener('lite-editor-loaded', function() {
-        // 간소화된 에디터 초기화
-        const editor = LiteEditor.init('#simple-editor', {
-            plugins: ['bold', 'italic', 'underline', 'link', 'reset'],
-            dividers: [3]
+        LiteEditor.init('#editor', {
+            plugins: ['bold', 'italic', 'underline', 'link', 'reset']
         });
     });
-</script>
+    </script>
+</body>
+</html>
 ```
 
-### 플러그인 선택 가이드
+## ✨ 에디터 기능 목록
 
-에디터 기능에 따라 필요한 플러그인을 선택하여 사용할 수 있습니다:
+- **굵게** - 텍스트를 굵게 표시
+- **기울임** - 텍스트를 기울임꼴로 표시
+- **밑줄** - 텍스트에 밑줄 추가
+- **취소선** - 텍스트에 취소선 추가
+- **폰트 패밀리** - 다양한 글꼴 선택
+- **폰트 색상** - 텍스트 색상 변경
+- **하이라이트** - 텍스트 배경색 변경
+- **제목 스타일** - H1~H6 제목 태그 적용
+- **텍스트 정렬** - 좌/중/우/양쪽 정렬
+- **들여쓰기** - 들여쓰기 및 내어쓰기
+- **순서 없는 목록** - 불릿 리스트 생성
+- **순서 있는 목록** - 번호 리스트 생성
+- **체크리스트** - 체크박스 리스트 생성
+- **하이퍼링크** - 링크 삽입 및 편집
+- **이미지 업로드** - 이미지 삽입 및 리사이즈
+- **테이블** - 테이블 생성 및 편집
+- **동영상** - 다중 플랫폼 동영상 삽입
+- **인용구** - 블록쿼트 생성
+- **인라인 코드** - 코드 서식 적용
+- **코드 블록** - 코드 블록 및 구문 강조
+- **수평선** - 구분선 삽입
+- **실행 취소** - 이전 작업으로 되돌리기
+- **다시 실행** - 취소한 작업 다시 실행
+- **서식 제거** - 모든 서식 제거
 
-- **텍스트 서식**: `bold`, `italic`, `underline`, `strike`
-- **폰트 관련**: `fontFamily`, `fontColor`, `emphasis`
-- **제목 및 구조**: `heading`, `align`, `formatIndent`
-- **리스트**: `unorderedList`, `orderedList`, `checkList`
-- **삽입 요소**: `link`, `imageUpload`, `table`, `media`, `line`
-- **코드 관련**: `code`, `codeBlock`
-- **기타**: `blockquote`, `historyInit`, `undo`, `redo`, `reset`
+## 🎯 제품 설명 및 특징
 
-## 옵션 설명
+### 주요 특징
+- **경량화**: 최소한의 리소스로 최대 성능 제공
+- **플러그인 기반**: 필요한 기능만 선택하여 사용
+- **높은 호환성**: 모든 모던 브라우저 지원
+- **쉬운 통합**: 간단한 HTML/JS 코드로 즉시 사용
+- **분리 모드**: 툴바와 콘텐츠 영역을 자유롭게 배치
+- **키보드 단축키**: 주요 기능에 대한 단축키 지원
+- **다중 플랫폼 동영상 첨부**: YouTube, Vimeo, 카카오TV 등 동영상 지원
+- **실시간 미리보기**: 폰트, 색상 등 실시간 미리보기
+- **이미지 링크, 파일 첨부 형태 지원**: 이미지 크기 조절, 위치 조정 지원 
 
-LiteEditor는 다양한 설정 옵션을 제공합니다:
+### 기술적 특징
+- **순수 JavaScript**: 외부 프레임워크 의존성 없음
+- **모듈화 설계**: 각 기능이 독립적인 플러그인으로 구성
+- **캐시 버스팅**: 개발/프로덕션 환경별 캐시 전략
+- **보안 강화**: XSS 방지 및 URL 검증 시스템
+- **오류 처리**: 통합 오류 처리 및 디버깅 시스템
 
-| 옵션 | 타입 | 설명 |
-|------|------|------|
-| `plugins` | Array | 사용할 플러그인 목록 |
-| `dividers` | Array | 툴바에 구분선을 넣을 위치 (플러그인 인덱스) |
-| `dimensions` | Object | 에디터 크기 설정 |
-| `debug` | Boolean | 디버그 모드 활성화 여부 (개발용) |
+## 🚀 로드맵
 
-## 플러그인 목록
-
-LiteEditor는 다음 플러그인을 제공합니다:
-
-| 플러그인 | 기능 | 설명 |
-|---------|------|------|
-| `bold` | 굵게 | 텍스트를 굵게 표시 |
-| `italic` | 기울임 | 텍스트를 기울임꼴로 표시 |
-| `underline` | 밑줄 | 텍스트에 밑줄 추가 |
-| `strike` | 취소선 | 텍스트에 취소선 추가 |
-| `fontFamily` | 폰트 | 텍스트 폰트 변경 |
-| `fontColor` | 폰트 색상 | 텍스트 색상 변경 |
-| `emphasis` | 하이라이트 | 텍스트 배경색 변경 |
-| `heading` | 제목 | H1-H6 제목 스타일 적용 |
-| `align` | 정렬 | 텍스트 정렬 (왼쪽, 가운데, 오른쪽, 양쪽) |
-| `formatIndent` | 들여쓰기 | 들여쓰기 및 내어쓰기 |
-| `unorderedList` | 순서 없는 목록 | 불릿 리스트 생성 |
-| `orderedList` | 순서 있는 목록 | 넘버링 리스트 생성 |
-| `checkList` | 체크리스트 | 체크박스 리스트 생성 |
-| `link` | 링크 | 하이퍼링크 삽입 |
-| `imageUpload` | 이미지 | 이미지 업로드 및 삽입 |
-| `table` | 테이블 | 테이블 생성 및 관리 |
-| `media` | 미디어 | 미디어 파일 관리 |
-| `blockquote` | 인용구 | 인용구 블록 생성 |
-| `code` | 코드 | 인라인 코드 서식 적용 |
-| `codeBlock` | 코드 블록 | 코드 블록 생성 및 구문 강조 |
-| `line` | 수평선 | 수평선 삽입 |
-| `historyInit` | 히스토리 초기화 | 작업 이력 관리 초기화 |
-| `undo` | 실행 취소 | 작업 되돌리기 |
-| `redo` | 다시 실행 | 취소한 작업 다시 실행 |
-| `reset` | 서식 제거 | 모든 서식 제거 |
-
-## API 참조
-
-개발중
-
-## 브라우저 호환성
-
-- Chrome (최신 버전)
-- Firefox (최신 버전)
-- Safari (최신 버전)
-- Edge (최신 버전)
-- Opera (최신 버전)
-- IE는 지원하지 않습니다.
-
-## 기여하기
-
-LiteEditor 프로젝트에 기여하는 방법:
-
-1. 이 저장소를 포크하세요.
-2. 새 기능 브랜치를 만드세요 (`git checkout -b feature/amazing-feature`).
-3. 변경사항을 커밋하세요 (`git commit -m 'Add some amazing feature'`).
-4. 브랜치에 푸시하세요 (`git push origin feature/amazing-feature`).
-5. Pull Request를 생성하세요. 기능의 변경사항에 대해서 자세히 기술해주십시오.
-
-## 로드맵
 - [ ] HTML/Rich 모드 전환
 - [ ] HTML/Markdown 가져오기/내보내기
 - [ ] 수학 수식 편집기
 - [ ] 차트 생성 도구
+- [ ] 템플릿 양식 지원 
 - [ ] 코드 하이라이팅 개선
+- [ ] 모바일 최적화
+- [ ] 다국어 지원 확장
 
-## 라이센스
+## 🤝 기여하기
 
-이 프로젝트는 Modified Apache License 2.0 라이센스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
+LiteEditor 프로젝트에 기여하는 방법:
 
-## 문의
+1. 이 저장소를 포크하세요
+2. 새 기능 브랜치를 만드세요 (`git checkout -b feature/amazing-feature`)
+3. 변경사항을 커밋하세요 (`git commit -m 'Add some amazing feature'`)
+4. 브랜치에 푸시하세요 (`git push origin feature/amazing-feature`)
+5. Pull Request를 생성하세요
 
-질문이나 제안사항이 있으시면 이슈를 남겨주세요.
+## 📄 라이센스
+
+이 프로젝트는 Apache License 2.0 with Commons Clause 라이센스에 따라 배포됩니다. 자세한 내용은 [LICENSE](./LICENSE) 파일을 참조하세요.
+
+## 📞 문의
+
+- **이메일**: teamsubnote@gmail.com
+- **웹사이트**: https://v0-interactive-landing-page-omega.vercel.app/
+- **서브노트앱**: https://subnote.cc
+- **이슈**: GitHub Issues를 통해 버그 리포트나 기능 요청을 해주세요
+
+---
+
+**개발팀**: subnote lite-editor team in korea  
+**버전**: v1.0.05  
+**최종 업데이트**: 2025-05-25
+

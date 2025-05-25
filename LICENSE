@@ -1,16 +1,18 @@
 # Modified Apache License 2.0 with Commons Clause
 
-## Commons Clause - Restriction on Redistribution
+## Commons Clause – Restriction on Commercial Redistribution
 
 "Commons Clause" License Condition v1.0
 
-The Software is provided to you by the Licensor under the License, as defined below, subject to the following condition.
+The Software is provided to you by the Licensor under the License defined below, subject to the following restriction:
 
-Without limiting other conditions in the License, the grant of rights under the License will not include, and the License does not grant to you, the right to Sell the Software.
+Without limiting other terms in the License, the grant of rights under this License does not include, and the License explicitly excludes, the right to Sell the Software.
 
-For purposes of the foregoing, "Sell" means practicing any or all of the rights granted to you under the License to provide to third parties, for a fee or other consideration (including without limitation fees for hosting or consulting/support services related to the Software), a product or service whose value derives, entirely or substantially, from the functionality of the Software. Any license notice or attribution required by the License must also include this Commons Clause License Condition notice.
+“Sell” refers to using any of the rights granted under the License to provide a product or service to third parties for a fee or other consideration, where the product or service derives significant or entire value from the Software itself — including, without limitation, hosting, SaaS offerings, consulting, resale, or bundling within other paid offerings.
 
-If you need technical support for installation or commercial use of this product, please send an email to the contact information below.
+If you require technical support, customization, or wish to use the Software in a commercial context, you must obtain explicit written permission from the Licensor. Contact: [teamsubnote@gmail.com]
+
+---
 
 ## Apache License 2.0
 
@@ -18,7 +20,7 @@ Copyright 2025 SubNOTE, Substacks inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+You may obtain a copy of the License at:
 
     http://www.apache.org/licenses/LICENSE-2.0
 
@@ -28,12 +30,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+---
+
 ## Additional Terms
 
-1. You may view, use, modify, and distribute the source code for personal and internal use.
-2. You may not redistribute the Software or modified versions of the Software without explicit permission from the Licensor.
-3. You must include this license and copyright notice in all copies of the Software.
-4. This is not an Open Source license as defined by the Open Source Initiative.
-5. For commercial use, please contact the Licensor.
+1. You may use, modify, and distribute the Software for personal or internal purposes.
+2. You may not redistribute or sublicense the Software in a commercial product or service without explicit permission.
+3. You may integrate this Software into open-source projects or platforms, provided that the usage is non-commercial and this license file remains intact and unaltered.
+4. This Software is not classified as Open Source under the Open Source Initiative (OSI) definition.
+5. For any commercial use or monetization, including SaaS, consulting, hosting, or resale, you must obtain a commercial license from the Licensor.
+6. This license aims to prevent unfair commercial exploitation while still supporting the open developer and research community.
+7. Non-commercial use by individuals, open-source communities, non-profit organizations, and academic institutions is explicitly permitted without requiring a separate license, provided that this license notice remains intact and unmodified.
 
-For questions or further information, please contact: [teamsubnote@gmail.com]
+---
+
+For all inquiries or commercial license requests, please contact:  
+📩 [teamsubnote@gmail.com]
