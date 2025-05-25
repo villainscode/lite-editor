@@ -6,6 +6,32 @@
  */
 
 (function() {
+  // 🔧 성능 최적화: 정규식 캐싱
+  const FONT_FAMILY_REGEX = /font-family:\s*([^;]+)/;
+  const QUOTE_REGEX = /['"]/g;
+  
+  // 🔧 성능 최적화: 폰트명 파싱 함수
+  function parseFontFamily(styleAttr) {
+    if (!styleAttr) return null;
+    
+    const match = styleAttr.match(FONT_FAMILY_REGEX);
+    if (!match) return null;
+    
+    const fontFamily = match[1].trim();
+    // 따옴표 제거 최적화: indexOf로 먼저 체크
+    return fontFamily.indexOf('"') !== -1 || fontFamily.indexOf("'") !== -1 
+      ? fontFamily.replace(QUOTE_REGEX, '') 
+      : fontFamily;
+  }
+  
+  // 🔧 성능 최적화: 첫 번째 폰트명 추출 함수
+  function getFirstFontName(fontFamily) {
+    if (!fontFamily) return '';
+    
+    const commaIndex = fontFamily.indexOf(',');
+    return commaIndex !== -1 ? fontFamily.substring(0, commaIndex) : fontFamily;
+  }
+
   // PluginUtil 참조
   const util = window.PluginUtil || {};
   if (!util.selection) {
@@ -104,7 +130,7 @@
         fontContainer.style.color = '#1a73e8';
         icon.style.color = '#1a73e8';
         
-        // 🔴 중요: 현재 폰트에 해당하는 드롭다운 항목 선택
+        // 🔧 3단계 최적화: 폰트 파싱 최적화
         let currentFontFamily = null;
         
         // font 태그의 face 속성에서 폰트 추출
@@ -114,16 +140,16 @@
         // span 태그의 style 속성에서 폰트 추출
         else {
           const styleAttr = fontElement.getAttribute('style');
-          const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
-          if (fontFamilyMatch) {
-            currentFontFamily = fontFamilyMatch[1].trim().replace(/['"]/g, '');
-          }
+          currentFontFamily = parseFontFamily(styleAttr);
         }
         
         if (currentFontFamily) {
+          // 🔧 3단계 최적화: 첫 번째 폰트명 추출 최적화
+          const firstFontName = getFirstFontName(currentFontFamily);
+          
           // 캐시된 데이터 사용
           const fonts = getCachedFontData();
-          const matchedFont = fonts.find(f => f.value && f.value.includes(currentFontFamily.split(',')[0]));
+          const matchedFont = fonts.find(f => f.value && f.value.includes(firstFontName));
           
           if (matchedFont) {
             // 폰트명 업데이트
@@ -145,7 +171,8 @@
               
               fontItems.forEach(item => {
                 const itemFontFamily = item.style.fontFamily;
-                if (itemFontFamily && itemFontFamily.includes(currentFontFamily.split(',')[0])) {
+                // 🔧 3단계 최적화: 문자열 비교 최적화
+                if (itemFontFamily && itemFontFamily.includes(firstFontName)) {
                   item.style.backgroundColor = '#e9e9e9';
                   currentSelectedFontItem = item;
                 } else {
@@ -405,7 +432,7 @@
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
             
-            // �� 6단계 최적화: 닫힐 때도 정리
+            // 🔧 6단계 최적화: 닫힐 때도 정리
             if (outsideClickCleanup) {
               outsideClickCleanup();
               outsideClickCleanup = null;
@@ -495,10 +522,9 @@
               let fontFamily = currentFontValue;
               
               if (!fontFamily) {
-                // 폴백: 현재 요소에서 추출
+                // 🔧 3단계 최적화: 폰트 파싱 최적화
                 const styleAttr = fontElement.getAttribute('style');
-                const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
-                fontFamily = fontFamilyMatch ? fontFamilyMatch[1].trim() : 'inherit';
+                fontFamily = parseFontFamily(styleAttr) || 'inherit';
               }
               
               // 새 줄과 빈 span 생성 (텍스트 분할 없음)
