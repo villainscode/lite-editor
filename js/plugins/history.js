@@ -141,7 +141,7 @@
     };
     
     const pasteHandler = function() {
-      historyManager.recordState(editorId, contentArea);
+        historyManager.recordState(editorId, contentArea);
     };
     
     // 이벤트 리스너 등록

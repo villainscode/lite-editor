@@ -28,8 +28,98 @@
   // CSS 파일 로드
   util.styles.loadCssFile(`${PLUGIN_ID}-css`, CSS_PATH);
   
+  // ✅ 개선안: 단일 Observer + WeakMap 관리
+  const videoObservers = new WeakMap();
+
+  // ✅ 개선안: WeakMap 기반 cleanup 관리
+  const resizeCleanupMap = new WeakMap();
+
   /**
-   * YouTube URL에서 video ID 추출
+   * ✅ 동영상 URL 유효성 검사 (통합 보안 시스템 활용)
+   * @param {string} url - 검사할 URL
+   * @returns {boolean} 유효성 여부
+   */
+  function isValidVideoUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    
+    // 1. 기본 URL 형식 검사 (security-manager.js 활용)
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.isValidUrl) {
+      if (!LiteEditorSecurity.isValidUrl(url)) {
+        return false;
+      }
+    }
+    
+    // 2. 동영상 도메인 허용 목록 검사 (security-manager.js 활용)
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.isVideoUrlAllowed) {
+      return LiteEditorSecurity.isVideoUrlAllowed(url);
+    }
+    
+    // 3. 폴백: videoList.js 직접 참조
+    if (typeof window.LiteEditorVideoData !== 'undefined') {
+      try {
+        const urlObj = new URL(url);
+        const allowedDomains = window.LiteEditorVideoData.ALLOWED_VIDEO_DOMAINS || [];
+        return allowedDomains.some(domain => 
+          urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
+        );
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // 4. 최종 폴백: 기본 YouTube 도메인만 허용
+    return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/i.test(url);
+  }
+
+  /**
+   * ✅ 동영상 플랫폼 감지 (security-manager.js 활용)
+   * @param {string} url - 분석할 URL
+   * @returns {Object|null} 플랫폼 정보 또는 null
+   */
+  function detectVideoPlatform(url) {
+    // security-manager.js의 detectVideoPlatform 활용
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.detectVideoPlatform) {
+      return LiteEditorSecurity.detectVideoPlatform(url);
+    }
+    
+    // 폴백: YouTube만 지원
+    const videoId = parseYouTubeID(url);
+    if (videoId) {
+      return {
+        platform: 'youtube',
+        id: videoId,
+        hash: null,
+        originalUrl: url
+      };
+    }
+    
+    return null;
+  }
+
+  /**
+   * ✅ 플랫폼별 임베드 URL 생성 (security-manager.js 활용)
+   * @param {string} platform - 플랫폼 이름
+   * @param {string} videoId - 비디오 ID
+   * @param {Object} options - 추가 옵션
+   * @returns {string} 임베드 URL
+   */
+  function createEmbedUrl(platform, videoId, options = {}) {
+    // security-manager.js의 createEmbedUrl 활용
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.createEmbedUrl) {
+      return LiteEditorSecurity.createEmbedUrl(platform, videoId, options);
+    }
+    
+    // 폴백: YouTube만 지원
+    if (platform === 'youtube') {
+      const params = options.params || 'enablejsapi=0&rel=0&modestbranding=1';
+      return `https://www.youtube.com/embed/${videoId}?${params}`;
+    }
+    
+    return '';
+  }
+
+  /**
+   * YouTube URL에서 video ID 추출 (기존 함수 유지 - 폴백용)
    * @param {string} url - YouTube URL
    * @returns {string|null} - 추출된 video ID 또는 null
    */
@@ -38,10 +128,6 @@
     url = url.replace(/^@/, '');
     
     // 다양한 YouTube 링크 패턴 처리
-    // 1. 일반 유튜브 링크: youtube.com/watch?v=VIDEO_ID
-    // 2. 짧은 링크: youtu.be/VIDEO_ID
-    // 3. 임베드 링크: youtube.com/embed/VIDEO_ID
-    // 4. 쇼츠 링크: youtube.com/shorts/VIDEO_ID
     const patterns = [
       // 일반 유튜브 및 임베드 링크
       /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/))([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)/,
@@ -59,31 +145,9 @@
       }
     }
     
-    // 기본 비디오 ID 추출 (다른 모든 패턴 실패 시 시도)
-    // URL 내 11자 영숫자 패턴 찾기
-    const basicIdMatch = url.match(/([A-Za-z0-9_-]{11})/);
-    if (basicIdMatch) {
-      return basicIdMatch[1];
-    }
-    
     return null;
   }
 
-  /**
-   * URL 유효성 검사
-   * @param {string} url - 검사할 URL
-   * @returns {boolean} - 유효성 여부
-   */
-  function isValidYouTubeUrl(url) {
-    // URL에 youtube 또는 youtu.be가 포함되어 있는지만 확인
-    // 더 적극적으로 수용하는 방식 사용
-    return (
-      url.includes('youtube.com') || 
-      url.includes('youtu.be') || 
-      parseYouTubeID(url) !== null
-    );
-  }
-  
   /**
    * 선택 영역 저장
    */
@@ -107,18 +171,40 @@
   }
 
   /**
-   * YouTube iframe 요소 생성
-   * @param {string} videoId - YouTube 비디오 ID
+   * ✅ 플랫폼별 iframe 요소 생성 (통합 보안 시스템 활용)
+   * @param {string} platform - 플랫폼 이름
+   * @param {string} videoId - 비디오 ID
    * @returns {HTMLIFrameElement} - 생성된 iframe 요소
    */
-  function createYouTubeIframe(videoId) {
+  function createVideoIframe(platform, videoId) {
+    // 임베드 URL 생성
+    const embedUrl = createEmbedUrl(platform, videoId);
+    
+    if (!embedUrl) {
+      throw new Error(`지원되지 않는 플랫폼: ${platform}`);
+    }
+    
+    // security-manager.js의 createSafeIframe 활용
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.createSafeIframe) {
+      const iframe = LiteEditorSecurity.createSafeIframe(embedUrl, {
+        width: '100%',
+        height: '100%',
+        title: `${platform} video player`,
+        allow: getVideoAllowAttributes(platform),
+        allowFullscreen: true
+      });
+      
+      if (iframe) return iframe;
+    }
+    
+    // 폴백: 직접 생성
     return util.dom.createElement('iframe', {
       width: '100%',
       height: '100%',
-      src: `https://www.youtube.com/embed/${videoId}?enablejsapi=0&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin || '*')}`,
-      title: 'YouTube video player',
+      src: embedUrl,
+      title: `${platform} video player`,
       frameBorder: '0',
-      allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      allow: getVideoAllowAttributes(platform),
       allowFullscreen: true,
       loading: 'lazy',
       referrerPolicy: 'strict-origin-when-cross-origin'
@@ -126,72 +212,95 @@
   }
 
   /**
-   * YouTube 동영상 삽입
-   * @param {string} url - YouTube URL
+   * ✅ 플랫폼별 allow 속성 가져오기
+   * @param {string} platform - 플랫폼 이름
+   * @returns {string} allow 속성 값
+   */
+  function getVideoAllowAttributes(platform) {
+    // security-manager.js의 VIDEO_EMBED_CONFIG 활용
+    if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.VIDEO_EMBED_CONFIG) {
+      const config = LiteEditorSecurity.VIDEO_EMBED_CONFIG[platform];
+      return config?.allowAttributes || 'autoplay; fullscreen';
+    }
+    
+    // 폴백: 기본 속성
+    const defaultAttributes = {
+      youtube: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+      vimeo: 'autoplay; fullscreen; picture-in-picture',
+      dailymotion: 'autoplay; fullscreen; picture-in-picture',
+      kakao: 'autoplay; fullscreen',
+      naver: 'autoplay; fullscreen'
+    };
+    
+    return defaultAttributes[platform] || 'autoplay; fullscreen';
+  }
+
+  /**
+   * ✅ 동영상 삽입 (통합 보안 시스템 활용)
+   * @param {string} url - 동영상 URL
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
    */
-  function insertYouTubeVideo(url, contentArea) {
+  function insertVideo(url, contentArea) {
     try {
-      // YouTube ID 추출
-      const videoId = parseYouTubeID(url);
+      // 1. URL 유효성 검사
+      if (!isValidVideoUrl(url)) {
+        errorHandler.showUserAlert('P903');
+        return;
+      }
       
-      if (!videoId) return;
+      // 2. 네이버 단축 URL 체크
+      if (/naver\.me\//.test(url)) {
+        alert('네이버 단축 URL(naver.me)은 지원되지 않습니다.\ntv.naver.com의 전체 URL을 사용해주세요.');
+        return;
+      }
       
+      // 3. 플랫폼 감지
+      const platformInfo = detectVideoPlatform(url);
+      if (!platformInfo) {
+        errorHandler.showUserAlert('P903');
+        return;
+      }
+      
+      // 4. 에디터 포커스 설정
       try {
         contentArea.focus({ preventScroll: true });
       } catch (e) {
         contentArea.focus();
       }
       
+      // 5. 선택 영역 복원
       restoreSelection();
       
-      // 보안 관리자가 있는 경우 도메인 검증
-      if (typeof LiteEditorSecurity !== 'undefined') {
-        const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        
-        // 도메인 허용 여부 확인
-        if (!LiteEditorSecurity.isDomainAllowed(youtubeUrl)) {
-          errorHandler.logError('MediaPlugin', errorHandler.codes.SECURITY.DOMAIN_NOT_ALLOWED, e);
-          return;
-        }
-      }
+      // 6. iframe 요소 생성
+      const iframe = createVideoIframe(platformInfo.platform, platformInfo.id);
       
-      // iframe 요소 생성
-      const iframe = createYouTubeIframe(videoId);
-      
-      // 래퍼 생성 - 클래스와 인라인 스타일 모두 적용
+      // 7. 래퍼 생성
       const wrapper = document.createElement('div');
       wrapper.className = 'video-wrapper';
+      wrapper.setAttribute('data-platform', platformInfo.platform);
+      wrapper.setAttribute('data-video-id', platformInfo.id);
       
-      // 중요: width와 height를 style 속성에 직접 지정 (저장 시 유지)
+      // 스타일 설정
       wrapper.style.width = '640px';
       wrapper.style.height = '360px';
       wrapper.style.position = 'relative';
       wrapper.style.margin = '10px 0';
-      wrapper.style.resize = 'both';
       wrapper.style.overflow = 'hidden';
-      wrapper.style.border = '2px solid #e0e0e0';
+      wrapper.style.border = 'none';
       wrapper.style.boxSizing = 'border-box';
       wrapper.style.maxWidth = '100%';
       
-      // 리사이즈 핸들 요소 추가 (CSS pseudo-element 대신 실제 요소로 대체)
+      // 8. 리사이즈 핸들 추가
       const resizeHandle = util.dom.createElement('div', {
         className: 'video-resize-handle'
       });
-      resizeHandle.style.position = 'absolute';
-      resizeHandle.style.right = '0';
-      resizeHandle.style.bottom = '0';
-      resizeHandle.style.width = '10px';
-      resizeHandle.style.height = '10px';
-      resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
-      resizeHandle.style.cursor = 'nwse-resize';
-      resizeHandle.style.zIndex = '10';
       
+
       wrapper.contentEditable = false;
       wrapper.appendChild(iframe);
       wrapper.appendChild(resizeHandle);
       
-      // 에디터에 삽입
+      // 9. 에디터에 삽입
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
@@ -208,32 +317,34 @@
         contentArea.appendChild(wrapper);
       }
       
-      // 에디터 이벤트 발생 (수정사항 적용)
+      // 10. 리사이즈 핸들 설정
+      setupVideoResizeHandle(wrapper, resizeHandle);
+      
+      // 11. 에디터 이벤트 발생
       if (util.editor && util.editor.dispatchEditorEvent) {
         util.editor.dispatchEditorEvent(contentArea);
       }
       
-      // 크기 변경 감지를 위한 MutationObserver 설정
-      if (window.MutationObserver) {
-        const observer = new MutationObserver(mutations => {
-          // 에디터 이벤트 발생 (수정사항 적용)
-          if (util.editor && util.editor.dispatchEditorEvent) {
-            util.editor.dispatchEditorEvent(contentArea);
-          }
-        });
-        
-        observer.observe(wrapper, {
-          attributes: true,
-          attributeFilter: ['style']
-        });
-      }
-      
-      // 선택 영역 초기화
+      // 13. 선택 영역 초기화
       clearSelection();
+      
+      // 14. 성공 로그
+      errorHandler.logInfo('MediaPlugin', `${platformInfo.platform} 동영상 삽입 완료: ${platformInfo.id}`);
       
     } catch (error) {
       errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
+      errorHandler.showUserAlert('P901');
     }
+  }
+
+  /**
+   * ✅ YouTube 동영상 삽입 (하위 호환성 유지)
+   * @param {string} url - YouTube URL
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   */
+  function insertYouTubeVideo(url, contentArea) {
+    // 새로운 통합 함수로 리다이렉트
+    insertVideo(url, contentArea);
   }
   
   // 플러그인 등록
@@ -257,7 +368,7 @@
       });
       mediaButton.appendChild(icon);
       
-      // 3. 드롭다운 메뉴 생성 - 새로운 구조
+      // 3. 드롭다운 메뉴 생성
       const dropdownMenu = util.dom.createElement('div', {
         className: 'lite-editor-dropdown-menu media-dropdown',
         id: 'media-dropdown-' + Math.random().toString(36).substr(2, 9)
@@ -277,7 +388,7 @@
         zIndex: '99999'
       });
       
-      // 4. 헤더 생성 - 상단에 완전히 맞도록 조정
+      // 4. 헤더 생성
       const header = util.dom.createElement('div', {
         className: 'lite-editor-media-header'
       }, {
@@ -294,7 +405,7 @@
       
       const title = util.dom.createElement('span', {
         className: 'lite-editor-media-title',
-        textContent: 'Enter the video URL to insert'
+        textContent: 'Enter video URL (YouTube, Vimeo, etc.)'  // ✅ 다중 플랫폼 지원 표시
       }, {
         fontSize: '13px',
         fontWeight: '500',
@@ -305,7 +416,7 @@
       header.appendChild(title);
       dropdownMenu.appendChild(header);
       
-      // 5. 입력 그룹 생성 - 입력 필드 상단 여백 추가
+      // 5. 입력 그룹 생성
       const inputGroup = util.dom.createElement('div', {
         className: 'lite-editor-media-input-group'
       }, {
@@ -322,7 +433,7 @@
       const urlInput = util.dom.createElement('input', {
         type: 'text', 
         className: 'lite-editor-media-input',
-        placeholder: 'https://www.youtube.com/watch?v=...'
+        placeholder: 'https://www.youtube.com/watch?v=... or other video URL'  // ✅ 다중 플랫폼 지원 표시
       }, {
         flex: '1',
         height: '28px',
@@ -334,7 +445,7 @@
         boxSizing: 'border-box'
       });
       
-      // OK 버튼 (link.js 스타일)
+      // OK 버튼
       const submitButton = util.dom.createElement('button', {
         type: 'submit',
         className: 'lite-editor-media-insert',
@@ -362,45 +473,17 @@
       // 6. 드롭다운을 document.body에 추가
       document.body.appendChild(dropdownMenu);
       
-      // 7. 처리 함수 정의
+      // 7. ✅ 처리 함수 정의 (통합 보안 시스템 활용)
       const processVideoUrl = (url) => {
         url = url.trim();
         
-        // 보안 검사: HTML 태그 감지
-        if (url.indexOf('<') !== -1 || url.indexOf('>') !== -1) {
-          // 드롭다운 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          mediaButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
-          util.activeModalManager.unregister(dropdownMenu);
-          
-          // 경고 메시지 표시 (지연 적용)
-          setTimeout(() => {
-            errorHandler.showUserAlert('P902');
-          }, 300);
-          
+        if (!url) {
+          errorHandler.showUserAlert('P903');
           return;
         }
         
-        // 기존 YouTube URL 유효성 검사 대신 SecurityManager 사용
-        if (!LiteEditorSecurity.isDomainAllowed(url)) {
-          // 드롭다운 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          mediaButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
-          util.activeModalManager.unregister(dropdownMenu);
-          
-          // 경고 메시지 표시 (지연 적용)
-          setTimeout(() => {
-            errorHandler.showUserAlert('P903');
-          }, 300);
-          
+        if (!isValidVideoUrl(url)) {
+          errorHandler.showUserAlert('P903');
           return;
         }
         
@@ -410,11 +493,10 @@
         mediaButton.classList.remove('active');
         isDropdownOpen = false;
         
-        // 모달 관리 시스템에서 제거
         util.activeModalManager.unregister(dropdownMenu);
         
-        // 동영상 삽입
-        insertYouTubeVideo(url, contentArea);
+        // 동영상 삽입 (동기)
+        insertVideo(url, contentArea);
       };
       
       // 8. 이벤트 설정
@@ -427,12 +509,12 @@
         }
       });
       
-      // 9. 버튼 클릭 이벤트 - 직접 구현한 드롭다운 토글 로직
+      // 9. 버튼 클릭 이벤트
       mediaButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 스크롤 위치 저장 추가
+        // 스크롤 위치 저장
         const scrollPosition = util.scroll.savePosition();
         
         // 선택 영역 저장
@@ -441,8 +523,7 @@
         // 현재 드롭다운의 상태 확인
         const isVisible = dropdownMenu.classList.contains('show');
         
-        // 다른 모든 드롭다운 닫기 - activeModalManager 사용
-        // 이미 열려있는 상태에서 닫는 경우에는 closeAll을 호출하지 않음
+        // 다른 모든 드롭다운 닫기
         if (!isVisible) {
           util.activeModalManager.closeAll();
         }
@@ -454,12 +535,11 @@
           mediaButton.classList.remove('active');
           isDropdownOpen = false;
           
-          // 모달 관리 시스템에서 제거
           util.activeModalManager.unregister(dropdownMenu);
         } else {
           // 열기
           dropdownMenu.classList.add('show');
-          dropdownMenu.style.display = 'flex'; // flex로 변경 (레이아웃 유지)
+          dropdownMenu.style.display = 'flex';
           mediaButton.classList.add('active');
           isDropdownOpen = true;
           
@@ -472,7 +552,7 @@
           urlInput.value = '';
           setTimeout(() => urlInput.focus(), 10);
           
-          // 활성 모달 등록 (관리 시스템에 추가)
+          // 활성 모달 등록
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -482,7 +562,7 @@
           
           util.activeModalManager.register(dropdownMenu);
           
-          // 외부 클릭 시 닫기 설정 - 열 때만 등록
+          // 외부 클릭 시 닫기 설정
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
@@ -492,11 +572,94 @@
           }, [mediaButton]);
         }
         
-        // 스크롤 위치 복원 추가
+        // 스크롤 위치 복원
         util.scroll.restorePosition(scrollPosition);
       });
       
       return mediaButton;
     }
   });
+
+  // ✅ 개선된 media.js 리사이즈 핸들
+  function setupVideoResizeHandle(wrapper, resizeHandle) {
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+
+    function handleResize(e) {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        const newWidth = startWidth + deltaX;
+        const newHeight = startHeight + deltaY;
+        
+        if (newWidth > 100 && newHeight > 60) {
+            wrapper.style.width = newWidth + 'px';
+            wrapper.style.height = newHeight + 'px';
+        }
+    }
+
+    function stopResize() {
+        if (!isResizing) return;
+        
+        wrapper.removeAttribute('data-resizing');
+        isResizing = false;
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', stopResize);
+        
+        // ✅ 리사이즈 완료 후에만 에디터 이벤트 발생
+        const contentArea = document.querySelector('.lite-editor-content');
+        if (contentArea && util.editor && util.editor.dispatchEditorEvent) {
+            util.editor.dispatchEditorEvent(contentArea);
+        }
+    }
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        // ✅ 리사이즈 상태 표시
+        wrapper.setAttribute('data-resizing', 'true');
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = wrapper.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+        
+        document.addEventListener('mousemove', handleResize);
+        document.addEventListener('mouseup', stopResize);
+    });
+
+    // cleanup 함수를 WeakMap에 저장
+    const cleanup = () => {
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', stopResize);
+    };
+    
+    resizeCleanupMap.set(wrapper, cleanup);
+  }
+
+  // ✅ 개선안: 플러그인 레벨 cleanup
+  function cleanup() {
+    // 모든 Observer 정리
+    videoObservers.forEach((observer, wrapper) => {
+      observer.disconnect();
+    });
+    
+    // 모든 리사이즈 이벤트 정리
+    resizeCleanupMap.forEach((cleanup, wrapper) => {
+      cleanup();
+    });
+    
+    // 전역 변수 초기화
+    savedRange = null;
+    isDropdownOpen = false;
+  }
+
+  // 페이지 언로드 시 정리
+  window.addEventListener('beforeunload', cleanup);
 })();

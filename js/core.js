@@ -134,6 +134,22 @@ const LiteEditor = (function() {
     // 기본 설정과 사용자 설정 병합
     const config = { ...defaultConfig, ...customConfig };
     
+    // B모드: 분리 모드 지원
+    if (config.separatedMode && config.toolbarTarget) {
+      return initSeparatedMode(target, config);
+    }
+    
+    // 기존 통합 모드 (기본값)
+    return initIntegratedMode(target, config);
+  }
+  
+  /**
+   * 통합 모드 초기화 (기존 방식)
+   * @param {HTMLElement} target - 대상 요소
+   * @param {Object} config - 설정 옵션
+   * @returns {Object} 에디터 인스턴스
+   */
+  function initIntegratedMode(target, config) {
     // 원본 요소 저장 및 숨기기
     const originalElement = target;
     const isTextarea = originalElement.tagName === 'TEXTAREA';
@@ -207,10 +223,99 @@ const LiteEditor = (function() {
       }
     }
     
+    // 공통 초기화 호출
+    return completeInitialization({
+      config,
+      originalElement,
+      editorContainer,
+      toolbar,
+      contentArea,
+      mode: 'integrated'
+    });
+  }
+  
+  /**
+   * 분리 모드 초기화 (B모드)
+   * @param {HTMLElement} contentTarget - 콘텐츠 대상 요소
+   * @param {Object} config - 설정 옵션
+   * @returns {Object} 에디터 인스턴스
+   */
+  function initSeparatedMode(contentTarget, config) {
+    // 툴바 대상 요소 찾기
+    const toolbarTarget = typeof config.toolbarTarget === 'string'
+      ? document.querySelector(config.toolbarTarget)
+      : config.toolbarTarget;
+    
+    if (!toolbarTarget) {
+      errorHandler.logError('LiteEditor', 'TOOLBAR_TARGET_NOT_FOUND', new Error('툴바 대상 요소를 찾을 수 없습니다.'));
+      return null;
+    }
+    
+    // 원본 요소 저장
+    const originalElement = contentTarget;
+    const isTextarea = originalElement.tagName === 'TEXTAREA';
+    
+    // 콘텐츠 영역 설정
+    let contentArea;
+    if (isTextarea) {
+      // textarea인 경우 새로운 div 생성
+      contentArea = document.createElement('div');
+      contentArea.className = 'lite-editor-content';
+      contentArea.setAttribute('contenteditable', 'true');
+      contentArea.innerHTML = originalElement.value || '';
+      originalElement.style.display = 'none';
+      originalElement.parentNode.insertBefore(contentArea, originalElement);
+    } else {
+      // 기존 요소를 콘텐츠 영역으로 사용
+      contentArea = originalElement;
+      contentArea.className = 'lite-editor-content';
+      contentArea.setAttribute('contenteditable', 'true');
+    }
+    
+    // 콘텐츠 영역 속성 설정
+    contentArea.setAttribute('data-placeholder', config.placeholder);
+    contentArea.setAttribute('data-editor', 'lite-editor');
+    contentArea.setAttribute('data-exclude-from-extensions', 'true');
+    contentArea.setAttribute('autocomplete', 'off');
+    contentArea.setAttribute('autocorrect', 'off');
+    contentArea.setAttribute('autocapitalize', 'off');
+    contentArea.setAttribute('spellcheck', 'false');
+    
+    // 툴바 영역 설정
+    const toolbar = toolbarTarget;
+    toolbar.className = 'lite-editor-toolbar';
+    
+    // 가상의 에디터 컨테이너 (분리 모드에서는 실제로 DOM에 추가되지 않음)
+    const editorContainer = {
+      separated: true,
+      toolbar: toolbar,
+      contentArea: contentArea
+    };
+    
+    // 공통 초기화 호출
+    return completeInitialization({
+      config,
+      originalElement,
+      editorContainer,
+      toolbar,
+      contentArea,
+      mode: 'separated'
+    });
+  }
+  
+  /**
+   * 공통 초기화 완료 처리
+   * @param {Object} initData - 초기화 데이터
+   * @returns {Object} 에디터 인스턴스
+   */
+  function completeInitialization(initData) {
+    const { config, originalElement, editorContainer, toolbar, contentArea, mode } = initData;
+    const isTextarea = originalElement.tagName === 'TEXTAREA';
+    
     // 에디터 크기 설정 (사용자 정의 dimensions 적용)
     if (config.dimensions) {
-      // 에디터 컨테이너 크기 적용
-      if (config.dimensions.editor) {
+      // 통합 모드에서만 에디터 컨테이너 크기 적용
+      if (mode === 'integrated' && config.dimensions.editor) {
         if (config.dimensions.editor.width) {
           editorContainer.style.width = config.dimensions.editor.width;
         }
@@ -231,7 +336,7 @@ const LiteEditor = (function() {
           toolbar.style.height = config.dimensions.toolbar.height;
           toolbar.style.minHeight = config.dimensions.toolbar.height;
           toolbar.style.maxHeight = config.dimensions.toolbar.height;
-          toolbar.style.overflow = 'hidden'; // 툴바 내용이 넘칠 경우 숨김 처리
+          toolbar.style.overflow = 'hidden';
         }
       }
       
@@ -243,16 +348,16 @@ const LiteEditor = (function() {
         if (config.dimensions.content.height) {
           contentArea.style.height = config.dimensions.content.height;
           contentArea.style.maxHeight = config.dimensions.content.height;
-          contentArea.style.overflowY = 'auto'; // 내용이 넘칠 경우 스크롤 표시
+          contentArea.style.overflowY = 'auto';
         }
         if (config.dimensions.content.minHeight) {
           contentArea.style.minHeight = config.dimensions.content.minHeight;
         }
       }
       
-      // 자동 높이 계산이 아닌 경우 컨테이너 내부 요소 조정
-      if (config.dimensions.editor.height && config.dimensions.editor.height !== 'auto') {
-        editorContainer.style.overflow = 'hidden'; // 컨테이너 넘침 방지
+      // 통합 모드에서 자동 높이 계산이 아닌 경우 컨테이너 내부 요소 조정
+      if (mode === 'integrated' && config.dimensions.editor && config.dimensions.editor.height && config.dimensions.editor.height !== 'auto') {
+        editorContainer.style.overflow = 'hidden';
       }
     }
     
@@ -269,6 +374,7 @@ const LiteEditor = (function() {
       editorContainer,
       toolbar,
       contentArea,
+      mode,
       getContent: () => contentArea.innerHTML,
       setContent: (html) => {
         contentArea.innerHTML = html;
@@ -278,12 +384,21 @@ const LiteEditor = (function() {
       },
       destroy: () => {
         // 이벤트 리스너 제거, DOM 요소 정리 등
+        if (mode === 'integrated') {
         if (isTextarea) {
           originalElement.style.display = '';
           editorContainer.remove();
         } else {
           originalElement.innerHTML = contentArea.innerHTML;
           editorContainer.remove();
+          }
+        } else {
+          // 분리 모드에서는 개별 정리
+          toolbar.innerHTML = '';
+          if (isTextarea) {
+            originalElement.style.display = '';
+            contentArea.remove();
+          }
         }
         // 인스턴스 제거
         const index = instances.indexOf(instance);

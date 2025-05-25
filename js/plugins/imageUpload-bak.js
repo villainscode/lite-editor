@@ -1,134 +1,40 @@
 /**
- * LiteEditor imageUpload Plugin - 스크롤 점프 문제 해결
- * 이미지 업로드 플러그인
+ * LiteEditor imageUpload Plugin - 리셋 버전
+ * 이미지 업로드 기본 기능만 포함 - 0525 오전 드래그앤드롭 개발 직전코드
  */
 (function() {
-    // 🔧 PluginUtil 참조 추가
     const util = window.PluginUtil || {};
     
-    // 1. 상수 및 변수 선언 영역
+    // 상수 및 변수 선언
     const PLUGIN_ID = 'imageUpload';
     const STYLE_ID = 'imageUploadStyles';
     const CSS_PATH = 'css/plugins/imageUpload.css';
     let isEventHandlerRegistered = false;
-
-    // 현재 커서의 위치 저장 
     let savedRange = null;
+    let selectedImage = null;
+    let copiedImageData = null;
+    let isCut = false;
 
-    // 🔧 에디터 내부 스크롤 처리를 위한 유틸리티
-    const editorScrollManager = {
-        // 에디터 내부 스크롤 위치 저장
-        saveScrollPosition() {
-            const editor = document.querySelector('#lite-editor');
-            const editorContent = document.querySelector('.lite-editor-content');
-            
-            // 🔧 디버깅: 어떤 요소가 실제 스크롤 컨테이너인지 확인
-            console.log('[SCROLL DEBUG] 요소 확인:', {
-                editor: editor ? 'found' : 'not found',
-                editorContent: editorContent ? 'found' : 'not found',
-                editorScrollTop: editor ? editor.scrollTop : 'no editor',
-                editorContentScrollTop: editorContent ? editorContent.scrollTop : 'no content',
-                editorScrollHeight: editor ? editor.scrollHeight : 'no editor',
-                editorContentScrollHeight: editorContent ? editorContent.scrollHeight : 'no content'
-            });
-            
-            // 실제 스크롤이 있는 요소 찾기
-            let scrollContainer = null;
-            let scrollTop = 0;
-            
-            if (editorContent && editorContent.scrollTop > 0) {
-                scrollContainer = editorContent;
-                scrollTop = editorContent.scrollTop;
-            } else if (editor && editor.scrollTop > 0) {
-                scrollContainer = editor;
-                scrollTop = editor.scrollTop;
-            } else {
-                // 스크롤이 0이어도 높이가 있는 컨테이너 찾기
-                if (editorContent && editorContent.scrollHeight > editorContent.clientHeight) {
-                    scrollContainer = editorContent;
-                    scrollTop = editorContent.scrollTop;
-                } else if (editor && editor.scrollHeight > editor.clientHeight) {
-                    scrollContainer = editor;
-                    scrollTop = editor.scrollTop;
-                }
-            }
-            
-            console.log('[SCROLL DEBUG] 스크롤 저장:', {
-                container: scrollContainer ? scrollContainer.className : 'none',
-                scrollTop: scrollTop,
-                timestamp: Date.now()
-            });
-            
-            return {
-                scrollTop: scrollTop,
-                container: scrollContainer,
-                timestamp: Date.now()
-            };
-        },
-        
-        // 에디터 내부 스크롤 위치 복원
-        restoreScrollPosition(savedPosition, delay = 0) {
-            if (!savedPosition) {
-                console.log('[SCROLL DEBUG] 복원할 위치 없음');
-                return;
-            }
-            
-            const restoreScroll = () => {
-                // 저장된 컨테이너가 있으면 그것을 사용, 없으면 다시 찾기
-                let targetContainer = savedPosition.container;
-                
-                if (!targetContainer) {
-                    const editor = document.querySelector('#lite-editor');
-                    const editorContent = document.querySelector('.lite-editor-content');
-                    targetContainer = editorContent || editor;
-                }
-                
-                if (targetContainer) {
-                    targetContainer.scrollTop = savedPosition.scrollTop;
-                    console.log('[SCROLL DEBUG] 스크롤 복원 시도:', {
-                        container: targetContainer.className,
-                        targetScrollTop: savedPosition.scrollTop,
-                        actualScrollTop: targetContainer.scrollTop,
-                        success: targetContainer.scrollTop === savedPosition.scrollTop
-                    });
-                } else {
-                    console.log('[SCROLL DEBUG] 복원할 컨테이너 없음');
-                }
-            };
-            
-            if (delay > 0) {
-                setTimeout(restoreScroll, delay);
-            } else {
-                // 즉시 복원하되 렌더링 후 한 번 더 확인
-                restoreScroll();
-                requestAnimationFrame(() => {
-                    restoreScroll();
-                });
-            }
-        }
-    };
-
+    // 🔧 selection 저장 함수
     function saveSelection() {
-        // 🔧 PluginUtil 사용
-        savedRange = util.selection.saveSelection();
+        savedRange = util.selection ? util.selection.saveSelection() : null;
     }
 
-    function restoreSelection() {
-        // 🔧 PluginUtil 사용
-        if (savedRange) {
-            util.selection.restoreSelection(savedRange);
-        }
+    // 🔧 에디터 요소 찾기
+    function getEditorElements() {
+        return {
+            container: document.querySelector('#lite-editor'),
+            content: document.querySelector('.lite-editor-content')
+        };
     }
 
-    // 2. 모달 템플릿 
+    // 🔧 모달 템플릿
     const template = `
     <div class="modal-overlay">
         <div class="modal-content">            
-            <!-- 상단 제목 및 컨텐츠 영역 -->
             <div>
                 <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #333;">Insert Image</h3>
                 
-                <!-- URL 입력 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
                     URL
@@ -139,13 +45,11 @@
                            style="width: 100%; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; outline: none;">
                 </div>
                 
-                <!-- 구분선 -->
                 <div style="display: flex; align-items: center; margin: 15px 0;">
                     <div style="font-size: 11px; color: #888; margin-right: 8px;">OR</div>
                     <div style="flex-grow: 1; height: 1px; background-color: #e0e0e0;"></div>
                 </div>
 
-                <!-- 파일 업로드 -->
                 <div style="margin-bottom: 10px;">
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 4px;">
                      File
@@ -160,13 +64,7 @@
                 </div>
             </div>
             
-            <!-- 버튼 -->
             <div style="display: flex; justify-content: flex-end;">
-                <button type="button" data-action="close"
-                        style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
-                        title="Cancel">
-                    <span class="material-icons" style="font-size: 18px; color: #5f6368;">close</span>
-                </button>
                 <button type="submit"
                         style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; border: none; background-color: transparent; cursor: pointer;"
                         title="Insert">
@@ -176,145 +74,7 @@
         </div>
     </div>`;
 
-    // 🔧 디버깅 함수 추가
-    function logScroll(point, additionalInfo = {}) {
-        console.log(`[SCROLL DEBUG] ${point}:`, {
-            scrollY: window.scrollY,
-            scrollX: window.scrollX,
-            timestamp: Date.now(),
-            ...additionalInfo
-        });
-    }
-
-    // 3. 유틸리티 함수 - 완전한 이미지 컨테이너 삽입
-    function insertImage(src) {
-        console.log('[IMAGE_UPLOAD] insertImage 시작:', src);
-        
-        if (!src) {
-            console.error('[IMAGE_UPLOAD] 이미지 src가 없습니다');
-            return;
-        }
-        
-        const editor = document.querySelector('.lite-editor-content');
-        if (!editor) {
-            console.error('[IMAGE_UPLOAD] 편집 영역을 찾을 수 없습니다!');
-            return;
-        }
-        
-        // 🔧 스크롤 위치 미리 저장
-        const scrollPositions = {
-            editor: editor.scrollTop,
-            window: window.pageYOffset,
-            body: document.body.scrollTop,
-            documentElement: document.documentElement.scrollTop
-        };
-        console.log('[DEBUG] 스크롤 위치들 저장:', scrollPositions);
-        
-        // 🔧 완전한 이미지 컨테이너 HTML 생성 (리사이징 및 선택 기능 포함)
-        const timestamp = Date.now();
-        const imageHTML = `
-            <div class="image-wrapper" 
-                 contenteditable="false" 
-                 draggable="true" 
-                 id="img-${timestamp}"
-                 data-selectable="true"
-                 style="display: inline-block; position: relative; margin: 10px 0; max-width: 95%; resize: both; overflow: hidden;">
-                <img src="${src}" 
-                     style="width: 100%; height: auto; display: block;">
-                <div class="image-resize-handle" 
-                     style="position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background-image: linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%); cursor: nwse-resize; z-index: 10;"></div>
-            </div><br>`;
-        
-        console.log('[DEBUG] 저장된 선택 영역 상태:', {
-            savedRange: !!savedRange
-        });
-        
-        // 🔧 저장된 선택 영역이 있으면 복원 후 삽입
-        if (savedRange) {
-            console.log('[DEBUG] 저장된 선택 영역 복원 시도...');
-            try {
-                util.selection.restoreSelection(savedRange);
-                
-                const selection = window.getSelection();
-                if (selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const isInsideEditor = editor.contains(range.startContainer);
-                    
-                    console.log('[DEBUG] 복원된 Range:', {
-                        startContainer: range.startContainer.nodeName,
-                        startOffset: range.startOffset,
-                        isInsideEditor: isInsideEditor
-                    });
-                    
-                    if (isInsideEditor) {
-                        // 🔧 execCommand로 완전한 이미지 컨테이너 삽입
-                        const success = document.execCommand('insertHTML', false, imageHTML);
-                        console.log('[DEBUG] execCommand 결과:', success);
-                        
-                        if (success) {
-                            // 🔧 즉시 스크롤 복원
-                            restoreAllScrollPositions(scrollPositions);
-                            
-                            // 에디터 이벤트 발생
-                            const event = new Event('input', { bubbles: true });
-                            editor.dispatchEvent(event);
-                            
-                            console.log('[DEBUG] 완전한 이미지 컨테이너 삽입 성공');
-                            return;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('[DEBUG] 선택 영역 복원 실패:', error);
-            }
-        }
-        
-        // 🔧 대안: 에디터 끝에 완전한 이미지 컨테이너 삽입
-        console.log('[DEBUG] 에디터 끝에 완전한 이미지 컨테이너 삽입');
-        editor.insertAdjacentHTML('beforeend', imageHTML);
-        
-        // 🔧 스크롤 복원
-        restoreAllScrollPositions(scrollPositions);
-        
-        // 에디터 이벤트 발생
-        const event = new Event('input', { bubbles: true });
-        editor.dispatchEvent(event);
-        
-        console.log('[IMAGE_UPLOAD] insertImage 완료');
-        
-        // 🔧 스크롤 복원 함수
-        function restoreAllScrollPositions(positions) {
-            console.log('[DEBUG] 스크롤 복원 시작:', positions);
-            
-            // 즉시 복원
-            editor.scrollTop = positions.editor;
-            window.scrollTo(0, positions.window);
-            document.body.scrollTop = positions.body;
-            document.documentElement.scrollTop = positions.documentElement;
-            
-            // 애니메이션 프레임 후 재복원
-            requestAnimationFrame(() => {
-                editor.scrollTop = positions.editor;
-                window.scrollTo(0, positions.window);
-                console.log('[DEBUG] requestAnimationFrame 후 스크롤 복원');
-            });
-            
-            // 50ms 후 재복원
-            setTimeout(() => {
-                editor.scrollTop = positions.editor;
-                window.scrollTo(0, positions.window);
-                console.log('[DEBUG] 50ms 후 스크롤 복원');
-            }, 50);
-            
-            // 100ms 후 재복원
-            setTimeout(() => {
-                editor.scrollTop = positions.editor;
-                window.scrollTo(0, positions.window);
-                console.log('[DEBUG] 100ms 후 스크롤 복원 완료');
-            }, 100);
-        }
-    }
-
+    // 모달 관리 함수들
     function closeModal(modal) {
         if (!modal) return;
         
@@ -322,71 +82,46 @@
         modal.style.opacity = '0';
         modal.style.visibility = 'hidden';
         
-        // 🔧 activeModalManager 사용
-        util.activeModalManager.unregister(modal);
+        if (util.activeModalManager) {
+            util.activeModalManager.unregister(modal);
+        }
         
-        // 300ms 후 완전 제거
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
+        setTimeout(() => modal.remove(), 300);
     }
 
-    // 4. 이벤트 핸들러 설정
-    function setupGlobalEvents() {
-        if (isEventHandlerRegistered) return;
-        
-        // ESC 키로 닫기 - 전역 한 번만 등록
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const modal = document.querySelector('.modal-overlay.show');
-                if (modal) {
-                    closeModal(modal);
-                }
-            }
-        });
-        
-        isEventHandlerRegistered = true;
-    }
-
-    // 5. 모달 생성 및 표시
     function createModal() {
         saveSelection();
 
-        // 기존 모달 제거
         const existingModal = document.querySelector('.modal-overlay');
         if (existingModal) existingModal.remove();
 
-        // 🔧 PluginUtil 사용하여 모달 생성
-        const modalContainer = util.dom.createElement('div');
+        const modalContainer = util.dom ? util.dom.createElement('div') : document.createElement('div');
         modalContainer.innerHTML = template;
         const modal = modalContainer.firstElementChild;
         document.body.appendChild(modal);
 
-        const closeButton = modal.querySelector('button[data-action="close"]');
+        setupModalEvents(modal);
+        return modal;
+    }
+
+    function setupModalEvents(modal) {
         const insertButton = modal.querySelector('button[type="submit"]');
         const urlInput = modal.querySelector('#image-url-input');
         const fileInput = modal.querySelector('#image-file-input');
 
-        // 이벤트 핸들러 설정
-        closeButton.addEventListener('click', () => closeModal(modal));
-        
         const button = document.querySelector('.lite-editor-image-upload-button');
-        util.setupOutsideClickHandler(modal, () => closeModal(modal), [button]);
+        if (util.setupOutsideClickHandler) {
+            util.setupOutsideClickHandler(modal, () => closeModal(modal), [button]);
+        }
         
-        urlInput.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+        urlInput.addEventListener('click', (e) => e.stopPropagation());
 
         urlInput.addEventListener('keydown', (e) => {
-            if (e.key !== 'Escape') {
-                e.stopPropagation();
-            }
+            if (e.key !== 'Escape') e.stopPropagation();
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const url = urlInput.value.trim();
-                if (url) {
-                    processImageInsertion(url, null, modal);
-                }
+                if (url) processImageInsertion(url, null, modal);
             }
         });
 
@@ -407,34 +142,26 @@
             
             if (url || file) {
                 processImageInsertion(url, file, modal);
+            } else {
+                console.log('URL 또는 파일이 필요합니다');
             }
         });
-
-        return modal;
     }
-    
-    // 🔧 processImageInsertion에서 선택 영역 복원 활성화
+
     function processImageInsertion(url, file, modal) {
-        console.log('[IMAGE_UPLOAD] processImageInsertion 시작:', { url: !!url, file: !!file });
+        console.log('[IMAGE_UPLOAD] 처리 시작:', { url: !!url, file: !!file });
         
         closeModal(modal);
         
-        // 🔧 선택 영역 복원 (주석 해제)
-        // restoreSelection(); // 이것보다는 insertImage에서 직접 처리
-        
-        // 이미지 삽입
         if (url) {
-            console.log('[IMAGE_UPLOAD] URL 이미지 삽입:', url);
+            console.log('[IMAGE_UPLOAD] URL 이미지:', url);
             insertImage(url);
         } else if (file) {
-            console.log('[IMAGE_UPLOAD] 파일 이미지 처리 시작');
+            console.log('[IMAGE_UPLOAD] 파일 처리 시작');
             const reader = new FileReader();
             reader.onload = (e) => {
-                console.log('[IMAGE_UPLOAD] 파일 읽기 완료, 삽입 중');
+                console.log('[IMAGE_UPLOAD] 파일 읽기 완료');
                 insertImage(e.target.result);
-            };
-            reader.onerror = (e) => {
-                console.error('[IMAGE_UPLOAD] 파일 읽기 실패:', e);
             };
             reader.readAsDataURL(file);
         }
@@ -444,7 +171,7 @@
         const modal = createModal();
         const button = document.querySelector('.lite-editor-image-upload-button');
         
-        if (button) {
+        if (button && util.layer && util.layer.setLayerPosition) {
             util.layer.setLayerPosition(modal, button);
         }
         
@@ -453,322 +180,529 @@
             modal.style.removeProperty('visibility');
             modal.classList.add('show');
             
-            util.activeModalManager.register(modal);
+            if (util.activeModalManager) {
+                util.activeModalManager.register(modal);
+            }
             
             requestAnimationFrame(() => {
                 const urlInput = modal.querySelector('#image-url-input');
-                if (urlInput) {
-                    urlInput.focus();
-                }
+                if (urlInput) urlInput.focus();
             });
         }, 10);
 
         setupGlobalEvents();
     }
 
-    /**
-     * 이미지 드래그 앤 드롭 기능 초기화
-     */
-    function initImageDragDrop() {
-        const editor = document.querySelector('#lite-editor');
-        if (!editor) return;
-
-        // 드래그 상태 변수
-        let draggedImage = null;
-        let dropIndicator = null;
-        let selectedImage = null;
-        let animationFrameId = null;
-
-        // 에디터에 상대적 위치를 위한 스타일 설정
-        if (window.getComputedStyle(editor).position === 'static') {
-            editor.style.position = 'relative';
-        }
-
-        // 드롭 인디케이터 생성
-        function createDropIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'image-drop-indicator';
-            indicator.style.position = 'absolute';
-            indicator.style.width = '2px';
-            indicator.style.height = '20px';
-            indicator.style.backgroundColor = '#4285f4';
-            indicator.style.zIndex = '9999';
-            indicator.style.pointerEvents = 'none';
-            indicator.style.animation = 'cursorBlink 1s infinite';
-            indicator.style.display = 'none';
-            
-            editor.appendChild(indicator);
-            return indicator;
-        }
-
-        // 빈 영역 처리를 포함한 드롭 인디케이터 표시 함수
-        function showDropIndicator(x, y) {
-            if (!dropIndicator) {
-                dropIndicator = createDropIndicator();
-            }
-
-            let range = document.caretRangeFromPoint(x, y);
-            if (!range) return;
-
-            const rects = range.getClientRects();
-            if (!rects.length || rects.length === 0) {
-                const tempSpan = document.createElement('span');
-                tempSpan.style.display = 'inline-block';
-                tempSpan.style.width = '0';
-                tempSpan.style.height = '1em';
-                tempSpan.textContent = '\u200B';
-                
-                range.insertNode(tempSpan);
-                
-                const tempRect = tempSpan.getBoundingClientRect();
-                const editorRect = editor.getBoundingClientRect();
-                dropIndicator.style.left = (tempRect.left - editorRect.left) + 'px';
-                dropIndicator.style.top = (tempRect.top - editorRect.top) + 'px';
-                dropIndicator.style.height = tempRect.height + 'px';
-                
-                tempSpan.parentNode.removeChild(tempSpan);
-            } else {
-                const rect = rects[0];
-                const editorRect = editor.getBoundingClientRect();
-                
-                dropIndicator.style.left = (rect.left - editorRect.left) + 'px';
-                dropIndicator.style.top = (rect.top - editorRect.top) + 'px';
-                dropIndicator.style.height = rect.height + 'px';
-            }
-            
-            dropIndicator.style.display = 'block';
-        }
-
-        function throttledShowIndicator(x, y) {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            
-            animationFrameId = requestAnimationFrame(() => {
-                showDropIndicator(x, y);
-                animationFrameId = null;
-            });
-        }
-
-        function hideDropIndicator() {
-            if (dropIndicator) {
-                dropIndicator.style.display = 'none';
-            }
-            
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-        }
-
-        function selectImage(imageWrapper) {
-            if (selectedImage && selectedImage !== imageWrapper) {
-                selectedImage.removeAttribute('data-selected');
-            }
-            
-            selectedImage = imageWrapper;
-            selectedImage.setAttribute('data-selected', 'true');
-        }
-
-        function deselectImage() {
-            if (selectedImage) {
-                selectedImage.removeAttribute('data-selected');
-                selectedImage = null;
-            }
-        }
-
-        function findClosestElement(element, selector) {
-            while (element && element.nodeType === 1) {
-                if (element.matches(selector)) {
-                    return element;
-                }
-                element = element.parentElement;
-            }
-            return null;
-        }
-
-        // 이벤트 리스너들
-        editor.addEventListener('click', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
-            
-            if (!imageWrapper) {
-                deselectImage();
-                return;
-            }
-            
-            selectImage(imageWrapper);
-            event.stopPropagation();
-        });
-
-        editor.addEventListener('dragstart', (event) => {
-            const imageWrapper = findClosestElement(event.target, '.image-wrapper');
-            if (!imageWrapper) return;
-
-            draggedImage = imageWrapper;
-            selectImage(imageWrapper);
-            
-            event.dataTransfer.setData('text/plain', imageWrapper.id);
-            event.dataTransfer.effectAllowed = 'move';
-            
-            setTimeout(() => {
-                imageWrapper.classList.add('dragging');
-            }, 0);
-        });
-
-        editor.addEventListener('dragover', (event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            
-            if (draggedImage) {
-                throttledShowIndicator(event.clientX, event.clientY);
-            }
-        });
-
-        editor.addEventListener('dragleave', (event) => {
-            if (!editor.contains(event.relatedTarget)) {
-                hideDropIndicator();
-            }
-        });
-
-        editor.addEventListener('drop', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            hideDropIndicator();
-            
-            if (!draggedImage) return;
-            
-            // 🔧 드롭 시에도 스크롤 위치 보존
-            const scrollPosition = editorScrollManager.saveScrollPosition();
-            
-            let range;
-            if (document.caretRangeFromPoint) {
-                range = document.caretRangeFromPoint(event.clientX, event.clientY);
-            } else if (document.caretPositionFromPoint) {
-                const position = document.caretPositionFromPoint(event.clientX, event.clientY);
-                range = document.createRange();
-                range.setStart(position.offsetNode, position.offset);
-                range.collapse(true);
-            }
-            
-            if (range) {
-                if (draggedImage.parentNode) {
-                    draggedImage.parentNode.removeChild(draggedImage);
-                }
-                
-                range.insertNode(draggedImage);
-                
-                draggedImage.classList.remove('dragging');
-                
-                if (!draggedImage.nextSibling || 
-                    (draggedImage.nextSibling.nodeType !== Node.ELEMENT_NODE || 
-                     draggedImage.nextSibling.nodeName !== 'BR')) {
-                    const br = document.createElement('br');
-                    draggedImage.parentNode.insertBefore(br, draggedImage.nextSibling);
-                }
-                
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                
-                const newRange = document.createRange();
-                newRange.setStartAfter(draggedImage);
-                newRange.collapse(true);
-                selection.addRange(newRange);
-                
-                // 🔧 스크롤 위치 복원
-                editorScrollManager.restoreScrollPosition(scrollPosition);
-                
-                const event = new Event('input', { bubbles: true });
-                editor.dispatchEvent(event);
-            }
-            
-            draggedImage = null;
-        });
-
-        editor.addEventListener('dragend', (event) => {
-            hideDropIndicator();
-            
-            if (draggedImage) {
-                draggedImage.classList.remove('dragging');
-                draggedImage = null;
-            }
-            
-            deselectImage();
-        });
-    }
-
-    // CSS 스타일 추가 함수
-    function addDragAndDropStyles() {
-        const styleId = 'imageUploadDragStyles';
-        if (document.getElementById(styleId)) return;
+    function setupGlobalEvents() {
+        if (isEventHandlerRegistered) return;
         
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            .image-wrapper {
-                transition: opacity 0.2s ease, outline 0.2s ease;
-                cursor: move;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.querySelector('.modal-overlay.show');
+                if (modal) closeModal(modal);
             }
-            
-            .image-wrapper:hover {
-                outline: 1px solid rgba(66, 133, 244, 0.3);
-            }
-            
-            .image-wrapper[data-selected="true"] {
-                outline: 2px solid #4285f4;
-            }
-            
-            .image-wrapper.dragging {
-                opacity: 0.5;
-                outline: 2px dashed #4285f4;
-            }
-            
-            @keyframes cursorBlink {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
+        });
+        
+        setupCopyPasteEvents();
+        
+        isEventHandlerRegistered = true;
     }
 
-    // 6. 플러그인 등록
+    // 🔧 이미지 삽입 함수 (media.js 스타일 참고)
+    function insertImage(src) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        const security = window.LiteEditorSecurity || {};
+        
+        if (!src) {
+            errorHandler.logError && errorHandler.logError(MODULE_NAME, 'P803', '빈 URL');
+            return;
+        }
+
+        // URL 보안 체크 (security-manager.js 활용)
+        if (security.isValidImageUrl && !security.isValidImageUrl(src)) {
+            errorHandler.showUserAlert && errorHandler.showUserAlert('P803');
+            return;
+        }
+
+        const contentArea = document.querySelector('.lite-editor-content');
+        if (!contentArea) {
+            errorHandler.logError && errorHandler.logError(MODULE_NAME, 'P802', 'Content area를 찾을 수 없음');
+            return;
+        }
+
+        // 🔧 스크롤 위치 저장 (plugin-util.js 활용)
+        const scrollPosition = util.scroll ? util.scroll.savePosition() : null;
+        
+        // 현재 선택 영역 정보 로그 (debugging)
+        if (errorHandler.logSelectionOffsets) {
+            const selectionInfo = errorHandler.logSelectionOffsets(contentArea);
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 삽입 위치', selectionInfo, '#9c27b0');
+        }
+
+        try {
+            contentArea.focus({ preventScroll: true });
+            
+            // 선택 영역 복원
+            const selectionRestored = util.selection ? util.selection.restoreSelection(savedRange) : false;
+            
+            // 고유 ID 생성
+            const timestamp = Date.now();
+            const imageId = `img-${timestamp}`;
+            
+            // 🔧 이미지 컨테이너 생성 (media.js 스타일 참고)
+            const wrapper = document.createElement('div');
+            wrapper.className = 'image-wrapper';
+            wrapper.id = imageId;
+            wrapper.contentEditable = false;
+            wrapper.setAttribute('data-selectable', 'true');
+            
+            // 기본 스타일 (원본 크기, 최대 95%)
+            wrapper.style.display = 'inline-block';
+            wrapper.style.position = 'relative';
+            wrapper.style.margin = '10px 0';
+            wrapper.style.maxWidth = '95%';
+            wrapper.style.resize = 'both';
+            wrapper.style.overflow = 'hidden';
+            wrapper.style.boxSizing = 'border-box';
+            
+            // 이미지 요소 생성
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.width = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            
+            // 🔧 리사이즈 핸들 추가 (media.js 스타일)
+            const resizeHandle = util.dom ? util.dom.createElement('div', {
+                className: 'image-resize-handle'
+            }) : document.createElement('div');
+            
+            resizeHandle.style.position = 'absolute';
+            resizeHandle.style.right = '0';
+            resizeHandle.style.bottom = '0';
+            resizeHandle.style.width = '10px';
+            resizeHandle.style.height = '10px';
+            resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
+            resizeHandle.style.cursor = 'nwse-resize';
+            resizeHandle.style.zIndex = '10';
+            
+            wrapper.appendChild(img);
+            wrapper.appendChild(resizeHandle);
+            
+            // 에디터에 삽입
+            let insertSuccess = false;
+            
+            if (selectionRestored) {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const isInsideEditor = contentArea.contains(range.startContainer);
+                    
+                    if (isInsideEditor) {
+                        range.deleteContents();
+                        range.insertNode(wrapper);
+                        insertSuccess = true;
+                    }
+                }
+            }
+            
+            // 대안: 에디터 끝에 삽입
+            if (!insertSuccess) {
+                contentArea.appendChild(wrapper);
+            }
+            
+            // 🔧 스크롤 위치 복원 (plugin-util.js 활용)
+            if (scrollPosition && util.scroll) {
+                util.scroll.restorePosition(scrollPosition);
+            }
+            
+            // 에디터 이벤트 발생
+            if (util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(contentArea);
+            }
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 삽입 완료', { id: imageId, src: src.substring(0, 50) + '...' }, '#4caf50');
+            
+            // 이미지 이벤트 설정
+            setupImageEvents(wrapper);
+            
+        } catch (error) {
+            errorHandler.logError && errorHandler.logError(MODULE_NAME, 'P801', error);
+            if (scrollPosition && util.scroll) {
+                util.scroll.restorePosition(scrollPosition);
+            }
+        }
+    }
+
+    // 🔧 이미지 이벤트 설정 함수
+    function setupImageEvents(imageWrapper) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        // 클릭 선택 (dimmed 처리)
+        imageWrapper.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectImage(imageWrapper);
+        });
+        
+        // 리사이징 핸들 이벤트 (media.js 스타일)
+        const resizeHandle = imageWrapper.querySelector('.image-resize-handle');
+        if (resizeHandle) {
+            setupResizeHandle(imageWrapper, resizeHandle);
+        }
+    }
+
+    // 🔧 이미지 선택 관리 (dimmed 처리)
+    function selectImage(imageWrapper) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        // 기존 선택 해제
+        if (selectedImage && selectedImage !== imageWrapper) {
+            selectedImage.style.filter = '';
+            selectedImage.style.border = '';
+        }
+        
+        // 새 이미지 선택 (dimmed 처리)
+        selectedImage = imageWrapper;
+        selectedImage.style.filter = 'brightness(0.7)';
+        selectedImage.style.border = '2px solid #4285f4';
+        
+        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 선택됨', { id: imageWrapper.id }, '#ff9800');
+    }
+
+    function deselectImage() {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        if (selectedImage) {
+            selectedImage.style.filter = '';
+            selectedImage.style.border = '';
+            selectedImage = null;
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 선택 해제됨', null, '#757575');
+        }
+    }
+
+    // 🔧 리사이즈 핸들 설정 (media.js 스타일 참고)
+    function setupResizeHandle(imageWrapper, resizeHandle) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = imageWrapper.getBoundingClientRect();
+            startWidth = rect.width;
+            startHeight = rect.height;
+            
+            // 리사이징 시 테두리 제거
+            imageWrapper.style.border = 'none';
+            imageWrapper.style.filter = '';
+            
+            document.addEventListener('mousemove', handleResize);
+            document.addEventListener('mouseup', stopResize);
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '리사이징 시작', { id: imageWrapper.id }, '#ff9800');
+        });
+
+        function handleResize(e) {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newWidth = startWidth + deltaX;
+            const newHeight = startHeight + deltaY;
+            
+            // 최소 크기 제한
+            if (newWidth > 50 && newHeight > 50) {
+                imageWrapper.style.width = newWidth + 'px';
+                imageWrapper.style.height = newHeight + 'px';
+            }
+        }
+
+        function stopResize() {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            document.removeEventListener('mousemove', handleResize);
+            document.removeEventListener('mouseup', stopResize);
+            
+            // 에디터 이벤트 발생
+            const contentArea = document.querySelector('.lite-editor-content');
+            if (contentArea && util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(contentArea);
+            }
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '리사이징 완료', { 
+                id: imageWrapper.id,
+                width: imageWrapper.style.width,
+                height: imageWrapper.style.height
+            }, '#4caf50');
+        }
+    }
+
+    // 🔧 복사/붙여넣기 기능 (setupGlobalEvents 함수 내 추가)
+    function setupCopyPasteEvents() {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        document.addEventListener('keydown', (e) => {
+            if (!selectedImage) return;
+            
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'c': // 복사
+                        e.preventDefault();
+                        
+                        // 🔧 새로운 복사 시에만 기존 데이터 초기화
+                        copiedImageData = selectedImage.outerHTML;
+                        isCut = false; // 복사는 항상 cut=false
+                        
+                        // 🔧 복사 시 상세 로그
+                        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 복사됨', { 
+                            id: selectedImage.id,
+                            tagName: selectedImage.tagName,
+                            className: selectedImage.className,
+                            dataLength: copiedImageData.length,
+                            hasResizeHandle: !!selectedImage.querySelector('.image-resize-handle'),
+                            htmlPreview: copiedImageData.substring(0, 200) + '...',
+                            imageSource: selectedImage.querySelector('img') ? selectedImage.querySelector('img').src.substring(0, 50) + '...' : 'none'
+                        }, '#4caf50');
+                        break;
+                        
+                    case 'x': // 잘라내기
+                        e.preventDefault();
+                        
+                        // 🔧 새로운 잘라내기 시에만 기존 데이터 초기화
+                        copiedImageData = selectedImage.outerHTML;
+                        isCut = true; // 잘라내기 플래그 설정
+                        selectedImage.style.opacity = '0.3';
+                        
+                        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 잘라내기됨', { 
+                            id: selectedImage.id,
+                            htmlPreview: copiedImageData.substring(0, 200) + '...'
+                        }, '#ff9800');
+                        break;
+                        
+                    case 'v': // 붙여넣기
+                        if (copiedImageData) {
+                            e.preventDefault();
+                            pasteImageAtCursor();
+                        }
+                        break;
+                }
+            }
+        });
+        
+        // 외부 클릭으로 이미지 선택 해제
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.image-wrapper')) {
+                deselectImage();
+            }
+        });
+    }
+
+    // 🔧 이미지 붙여넣기 함수 (수정)
+    function pasteImageAtCursor() {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        const contentArea = document.querySelector('.lite-editor-content');
+        
+        // 🔧 초기 상태 로그 추가
+        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '붙여넣기 시도', { 
+            hasContentArea: !!contentArea,
+            hasCopiedData: !!copiedImageData,
+            copiedDataLength: copiedImageData ? copiedImageData.length : 0,
+            isCut: isCut
+        }, '#2196f3');
+        
+        if (!contentArea || !copiedImageData) {
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '붙여넣기 실패 - 조건 미충족', { 
+                contentArea: !!contentArea,
+                copiedImageData: !!copiedImageData
+            }, '#f44336');
+            return;
+        }
+        
+        const selection = window.getSelection();
+        
+        // 🔧 Selection 상태 로그 추가
+        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, 'Selection 상태', { 
+            hasSelection: !!selection,
+            rangeCount: selection ? selection.rangeCount : 0,
+            isCollapsed: selection && selection.rangeCount > 0 ? selection.getRangeAt(0).collapsed : null
+        }, '#9c27b0');
+        
+        // 🔧 Selection이 없는 경우 커서를 에디터 끝으로 이동
+        if (!selection || selection.rangeCount === 0) {
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, 'Selection 없음 - 에디터 끝에 삽입', null, '#ff9800');
+            
+            // 에디터 끝에 직접 삽입
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = copiedImageData;
+            const newImageWrapper = tempDiv.firstElementChild;
+            
+            // 새 ID 생성
+            const timestamp = Date.now();
+            newImageWrapper.id = `img-${timestamp}`;
+            newImageWrapper.style.opacity = '1';
+            
+            // 🔧 잘라내기였다면 원본 제거 (한 번만)
+            if (isCut && selectedImage) {
+                selectedImage.remove();
+                deselectImage();
+                isCut = false; // ✅ 잘라내기는 한 번만 실행되도록
+            }
+            
+            contentArea.appendChild(newImageWrapper);
+            setupImageEvents(newImageWrapper);
+            
+            // 🔧 복사 데이터는 유지 (잘라내기만 초기화됨)
+            // copiedImageData = null; // ❌ 제거: 여러 번 붙여넣기 허용
+            
+            // 에디터 이벤트 발생
+            if (util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(contentArea);
+            }
+            
+            // 🔧 상세 로그 출력
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 붙여넣기 완료 (에디터 끝)', { 
+                id: newImageWrapper.id,
+                insertMethod: 'appendChild',
+                originalHtml: copiedImageData.substring(0, 200) + '...',
+                finalHtml: newImageWrapper.outerHTML.substring(0, 200) + '...',
+                wasCut: false // 이미 처리됨
+            }, '#4caf50');
+            
+            return;
+        }
+        
+        // 🔧 기존 Range 기반 삽입 로직
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            
+            // 🔧 Range 정보 로그
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, 'Range 정보', { 
+                startContainer: range.startContainer.nodeName,
+                startOffset: range.startOffset,
+                endContainer: range.endContainer.nodeName,
+                endOffset: range.endOffset,
+                collapsed: range.collapsed
+            }, '#9c27b0');
+            
+            // 🔧 잘라내기였다면 원본 제거 (한 번만)
+            if (isCut && selectedImage) {
+                errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '잘라내기 원본 제거', { 
+                    originalId: selectedImage.id 
+                }, '#ff5722');
+                selectedImage.remove();
+                deselectImage();
+                isCut = false; // ✅ 잘라내기는 한 번만 실행되도록
+            }
+            
+            // 새 이미지 HTML 생성
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = copiedImageData;
+            const newImageWrapper = tempDiv.firstElementChild;
+            
+            // 새 ID 생성
+            const timestamp = Date.now();
+            const oldId = newImageWrapper.id;
+            newImageWrapper.id = `img-${timestamp}`;
+            newImageWrapper.style.opacity = '1';
+            
+            // 🔧 HTML 변환 과정 로그
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, 'HTML 변환 과정', { 
+                originalHtml: copiedImageData.substring(0, 200) + '...',
+                tempDivInnerHTML: tempDiv.innerHTML.substring(0, 200) + '...',
+                newElementTagName: newImageWrapper.tagName,
+                oldId: oldId,
+                newId: newImageWrapper.id,
+                hasResizeHandle: !!newImageWrapper.querySelector('.image-resize-handle')
+            }, '#673ab7');
+            
+            // 현재 커서 위치에 삽입
+            range.deleteContents();
+            range.insertNode(newImageWrapper);
+            
+            // 이벤트 설정
+            setupImageEvents(newImageWrapper);
+            
+            // 커서를 이미지 다음으로 이동
+            range.setStartAfter(newImageWrapper);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // 🔧 복사 데이터는 유지 (잘라내기만 초기화됨)
+            // copiedImageData = null; // ❌ 제거: 여러 번 붙여넣기 허용
+            
+            // 에디터 이벤트 발생
+            if (util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(contentArea);
+            }
+            
+            // 🔧 최종 상세 로그 출력
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 붙여넣기 완료 (Range 삽입)', { 
+                id: newImageWrapper.id,
+                insertMethod: 'range.insertNode',
+                wasCut: false, // 이미 처리됨
+                finalHtml: newImageWrapper.outerHTML.substring(0, 200) + '...',
+                parentElement: newImageWrapper.parentElement ? newImageWrapper.parentElement.tagName : 'none',
+                nextSibling: newImageWrapper.nextSibling ? newImageWrapper.nextSibling.nodeName : 'none',
+                previousSibling: newImageWrapper.previousSibling ? newImageWrapper.previousSibling.nodeName : 'none'
+            }, '#4caf50');
+        }
+    }
+
+    // 플러그인 등록
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Image upload',
         icon: 'photo_camera',
         customRender: function(toolbar, contentArea) {
-            util.styles.loadCssFile(STYLE_ID, CSS_PATH);
+            if (util.styles && util.styles.loadCssFile) {
+                util.styles.loadCssFile(STYLE_ID, CSS_PATH);
+            }
 
-            addDragAndDropStyles();
-            setTimeout(initImageDragDrop, 500);
-
-            const button = util.dom.createElement('button', {
-                className: 'lite-editor-button lite-editor-image-upload-button',
-                title: 'Image upload'
-            });
+            const button = util.dom ? 
+                util.dom.createElement('button', {
+                    className: 'lite-editor-button lite-editor-image-upload-button',
+                    title: 'Image upload'
+                }) : 
+                (() => {
+                    const btn = document.createElement('button');
+                    btn.className = 'lite-editor-button lite-editor-image-upload-button';
+                    btn.title = 'Image upload';
+                    return btn;
+                })();
             
-            const icon = util.dom.createElement('i', {
-                className: 'material-symbols-outlined',
-                textContent: 'photo_camera'
-            });
+            const icon = util.dom ? 
+                util.dom.createElement('i', {
+                    className: 'material-symbols-outlined',
+                    textContent: 'photo_camera'
+                }) :
+                (() => {
+                    const i = document.createElement('i');
+                    i.className = 'material-symbols-outlined';
+                    i.textContent = 'photo_camera';
+                    return i;
+                })();
             button.appendChild(icon);
             
-            // 🔧 리서치 기반 버튼 클릭 처리
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // 🔧 HTML 구조 디버깅
-                const editor = document.querySelector('#lite-editor');
-                console.log('[HTML DEBUG] 에디터 구조:', {
-                    editor: editor ? editor.outerHTML.substring(0, 200) + '...' : 'not found',
-                    children: editor ? Array.from(editor.children).map(child => ({
-                        tagName: child.tagName,
-                        className: child.className,
-                        scrollTop: child.scrollTop,
-                        scrollHeight: child.scrollHeight,
-                        clientHeight: child.clientHeight
-                    })) : []
-                });
                 
                 const existingModal = document.querySelector('.modal-overlay.show');
                 if (existingModal) {

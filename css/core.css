@@ -15,6 +15,27 @@
   overflow: hidden; /* Ensure nothing spills outside the editor */
 }
 
+/* 분리 모드: 독립 툴바 스타일 */
+.lite-editor-toolbar:not(.lite-editor .lite-editor-toolbar) {
+  border: 1px solid #ddd;
+  border-radius: 4px 4px 0 0;
+  background-color: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* 분리 모드: 독립 콘텐츠 영역 스타일 */
+.lite-editor-content:not(.lite-editor .lite-editor-content) {
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
 /* 툴바 기본 구조 */
 .lite-editor-toolbar {
   display: flex;

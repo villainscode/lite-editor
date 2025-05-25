@@ -14,25 +14,18 @@ const PluginUtil = (function() {
         globalCleanupFunctions: [] // 전역 이벤트 리스너 cleanup 함수들
     };
 
-    // 메모리 효율적인 레이어 관리 시스템
+    // 통합된 레이어 관리 시스템
     const layerManager = {
-        // WeakSet 사용으로 자동 가비지 컬렉션 허용
-        activeLayers: new WeakSet(),
-        activeLayersList: [], // 순회를 위한 배열 (정기적으로 정리)
+        activeLayers: new Set(),  // 모든 활성 레이어 추적 (드롭다운, 모달 등)
         
         // 레이어 등록
         register(layer, button) {
             if (layer) {
-                const layerInfo = { element: layer, button: button, type: button ? 'dropdown' : 'modal' };
-                
-                this.activeLayers.add(layer);
-                this.activeLayersList.push(layerInfo);
-                
-                // WeakMap에 레이어 정보 저장
-                elementStateMap.set(layer, layerInfo);
-                
-                // 주기적으로 배열 정리 (가비지 수집된 요소 제거)
-                this._cleanupDeadReferences();
+                this.activeLayers.add({
+                    element: layer,
+                    button: button,
+                    type: button ? 'dropdown' : 'modal'
+                });
             }
         },
         
@@ -40,44 +33,18 @@ const PluginUtil = (function() {
         unregister(layer) {
             if (!layer) return;
             
-            // WeakSet에서는 자동으로 제거되지만, 배열에서는 수동 제거 필요
-            this.activeLayersList = this.activeLayersList.filter(item => 
-                item.element !== layer && document.body.contains(item.element)
-            );
-            
-            // WeakMap에서 제거
-            elementStateMap.delete(layer);
-            
-            // 해당 요소의 이벤트 리스너 cleanup
-            this._cleanupElementListeners(layer);
-        },
-        
-        // 데드 레퍼런스 정리
-        _cleanupDeadReferences() {
-            this.activeLayersList = this.activeLayersList.filter(item => 
-                item.element && document.body.contains(item.element)
-            );
-        },
-        
-        // 요소별 이벤트 리스너 정리
-        _cleanupElementListeners(element) {
-            const cleanupFunctions = eventListenerCleanupMap.get(element);
-            if (cleanupFunctions) {
-                cleanupFunctions.forEach(cleanup => {
-                    try {
-                        cleanup();
-                    } catch (e) {
-                        console.warn('이벤트 리스너 정리 중 오류:', e);
-                    }
-                });
-                eventListenerCleanupMap.delete(element);
-            }
+            // Set에서 해당 레이어 항목 찾아 제거
+            this.activeLayers.forEach(item => {
+                if (item.element === layer) {
+                    this.activeLayers.delete(item);
+                }
+            });
         },
         
         // 모든 레이어 닫기 (특정 레이어 제외 가능)
         closeAll(exceptLayer) {
-            this.activeLayersList.forEach(item => {
-                if (item.element !== exceptLayer && document.body.contains(item.element)) {
+            this.activeLayers.forEach(item => {
+                if (item.element !== exceptLayer) {
                     if (item.type === 'dropdown') {
                         // 드롭다운 닫기
                         item.element.classList.remove('show');
@@ -92,16 +59,11 @@ const PluginUtil = (function() {
             });
             
             // 제외된 레이어 외에는 모두 제거
-            this.activeLayersList = exceptLayer ? 
-                this.activeLayersList.filter(item => item.element === exceptLayer) : [];
-        },
-        
-        // 메모리 정리 (수동 호출용)
-        cleanup() {
-            this.activeLayersList.forEach(item => {
-                this._cleanupElementListeners(item.element);
+            this.activeLayers.forEach(item => {
+                if (item.element !== exceptLayer) {
+                    this.activeLayers.delete(item);
+                }
             });
-            this.activeLayersList = [];
         },
         
         // 레이어 토글
@@ -152,11 +114,11 @@ const PluginUtil = (function() {
             layerManager.closeAll();
         },
         
-        // 버튼 등록 (WeakSet 사용)
+        // 모달 전용 기능
         registerButton(button) {
             if (!button) return;
-            if (state.registeredButtons.has(button)) return;
-            state.registeredButtons.add(button);
+            if (button._hasClickHandler) return;
+            button._hasClickHandler = true;
         }
     };
 
@@ -790,43 +752,11 @@ const PluginUtil = (function() {
         return layer;
     };
 
-    // 메모리 효율적인 바깥 영역 클릭 감지
+    // 바깥 영역 클릭 감지
     const setupOutsideClickHandler = function(element, callback, excludeElements = []) {
         let isJustOpened = true;
-        let handler = null;
-        let timeoutId = null;
         
-        const cleanup = () => {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-            if (handler) {
-                document.removeEventListener('click', handler);
-                handler = null;
-            }
-        };
-        
-        // WeakMap에 cleanup 함수 저장
-        const cleanupFunctions = eventListenerCleanupMap.get(element) || [];
-        cleanupFunctions.push(cleanup);
-        eventListenerCleanupMap.set(element, cleanupFunctions);
-        
-        // MutationObserver로 요소 제거 감지
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.removedNodes.forEach((node) => {
-                    if (node === element || (node.contains && node.contains(element))) {
-                        cleanup();
-                        observer.disconnect();
-                    }
-                });
-            });
-        });
-        
-        observer.observe(document.body, { childList: true, subtree: true });
-        
-        handler = (e) => {
+        const handler = (e) => {
             // 방금 열린 경우는 첫 클릭 무시
             if (isJustOpened) {
                 isJustOpened = false;
@@ -844,14 +774,11 @@ const PluginUtil = (function() {
         };
         
         // 지연 등록으로 현재 클릭이 외부 클릭으로 인식되는 것 방지
-        timeoutId = setTimeout(() => {
-            if (handler) {
-                document.addEventListener('click', handler);
-            }
-            timeoutId = null;
+        setTimeout(() => {
+            document.addEventListener('click', handler);
         }, 100);
         
-        return cleanup;
+        return () => document.removeEventListener('click', handler);
     };
 
     // 툴바 버튼 클릭 이벤트 관리
@@ -1144,73 +1071,6 @@ const PluginUtil = (function() {
         }
     };
 
-    // 전역 이벤트 리스너 관리 (cleanup 가능)
-    const setupGlobalEventListeners = function() {
-        // 이미 설정되었으면 스킵
-        if (state.globalCleanupFunctions.length > 0) return;
-        
-        // 툴바 클릭 핸들러
-        const toolbarClickHandler = (e) => {
-            const isToolbarButtonClick = !!e.target.closest('.lite-editor-button, .lite-editor-font-button');
-            const isDropdownClick = !!e.target.closest('.lite-editor-dropdown-menu');
-            const isModalClick = !!e.target.closest('.lite-editor-modal');
-            
-            // 🔧 분리 모드 추가 체크: 툴바 컨테이너 내부 클릭인지 확인
-            const isInSeparatedToolbar = !!e.target.closest('.lite-editor-toolbar');
-            
-            // 🔧 contentArea 클릭인지 확인 (에디터 내부 클릭)
-            const isInContentArea = !!e.target.closest('.lite-editor-content');
-            
-            // 🔧 어떤 에디터 관련 요소 클릭인지 종합 판단
-            const isEditorRelatedClick = isToolbarButtonClick || isDropdownClick || isModalClick || 
-                                       isInSeparatedToolbar || isInContentArea;
-            
-            // 에디터와 관련 없는 외부 클릭일 때만 모든 레이어 닫기
-            if (!isEditorRelatedClick) {
-                layerManager.closeAll();
-            }
-        };
-        
-        // ESC 키 핸들러
-        const escKeyHandler = (e) => {
-            if (e.key === 'Escape') {
-                layerManager.closeAll();
-            }
-        };
-        
-        // 이벤트 리스너 등록
-        document.addEventListener('click', toolbarClickHandler);
-        document.addEventListener('keydown', escKeyHandler);
-        
-        // cleanup 함수들 저장
-        state.globalCleanupFunctions.push(
-            () => document.removeEventListener('click', toolbarClickHandler),
-            () => document.removeEventListener('keydown', escKeyHandler)
-        );
-    };
-
-    // 전체 정리 함수
-    const cleanup = function() {
-        // 전역 이벤트 리스너 정리
-        state.globalCleanupFunctions.forEach(cleanupFn => {
-            try {
-                cleanupFn();
-            } catch (e) {
-                console.warn('전역 이벤트 리스너 정리 중 오류:', e);
-            }
-        });
-        state.globalCleanupFunctions = [];
-        
-        // 레이어 관리자 정리
-        layerManager.cleanup();
-    };
-
-    // 초기화
-    setupGlobalEventListeners();
-
-    // 페이지 언로드 시 정리
-    window.addEventListener('beforeunload', cleanup);
-
     // 공개 API
     return {
         dom,
@@ -1232,8 +1092,7 @@ const PluginUtil = (function() {
         activeModalManager,
         modal,
         dataLoader,
-        setupDropdownButton,
-        cleanup // 수동 정리 함수 노출
+        setupDropdownButton
     };
 })();
 
@@ -1280,3 +1139,27 @@ function toggleLinkModal(button, contentArea) {
         });
     }, 100);
 }
+
+// js/plugins/plugin-util.js에 통합된 버튼 클릭 핸들러
+document.addEventListener('click', (e) => {
+    // 에디터 툴바 버튼 클릭 시에는 드롭다운 닫기 지연
+    const isToolbarButtonClick = !!e.target.closest('.lite-editor-button, .lite-editor-font-button');
+    
+    // 드롭다운 내부 클릭 시에는 드롭다운 유지
+    const isDropdownClick = !!e.target.closest('.lite-editor-dropdown-menu');
+    
+    // 모달 내부 클릭 시에도 모달 유지
+    const isModalClick = !!e.target.closest('.lite-editor-modal');
+    
+    // 에디터 툴바 버튼이나 드롭다운/모달 내부 클릭이 아닌 경우에만 모든 레이어 닫기
+    if (!isToolbarButtonClick && !isDropdownClick && !isModalClick) {
+        PluginUtil.layerManager.closeAll();
+    }
+});
+
+// ESC 키 누를 때 모든 레이어 닫기
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        PluginUtil.layerManager.closeAll();
+    }
+});

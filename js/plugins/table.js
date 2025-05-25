@@ -182,8 +182,8 @@
             document.body.style.cursor = 'col-resize';
             
             // 이벤트 리스너 추가
-            document.addEventListener('mousemove', this.handleResizeMove, true);
-            document.addEventListener('mouseup', this.handleResizeEnd, true);
+            document.addEventListener('mousemove', this.handleResizeMove, false);
+            document.addEventListener('mouseup', this.handleResizeEnd, false);
         },
         
         // 모든 컬럼 너비를 픽셀 단위로 고정
@@ -200,8 +200,11 @@
             const state = resizerManager.state;
             if (!state.active) return;
             
-            e.preventDefault();
-            e.stopPropagation();
+            // 테이블 관련 요소에서만 이벤트 차단
+            if (e.target.closest('table') || e.target.classList.contains('resizer')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             
             const deltaX = e.clientX - state.active.startX;
             const newWidth = state.active.startWidth + deltaX;
@@ -231,8 +234,8 @@
             resizerManager.notifyEditorUpdate();
             
             // 이벤트 리스너 제거
-            document.removeEventListener('mousemove', resizerManager.handleResizeMove, true);
-            document.removeEventListener('mouseup', resizerManager.handleResizeEnd, true);
+            document.removeEventListener('mousemove', resizerManager.handleResizeMove, false);
+            document.removeEventListener('mouseup', resizerManager.handleResizeEnd, false);
             
             // 상태 초기화
             state.active = null;

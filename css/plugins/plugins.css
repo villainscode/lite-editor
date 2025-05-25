@@ -7,7 +7,7 @@
   font-family: 'Material Icons';
   font-weight: normal;
   font-style: normal;
-  font-size: 18px !important;
+  font-size: 20px !important;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -43,13 +43,20 @@
 }
 
 .lite-editor-button .material-icons {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   vertical-align: middle;
+}
+
+/* 리사이즈 핸들 예외 처리 */
+.video-resize-handle.material-icons,
+.image-resize-handle.material-icons {
+  width: 10px !important;
+  height: 10px !important;
 }
 
 .lite-editor-button:hover {
@@ -262,7 +269,7 @@
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
   font-size: 13px;
-  width: 140px;
+  width: 125px;
   white-space: nowrap;
   position: relative;
   overflow: hidden;

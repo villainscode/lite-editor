@@ -95,7 +95,7 @@
         activeElement: document.activeElement,
         hasFocus: document.hasFocus()
       }, '#e91e63');
-
+      
       // 🔧 디버깅: 현재 선택 영역 상태 로그
       errorHandler.selectionLog.start(contentArea);
       
@@ -116,12 +116,12 @@
           selection: errorHandler.getSelectionInfo(contentArea)
         }, '#ff9800');
         
-        try {
-          contentArea.focus({ preventScroll: true });
-        } catch (e) {
-          contentArea.focus();
-        }
-        
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
+      
         // 🔧 디버깅: 포커스 설정 후 상태
         errorHandler.colorLog('FONT_COLOR', '포커스 설정 후', {
           activeElement: document.activeElement?.tagName,
@@ -237,7 +237,7 @@
       // 🔧 디버깅: 최종 상태 확인
       errorHandler.selectionLog.final(contentArea);
       
-      util.editor.dispatchEditorEvent(contentArea);
+        util.editor.dispatchEditorEvent(contentArea);
       
       // 🔧 디버깅: 함수 완료 시점 상태
       errorHandler.colorLog('FONT_COLOR', '=== 폰트 컬러 적용 완료 ===', {

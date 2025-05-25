@@ -68,55 +68,55 @@
      */
     function applyLink(url, contentArea) {
         const applyWithScroll = util.scroll.preservePosition(() => {
+        try {
+            url = url.trim();
+            if (!url) return;
+            
+            // URL 정규화 (PluginUtil 활용)
+            const finalUrl = util.url.normalizeUrl(url);
+            
+            // 포커스 설정 (스크롤 방지)
             try {
-                url = url.trim();
-                if (!url) return;
+                contentArea.focus({ preventScroll: true });
+            } catch (e) {
+                contentArea.focus();
+            }
+            
+            // 선택 영역 복원
+            restoreSelection();
+            
+            // 선택 영역이 있는 경우
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+                document.execCommand('createLink', false, finalUrl);
                 
-                // URL 정규화 (PluginUtil 활용)
-                const finalUrl = util.url.normalizeUrl(url);
-                
-                // 포커스 설정 (스크롤 방지)
-                try {
-                    contentArea.focus({ preventScroll: true });
-                } catch (e) {
-                    contentArea.focus();
-                }
-                
-                // 선택 영역 복원
-                restoreSelection();
-                
-                // 선택 영역이 있는 경우
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
-                    document.execCommand('createLink', false, finalUrl);
-                    
-                    const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
-                    if (newLink) {
-                        newLink.setAttribute('target', '_blank');
-                    }
-                } else {
-                    // 선택 영역이 없는 경우 현재 커서 위치에 링크 삽입
-                    const linkText = url.replace(/^https?:\/\//i, '');
-                    const linkElement = `<a href="${finalUrl}" target="_blank">${linkText}</a>`;
-                    document.execCommand('insertHTML', false, linkElement);
-                }
-                
-                // 커서를 링크 뒤로 이동
                 const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
                 if (newLink) {
-                    const range = document.createRange();
-                    range.setStartAfter(newLink);
-                    range.collapse(true);
-                    
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    newLink.setAttribute('target', '_blank');
                 }
-                
-                // 에디터 이벤트 발생
-                util.editor.dispatchEditorEvent(contentArea);
-            } catch (e) {
-                errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.APPLY, e);
+            } else {
+                // 선택 영역이 없는 경우 현재 커서 위치에 링크 삽입
+                const linkText = url.replace(/^https?:\/\//i, '');
+                const linkElement = `<a href="${finalUrl}" target="_blank">${linkText}</a>`;
+                document.execCommand('insertHTML', false, linkElement);
             }
+            
+            // 커서를 링크 뒤로 이동
+            const newLink = contentArea.querySelector('a[href="' + finalUrl + '"]');
+            if (newLink) {
+                const range = document.createRange();
+                range.setStartAfter(newLink);
+                range.collapse(true);
+                
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            
+            // 에디터 이벤트 발생
+            util.editor.dispatchEditorEvent(contentArea);
+        } catch (e) {
+            errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.APPLY, e);
+        }
         });
         
         applyWithScroll();
