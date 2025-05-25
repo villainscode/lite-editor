@@ -1,6 +1,6 @@
 /**
  * LiteEditor imageUpload Plugin - 리셋 버전
- * 이미지 업로드 기본 기능만 포함
+ * 이미지 업로드 기본 기능만 포함 - 0525 오전 드래그앤드롭 개발 직전코드
  */
 (function() {
     const util = window.PluginUtil || {};
@@ -256,6 +256,7 @@
             wrapper.id = imageId;
             wrapper.contentEditable = false;
             wrapper.setAttribute('data-selectable', 'true');
+            wrapper.draggable = true;
             
             // 기본 스타일 (원본 크기, 최대 95%)
             wrapper.style.display = 'inline-block';
@@ -335,7 +336,7 @@
         }
     }
 
-    // 🔧 이미지 이벤트 설정 함수
+    // 🔧 이미지 이벤트 설정 함수 (드래그 앤 드롭 추가)
     function setupImageEvents(imageWrapper) {
         const MODULE_NAME = 'IMAGE_UPLOAD';
         const errorHandler = window.errorHandler || {};
@@ -345,6 +346,9 @@
             e.stopPropagation();
             selectImage(imageWrapper);
         });
+        
+        // 🔧 드래그 앤 드롭 이벤트 추가
+        setupDragAndDrop(imageWrapper);
         
         // 리사이징 핸들 이벤트 (media.js 스타일)
         const resizeHandle = imageWrapper.querySelector('.image-resize-handle');
@@ -449,6 +453,220 @@
                 width: imageWrapper.style.width,
                 height: imageWrapper.style.height
             }, '#4caf50');
+        }
+    }
+
+    // 🔧 드래그 앤 드롭 설정 함수 (dataTransfer 조작 방식)
+    function setupDragAndDrop(imageWrapper) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        
+        // 드래그 시작
+        imageWrapper.addEventListener('dragstart', (e) => {
+            // 🔧 dataTransfer 설정 (이동 모드)
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', imageWrapper.id);
+            e.dataTransfer.setData('text/html', imageWrapper.outerHTML);
+            
+            // 드래그 중 시각적 피드백
+            imageWrapper.style.opacity = '0.5';
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '드래그 시작', { 
+                id: imageWrapper.id,
+                effectAllowed: e.dataTransfer.effectAllowed
+            }, '#ff9800');
+        });
+        
+        // 드래그 종료
+        imageWrapper.addEventListener('dragend', (e) => {
+            // 시각적 피드백 복원
+            imageWrapper.style.opacity = '1';
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '드래그 종료', { 
+                id: imageWrapper.id,
+                dropEffect: e.dataTransfer.dropEffect
+            }, '#757575');
+        });
+        
+        // 🔧 에디터 영역에 드롭 이벤트 설정 (한 번만 실행)
+        setupDropZone();
+    }
+
+    // 🔧 드롭 존 설정 (전역으로 한 번만 실행)
+    let isDropZoneSetup = false;
+    function setupDropZone() {
+        if (isDropZoneSetup) return;
+        isDropZoneSetup = true;
+        
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        const contentArea = document.querySelector('.lite-editor-content');
+        
+        if (!contentArea) return;
+        
+        // 드래그 오버 (드롭 허용)
+        contentArea.addEventListener('dragover', (e) => {
+            // 이미지 드래그인 경우만 허용
+            if (e.dataTransfer.types.includes('text/plain')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move'; // 이동 모드 설정
+            }
+        });
+        
+        // 드래그 진입
+        contentArea.addEventListener('dragenter', (e) => {
+            if (e.dataTransfer.types.includes('text/plain')) {
+                e.preventDefault();
+            }
+        });
+        
+        // 드롭 처리
+        contentArea.addEventListener('drop', (e) => {
+            const draggedId = e.dataTransfer.getData('text/plain');
+            const draggedElement = document.getElementById(draggedId);
+            
+            // 이미지 래퍼가 아니면 무시
+            if (!draggedElement || !draggedElement.classList.contains('image-wrapper')) {
+                return;
+            }
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '드롭 처리 시작', { 
+                draggedId: draggedId,
+                dropX: e.clientX,
+                dropY: e.clientY
+            }, '#2196f3');
+            
+            // 🔧 드롭 위치 계산
+            let range = null;
+            if (document.caretRangeFromPoint) {
+                range = document.caretRangeFromPoint(e.clientX, e.clientY);
+            } else if (document.caretPositionFromPoint) {
+                const position = document.caretPositionFromPoint(e.clientX, e.clientY);
+                if (position) {
+                    range = document.createRange();
+                    range.setStart(position.offsetNode, position.offset);
+                    range.collapse(true);
+                }
+            }
+            
+            if (range && contentArea.contains(range.startContainer)) {
+                // 🔧 원본 이미지 제거 (이동)
+                const originalParent = draggedElement.parentElement;
+                const nextSibling = draggedElement.nextSibling;
+                
+                // 시각적 피드백 복원
+                draggedElement.style.opacity = '1';
+                
+                // 원본 제거
+                draggedElement.remove();
+                
+                // 🔧 새 위치에 삽입
+                try {
+                    range.insertNode(draggedElement);
+                    
+                    // 에디터 이벤트 발생
+                    if (util.editor && util.editor.dispatchEditorEvent) {
+                        util.editor.dispatchEditorEvent(contentArea);
+                    }
+                    
+                    errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 이동 완료', { 
+                        id: draggedId,
+                        fromParent: originalParent ? originalParent.tagName : 'none',
+                        toParent: draggedElement.parentElement ? draggedElement.parentElement.tagName : 'none',
+                        dropX: e.clientX,
+                        dropY: e.clientY
+                    }, '#4caf50');
+                    
+                } catch (error) {
+                    // 🔧 삽입 실패 시 원래 위치로 복원
+                    errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '드롭 실패 - 원래 위치 복원', { 
+                        error: error.message 
+                    }, '#f44336');
+                    
+                    if (originalParent) {
+                        if (nextSibling) {
+                            originalParent.insertBefore(draggedElement, nextSibling);
+                        } else {
+                            originalParent.appendChild(draggedElement);
+                        }
+                    }
+                }
+            } else {
+                // 🔧 유효하지 않은 드롭 위치 - 시각적 피드백만 복원
+                errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '유효하지 않은 드롭 위치', { 
+                    hasRange: !!range,
+                    isInEditor: range ? contentArea.contains(range.startContainer) : false
+                }, '#ff5722');
+                
+                draggedElement.style.opacity = '1';
+            }
+            
+            // 🔧 브라우저 기본 드롭 동작으로 생성된 중복 이미지 제거
+            setTimeout(() => {
+                removeDuplicateImages(draggedElement);
+            }, 10);
+        });
+        
+        errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '드롭 존 설정 완료', { 
+            contentArea: contentArea.tagName 
+        }, '#4caf50');
+    }
+
+    // 🔧 중복 이미지 제거 함수
+    function removeDuplicateImages(originalImage) {
+        const MODULE_NAME = 'IMAGE_UPLOAD';
+        const errorHandler = window.errorHandler || {};
+        const contentArea = document.querySelector('.lite-editor-content');
+        
+        if (!contentArea || !originalImage) return;
+        
+        const originalSrc = originalImage.querySelector('img')?.src;
+        if (!originalSrc) return;
+        
+        // 브라우저가 생성한 중복 이미지 패턴 찾기
+        const allImages = contentArea.querySelectorAll('img');
+        const duplicatesToRemove = [];
+        
+        allImages.forEach(img => {
+            // 원본 이미지와 같은 src를 가진 이미지 중
+            if (img.src === originalSrc && img !== originalImage.querySelector('img')) {
+                const parent = img.parentElement;
+                
+                // 브라우저가 생성한 패턴 감지
+                // 1. 단순 div > img 구조
+                // 2. image-wrapper 클래스가 없음
+                // 3. 리사이즈 핸들이 없음
+                if (parent && 
+                    parent.tagName === 'DIV' && 
+                    !parent.classList.contains('image-wrapper') &&
+                    !parent.querySelector('.image-resize-handle')) {
+                    
+                    duplicatesToRemove.push(parent);
+                    
+                    errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '중복 이미지 발견', { 
+                        duplicateParent: parent.outerHTML.substring(0, 100) + '...',
+                        originalId: originalImage.id
+                    }, '#ff5722');
+                }
+            }
+        });
+        
+        // 중복 이미지 제거
+        duplicatesToRemove.forEach(duplicate => {
+            duplicate.remove();
+            errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '중복 이미지 제거됨', { 
+                removedHtml: duplicate.outerHTML.substring(0, 100) + '...'
+            }, '#4caf50');
+        });
+        
+        if (duplicatesToRemove.length > 0) {
+            // 에디터 이벤트 발생
+            if (util.editor && util.editor.dispatchEditorEvent) {
+                util.editor.dispatchEditorEvent(contentArea);
+            }
         }
     }
 
