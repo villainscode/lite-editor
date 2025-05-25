@@ -425,6 +425,9 @@
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = (buttonRect.left - 3) + 'px';
           
+          // ✅ 수정: 드롭다운을 열 때 activeModalManager에 등록
+          util.activeModalManager.register(dropdownMenu);
+          
           // 활성 모달 등록
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');

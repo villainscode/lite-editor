@@ -174,6 +174,11 @@
             
             if (util.activeModalManager) {
                 util.activeModalManager.register(modal);
+                
+                // ✅ 추가: closeCallback 설정
+                modal.closeCallback = () => {
+                    closeModal(modal);
+                };
             }
             
             requestAnimationFrame(() => {
@@ -943,6 +948,11 @@
                 if (existingModal) {
                     closeModal(existingModal);
                     return;
+                }
+                
+                // ✅ 추가: 다른 모든 드롭다운/모달 닫기
+                if (util.activeModalManager) {
+                    util.activeModalManager.closeAll();
                 }
                 
                 showModal();
