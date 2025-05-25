@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10가지 다양한 HTML 테이블 예시</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .table-container {
+            margin-bottom: 50px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: white;
+        }
+        
+        .table-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .table-description {
+            margin-bottom: 20px;
+            color: #7f8c8d;
+        }
+        
+        /* 테이블 1: 심플 테이블 */
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .simple-table th, 
+        .simple-table td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        .simple-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .simple-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        /* 테이블 2: 파란색 테마 테이블 */
+        .blue-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .blue-table th, 
+        .blue-table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .blue-table thead {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .blue-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        
+        .blue-table tbody tr:nth-of-type(even) {
+            background-color: #f3f9fd;
+        }
+        
+        .blue-table tbody tr:last-of-type {
+            border-bottom: 2px solid #3498db;
+        }
+        
+        /* 테이블 3: 그라데이션 테이블 */
+        .gradient-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .gradient-table thead {
+            background: linear-gradient(to right, #36d1dc, #5b86e5);
+            color: white;
+        }
+        
+        .gradient-table th, 
+        .gradient-table td {
+            padding: 12px 15px;
+            text-align: left;
+        }
+        
+        .gradient-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        
+        .gradient-table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+        
+        .gradient-table tbody tr:hover {
+            background-color: #e9f4fb;
+        }
+        
+        /* 테이블 4: 다크 테마 테이블 */
+        .dark-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 8px;
+            background-color: #2c3e50;
+            color: white;
+        }
+        
+        .dark-table th, 
+        .dark-table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .dark-table thead {
+            background-color: #1a2530;
+        }
+        
+        .dark-table tbody tr {
+            border-bottom: 1px solid #3c5473;
+        }
+        
+        .dark-table tbody tr:hover {
+            background-color: #375273;
+        }
+        
+        /* 테이블 5: 테두리 없는 테이블 */
+        .borderless-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .borderless-table th, 
+        .borderless-table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .borderless-table thead {
+            border-bottom: 2px solid #27ae60;
+            color: #27ae60;
+        }
+        
+        .borderless-table td {
+            border-bottom: 1px solid #eee;
+        }
+        
+        .borderless-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        /* 테이블 6: 핑크 테마 테이블 */
+        .pink-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pink-table th, 
+        .pink-table td {
+            padding: 12px 15px;
+            text-align: center;
+        }
+        
+        .pink-table thead {
+            background-color: #e84393;
+            color: white;
+        }
+        
+        .pink-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        
+        .pink-table tbody tr:nth-child(even) {
+            background-color: #ffeef6;
+        }
+        
+        .pink-table tbody tr:last-of-type {
+            border-bottom: 2px solid #e84393;
+        }
+        
+        /* 테이블 7: 마우스 오버 하이라이트 테이블 */
+        .highlight-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+        }
+        
+        .highlight-table th, 
+        .highlight-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .highlight-table thead {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .highlight-table tbody tr:hover {
+            background-color: #fff4dd;
+            transform: scale(1.01);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        /* 테이블 8: 둥근 테이블 */
+        .rounded-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .rounded-table th, 
+        .rounded-table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .rounded-table thead {
+            background-color: #8e44ad;
+            color: white;
+        }
+        
+        .rounded-table tbody tr:nth-child(even) {
+            background-color: #f2e6f7;
+        }
+        
+        .rounded-table tbody tr:hover {
+            background-color: #e3d0ea;
+        }
+        
+        /* 테이블 9: 줄무늬 테이블 */
+        .striped-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-left: 5px solid #16a085;
+        }
+        
+        .striped-table th, 
+        .striped-table td {
+            padding: 12px 15px;
+            text-align: left;
+        }
+        
+        .striped-table th {
+            background-color: #16a085;
+            color: white;
+        }
+        
+        .striped-table tr:nth-child(odd) {
+            background-color: #e8f8f5;
+        }
+        
+        .striped-table tr:nth-child(even) {
+            background-color: #d1f2eb;
+        }
+        
+        /* 테이블 10: 미니멀 테이블 */
+        .minimal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .minimal-table th, 
+        .minimal-table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .minimal-table thead {
+            border-bottom: 2px solid #e74c3c;
+        }
+        
+        .minimal-table th {
+            color: #e74c3c;
+            font-weight: normal;
+        }
+        
+        .minimal-table td {
+            border-bottom: 1px solid #f1f1f1;
+        }
+        
+        .minimal-table tbody tr:hover {
+            background-color: #fff5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>10가지 다양한 HTML 테이블 디자인</h1>
+        
+        <!-- 테이블 1: 심플 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">1. 심플 테이블</h2>
+            <p class="table-description">기본적이고 깔끔한 디자인의 테이블입니다.</p>
+            
+            <table class="simple-table">
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>직책</th>
+                        <th>부서</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>김민준</td>
+                        <td>minjun@example.com</td>
+                        <td>매니저</td>
+                        <td>마케팅</td>
+                    </tr>
+                    <tr>
+                        <td>이서연</td>
+                        <td>seoyeon@example.com</td>
+                        <td>디자이너</td>
+                        <td>UI/UX</td>
+                    </tr>
+                    <tr>
+                        <td>박지훈</td>
+                        <td>jihoon@example.com</td>
+                        <td>개발자</td>
+                        <td>프론트엔드</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 2: 파란색 테마 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">2. 파란색 테마 테이블</h2>
+            <p class="table-description">푸른색 계열의 테마가 적용된 테이블입니다.</p>
+            
+            <table class="blue-table">
+                <thead>
+                    <tr>
+                        <th>상품명</th>
+                        <th>가격</th>
+                        <th>재고</th>
+                        <th>카테고리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>스마트폰</td>
+                        <td>₩899,000</td>
+                        <td>15</td>
+                        <td>전자기기</td>
+                    </tr>
+                    <tr>
+                        <td>노트북</td>
+                        <td>₩1,250,000</td>
+                        <td>8</td>
+                        <td>전자기기</td>
+                    </tr>
+                    <tr>
+                        <td>무선이어폰</td>
+                        <td>₩219,000</td>
+                        <td>27</td>
+                        <td>액세서리</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 3: 그라데이션 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">3. 그라데이션 테이블</h2>
+            <p class="table-description">그라데이션 효과가 적용된 헤더를 가진 테이블입니다.</p>
+            
+            <table class="gradient-table">
+                <thead>
+                    <tr>
+                        <th>영화 제목</th>
+                        <th>감독</th>
+                        <th>개봉일</th>
+                        <th>평점</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>인셉션</td>
+                        <td>크리스토퍼 놀란</td>
+                        <td>2010-07-21</td>
+                        <td>8.8/10</td>
+                    </tr>
+                    <tr>
+                        <td>기생충</td>
+                        <td>봉준호</td>
+                        <td>2019-05-30</td>
+                        <td>8.6/10</td>
+                    </tr>
+                    <tr>
+                        <td>어벤져스: 엔드게임</td>
+                        <td>앤서니 루소, 조 루소</td>
+                        <td>2019-04-24</td>
+                        <td>8.4/10</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 4: 다크 테마 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">4. 다크 테마 테이블</h2>
+            <p class="table-description">어두운 배경색을 적용한 현대적인 테이블입니다.</p>
+            
+            <table class="dark-table">
+                <thead>
+                    <tr>
+                        <th>프로젝트명</th>
+                        <th>담당자</th>
+                        <th>마감일</th>
+                        <th>진행상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>웹사이트 리뉴얼</td>
+                        <td>김철수</td>
+                        <td>2025-06-15</td>
+                        <td>진행중</td>
+                    </tr>
+                    <tr>
+                        <td>모바일 앱 개발</td>
+                        <td>박영희</td>
+                        <td>2025-07-30</td>
+                        <td>계획</td>
+                    </tr>
+                    <tr>
+                        <td>마케팅 캠페인</td>
+                        <td>이지민</td>
+                        <td>2025-05-25</td>
+                        <td>완료</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 5: 테두리 없는 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">5. 테두리 없는 테이블</h2>
+            <p class="table-description">테두리가 없는 미니멀한 디자인의 테이블입니다.</p>
+            
+            <table class="borderless-table">
+                <thead>
+                    <tr>
+                        <th>도서명</th>
+                        <th>저자</th>
+                        <th>출판사</th>
+                        <th>가격</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>해리 포터와 마법사의 돌</td>
+                        <td>J.K. 롤링</td>
+                        <td>문학수첩</td>
+                        <td>₩12,600</td>
+                    </tr>
+                    <tr>
+                        <td>어린 왕자</td>
+                        <td>생텍쥐페리</td>
+                        <td>열린책들</td>
+                        <td>₩8,100</td>
+                    </tr>
+                    <tr>
+                        <td>데미안</td>
+                        <td>헤르만 헤세</td>
+                        <td>민음사</td>
+                        <td>₩8,820</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 6: 핑크 테마 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">6. 핑크 테마 테이블</h2>
+            <p class="table-description">분홍색 계열의 테마가 적용된 테이블입니다.</p>
+            
+            <table class="pink-table">
+                <thead>
+                    <tr>
+                        <th>메뉴</th>
+                        <th>가격</th>
+                        <th>칼로리</th>
+                        <th>평점</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>딸기 케이크</td>
+                        <td>₩5,500</td>
+                        <td>320 kcal</td>
+                        <td>★★★★☆</td>
+                    </tr>
+                    <tr>
+                        <td>초콜릿 쿠키</td>
+                        <td>₩2,800</td>
+                        <td>180 kcal</td>
+                        <td>★★★★★</td>
+                    </tr>
+                    <tr>
+                        <td>아메리카노</td>
+                        <td>₩4,000</td>
+                        <td>10 kcal</td>
+                        <td>★★★☆☆</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 7: 마우스 오버 하이라이트 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">7. 마우스 오버 하이라이트 테이블</h2>
+            <p class="table-description">마우스를 올리면 행이 강조되는 테이블입니다.</p>
+            
+            <table class="highlight-table">
+                <thead>
+                    <tr>
+                        <th>축제명</th>
+                        <th>개최지</th>
+                        <th>개최기간</th>
+                        <th>특징</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>봄꽃 축제</td>
+                        <td>서울 여의도</td>
+                        <td>2025-04-05 ~ 2025-04-12</td>
+                        <td>벚꽃 명소</td>
+                    </tr>
+                    <tr>
+                        <td>재즈 페스티벌</td>
+                        <td>서울 올림픽 공원</td>
+                        <td>2025-05-25 ~ 2025-05-27</td>
+                        <td>국내외 재즈 아티스트</td>
+                    </tr>
+                    <tr>
+                        <td>청계천 빛 축제</td>
+                        <td>서울 청계천</td>
+                        <td>2025-12-20 ~ 2026-01-10</td>
+                        <td>겨울 조명 축제</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 8: 둥근 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">8. 둥근 테이블</h2>
+            <p class="table-description">모서리가 둥근 디자인의 테이블입니다.</p>
+            
+            <table class="rounded-table">
+                <thead>
+                    <tr>
+                        <th>강좌명</th>
+                        <th>강사</th>
+                        <th>요일</th>
+                        <th>수강료</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>기초 수채화</td>
+                        <td>박민지</td>
+                        <td>화, 목</td>
+                        <td>₩120,000/월</td>
+                    </tr>
+                    <tr>
+                        <td>현대 도예</td>
+                        <td>김태호</td>
+                        <td>수, 금</td>
+                        <td>₩150,000/월</td>
+                    </tr>
+                    <tr>
+                        <td>디지털 일러스트</td>
+                        <td>이수진</td>
+                        <td>토, 일</td>
+                        <td>₩180,000/월</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 9: 줄무늬 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">9. 줄무늬 테이블</h2>
+            <p class="table-description">줄무늬 패턴이 적용된 테이블입니다.</p>
+            
+            <table class="striped-table">
+                <thead>
+                    <tr>
+                        <th>여행지</th>
+                        <th>국가</th>
+                        <th>방문 시기</th>
+                        <th>추천 활동</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>바르셀로나</td>
+                        <td>스페인</td>
+                        <td>5월~9월</td>
+                        <td>가우디 건축물 투어</td>
+                    </tr>
+                    <tr>
+                        <td>교토</td>
+                        <td>일본</td>
+                        <td>3월~5월, 10월~11월</td>
+                        <td>전통 사찰 방문</td>
+                    </tr>
+                    <tr>
+                        <td>아이슬란드</td>
+                        <td>아이슬란드</td>
+                        <td>6월~8월</td>
+                        <td>오로라 관측, 빙하 투어</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 테이블 10: 미니멀 테이블 -->
+        <div class="table-container">
+            <h2 class="table-title">10. 미니멀 테이블</h2>
+            <p class="table-description">매우 간결하고 심플한 디자인의 테이블입니다.</p>
+            
+            <table class="minimal-table">
+                <thead>
+                    <tr>
+                        <th>운동</th>
+                        <th>소요 시간</th>
+                        <th>소모 칼로리</th>
+                        <th>난이도</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>달리기</td>
+                        <td>30분</td>
+                        <td>약 300 kcal</td>
+                        <td>중간</td>
+                    </tr>
+                    <tr>
+                        <td>수영</td>
+                        <td>45분</td>
+                        <td>약 400 kcal</td>
+                        <td>높음</td>
+                    </tr>
+                    <tr>
+                        <td>요가</td>
+                        <td>60분</td>
+                        <td>약 200 kcal</td>
+                        <td>낮음</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

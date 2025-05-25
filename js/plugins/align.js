@@ -274,6 +274,13 @@
           dropdownMenu.style.left = buttonRect.left + 'px';
           
           util.activeModalManager.register(dropdownMenu);
+          dropdownMenu.closeCallback = () => {
+            dropdownMenu.classList.remove('show');
+            dropdownMenu.style.display = 'none';
+            alignButton.classList.remove('active');
+            isDropdownOpen = false;
+            util.activeModalManager.unregister(dropdownMenu);
+          };
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';

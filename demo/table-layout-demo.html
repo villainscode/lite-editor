@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteEditor - 고급 표 그리기 데모</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .demo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .demo-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .demo-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .editor-container {
+            padding: 20px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #e9ecef;
+        }
+
+        .toolbar-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .toolbar-button:hover {
+            background: #e3f2fd;
+            transform: translateY(-1px);
+        }
+
+        .toolbar-button.active {
+            background: #2196f3;
+            color: white;
+        }
+
+        .content-area {
+            min-height: 300px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            outline: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .content-area:focus {
+            border-color: #2196f3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        /* 테이블 레이어 스타일 */
+        .table-layer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 10000;
+            min-width: 600px;
+            max-width: 800px;
+            display: none;
+        }
+
+        .table-layer.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .layer-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .insert-button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .insert-button:hover {
+            background: #1976d2;
+            transform: translateY(-1px);
+        }
+
+        .layer-content {
+            display: flex;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        .grid-section {
+            flex: 1;
+        }
+
+        .grid-container {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .size-display {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .grid-table {
+            border-collapse: separate;
+            border-spacing: 2px;
+            margin: 0 auto;
+        }
+
+        .grid-cell {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .grid-cell:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .grid-cell.selected {
+            background: #2196f3;
+            border-color: #1976d2;
+        }
+
+        .settings-section {
+            width: 280px;
+            border-left: 1px solid #e9ecef;
+            padding-left: 24px;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .dropdown-container {
+            position: relative;
+        }
+
+        .dropdown-button {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-button:hover {
+            border-color: #2196f3;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        }
+
+        .dropdown-arrow {
+            transition: transform 0.2s ease;
+        }
+
+        .dropdown-button.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: dropdownSlide 0.2s ease-out;
+        }
+
+        @keyframes dropdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.1s ease;
+        }
+
+        .dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .dropdown-item.selected {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .item-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .design-icon {
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+        }
+
+        .style-icon {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 1px;
+        }
+
+        .style-icon div {
+            background: #ddd;
+        }
+
+        .line-icon {
+            width: 20px;
+            height: 2px;
+            margin: 0 2px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 생성된 테이블 스타일 */
+        .demo-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+
+        .demo-table th,
+        .demo-table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .demo-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🎨 LiteEditor 고급 표 그리기</h1>
+            <p>직관적인 드래그 앤 드롭으로 원하는 크기와 스타일의 표를 만들어보세요</p>
+        </div>
+
+        <div class="editor-container">
+            <div class="toolbar">
+                <button class="toolbar-button" title="굵게">
+                    <span class="material-icons">format_bold</span>
+                </button>
+                <button class="toolbar-button" title="기울임">
+                    <span class="material-icons">format_italic</span>
+                </button>
+                <button class="toolbar-button" title="밑줄">
+                    <span class="material-icons">format_underlined</span>
+                </button>
+                <button class="toolbar-button" title="표 삽입" id="tableButton">
+                    <span class="material-icons">grid_on</span>
+                </button>
+                <button class="toolbar-button" title="링크">
+                    <span class="material-icons">link</span>
+                </button>
+                <button class="toolbar-button" title="이미지">
+                    <span class="material-icons">image</span>
+                </button>
+            </div>
+
+            <div class="content-area" contenteditable="true" id="contentArea">
+                <p>여기에 텍스트를 입력하고 표 버튼을 클릭해보세요! 🚀</p>
+                <p>드래그로 표 크기를 선택하고, 다양한 디자인과 스타일을 적용할 수 있습니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오버레이 -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- 표 생성 레이어 -->
+    <div class="table-layer" id="tableLayer">
+        <div class="layer-header">
+            <div class="layer-title">Drag to select table size (Max 10×10)</div>
+            <button class="insert-button" id="insertButton">삽입</button>
+        </div>
+        
+        <div class="layer-content">
+            <!-- 그리드 섹션 -->
+            <div class="grid-section">
+                <div class="grid-container">
+                    <div class="size-display" id="sizeDisplay">1×1 표</div>
+                    <table class="grid-table" id="gridTable">
+                        <!-- 10x10 그리드가 JavaScript로 생성됩니다 -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- 설정 섹션 -->
+            <div class="settings-section">
+                <div class="settings-title">표 설정</div>
+
+                <!-- 디자인 선택 -->
+                <div class="form-group">
+                    <label class="form-label">디자인</label>
+                    <div class="dropdown-container">
+                        <button class="dropdown-button" data-dropdown="design">
+                            <span class="selected-text">Modern</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-menu" id="designDropdown">
+                            <div class="dropdown-item selected" data-value="modern">
+                                <div class="item-icon design-icon">🎨</div>
+                                Modern
+                            </div>
+                            <div class="dropdown-item" data-value="classic">
+                                <div class="item-icon design-icon">📋</div>
+                                Classic
+                            </div>
+                            <div class="dropdown-item" data-value="minimal">
+                                <div class="item-icon design-icon">⚪</div>
+                                Minimal
+                            </div>
+                            <div class="dropdown-item" data-value="elegant">
+                                <div class="item-icon design-icon">✨</div>
+                                Elegant
+                            </div>
+                            <div class="dropdown-item" data-value="bold">
+                                <div class="item-icon design-icon">💪</div>
+                                Bold
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 스타일 선택 -->
+                <div class="form-group">
+                    <label class="form-label">스타일</label>
+                    <div class="dropdown-container">
+                        <button class="dropdown-button" data-dropdown="style">
+                            <span class="selected-text">Basic</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-menu" id="styleDropdown">
+                            <div class="dropdown-item selected" data-value="basic">
+                                <div class="item-icon">
+                                    <div class="style-icon">
+                                        <div></div><div></div><div></div><div></div>
+                                    </div>
+                                </div>
+                                Basic
+                            </div>
+                            <div class="dropdown-item" data-value="header">
+                                <div class="item-icon">
+                                    <div class="style-icon">
+                                        <div style="background: #666;"></div><div style="background: #666;"></div><div></div><div></div>
+                                    </div>
+                                </div>
+                                Header
+                            </div>
+                            <div class="dropdown-item" data-value="column">
+                                <div class="item-icon">
+                                    <div class="style-icon">
+                                        <div style="background: #666;"></div><div></div><div style="background: #666;"></div><div></div>
+                                    </div>
+                                </div>
+                                Column
+                            </div>
+                            <div class="dropdown-item" data-value="complex">
+                                <div class="item-icon">
+                                    <div class="style-icon">
+                                        <div style="background: #666;"></div><div style="background: #666;"></div><div style="background: #666;"></div><div></div>
+                                    </div>
+                                </div>
+                                Complex
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 라인 선택 -->
+                <div class="form-group">
+                    <label class="form-label">라인</label>
+                    <div class="dropdown-container">
+                        <button class="dropdown-button" data-dropdown="line">
+                            <span class="selected-text">Solid</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="dropdown-menu" id="lineDropdown">
+                            <div class="dropdown-item selected" data-value="solid">
+                                <div class="item-icon">
+                                    <div class="line-icon" style="background: #333;"></div>
+                                </div>
+                                Solid
+                            </div>
+                            <div class="dropdown-item" data-value="dotted">
+                                <div class="item-icon">
+                                    <div class="line-icon" style="border-top: 2px dotted #333;"></div>
+                                </div>
+                                Dotted
+                            </div>
+                            <div class="dropdown-item" data-value="none">
+                                <div class="item-icon">
+                                    <div class="line-icon" style="border-top: 2px dashed #ccc;"></div>
+                                </div>
+                                No Border
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태
+        const state = {
+            selectedRows: 1,
+            selectedCols: 1,
+            selectedDesign: 'modern',
+            selectedStyle: 'basic',
+            selectedLine: 'solid'
+        };
+
+        // DOM 요소들
+        const elements = {
+            tableButton: document.getElementById('tableButton'),
+            overlay: document.getElementById('overlay'),
+            tableLayer: document.getElementById('tableLayer'),
+            gridTable: document.getElementById('gridTable'),
+            sizeDisplay: document.getElementById('sizeDisplay'),
+            insertButton: document.getElementById('insertButton'),
+            contentArea: document.getElementById('contentArea')
+        };
+
+        // 10x10 그리드 생성
+        function createGrid() {
+            const tbody = document.createElement('tbody');
+            
+            for (let i = 0; i < 10; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < 10; j++) {
+                    const cell = document.createElement('td');
+                    cell.className = 'grid-cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    row.appendChild(cell);
+                }
+                tbody.appendChild(row);
+            }
+            
+            elements.gridTable.appendChild(tbody);
+        }
+
+        // 그리드 이벤트 설정
+        function setupGridEvents() {
+            let isMouseDown = false;
+            let startRow = 0, startCol = 0;
+
+            elements.gridTable.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('grid-cell')) {
+                    isMouseDown = true;
+                    startRow = parseInt(e.target.dataset.row);
+                    startCol = parseInt(e.target.dataset.col);
+                    updateSelection(startRow, startCol, startRow, startCol);
+                    e.preventDefault();
+                }
+            });
+
+            elements.gridTable.addEventListener('mouseover', (e) => {
+                if (isMouseDown && e.target.classList.contains('grid-cell')) {
+                    const endRow = parseInt(e.target.dataset.row);
+                    const endCol = parseInt(e.target.dataset.col);
+                    updateSelection(startRow, startCol, endRow, endCol);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+        }
+
+        // 선택 영역 업데이트
+        function updateSelection(startRow, startCol, endRow, endCol) {
+            // 모든 셀 선택 해제
+            document.querySelectorAll('.grid-cell').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+
+            // 선택 영역 계산
+            const minRow = Math.min(startRow, endRow);
+            const maxRow = Math.max(startRow, endRow);
+            const minCol = Math.min(startCol, endCol);
+            const maxCol = Math.max(startCol, endCol);
+
+            // 선택 영역 표시
+            for (let i = minRow; i <= maxRow; i++) {
+                for (let j = minCol; j <= maxCol; j++) {
+                    const cell = document.querySelector(`[data-row="${i}"][data-col="${j}"]`);
+                    if (cell) cell.classList.add('selected');
+                }
+            }
+
+            // 상태 업데이트
+            state.selectedRows = maxRow - minRow + 1;
+            state.selectedCols = maxCol - minCol + 1;
+
+            // 크기 표시 업데이트
+            elements.sizeDisplay.textContent = `${state.selectedRows}×${state.selectedCols} 표`;
+        }
+
+        // 드롭다운 이벤트 설정
+        function setupDropdowns() {
+            document.querySelectorAll('.dropdown-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const dropdownType = button.dataset.dropdown;
+                    const dropdown = document.getElementById(dropdownType + 'Dropdown');
+                    
+                    // 다른 드롭다운 닫기
+                    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                        if (menu !== dropdown) {
+                            menu.classList.remove('show');
+                        }
+                    });
+                    
+                    // 현재 드롭다운 토글
+                    dropdown.classList.toggle('show');
+                    button.classList.toggle('open');
+                });
+            });
+
+            // 드롭다운 아이템 클릭
+            document.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const dropdown = item.closest('.dropdown-menu');
+                    const button = dropdown.previousElementSibling;
+                    const selectedText = button.querySelector('.selected-text');
+                    
+                    // 선택 상태 업데이트
+                    dropdown.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    
+                    // 텍스트 업데이트
+                    selectedText.textContent = item.textContent.trim();
+                    
+                    // 상태 저장
+                    const dropdownType = dropdown.id.replace('Dropdown', '');
+                    state['selected' + dropdownType.charAt(0).toUpperCase() + dropdownType.slice(1)] = item.dataset.value;
+                    
+                    // 드롭다운 닫기
+                    dropdown.classList.remove('show');
+                    button.classList.remove('open');
+                });
+            });
+
+            // 외부 클릭 시 드롭다운 닫기
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+                document.querySelectorAll('.dropdown-button').forEach(button => {
+                    button.classList.remove('open');
+                });
+            });
+        }
+
+        // 레이어 표시/숨기기
+        function showTableLayer() {
+            elements.overlay.classList.add('show');
+            elements.tableLayer.classList.add('show');
+            elements.tableButton.classList.add('active');
+        }
+
+        function hideTableLayer() {
+            elements.overlay.classList.remove('show');
+            elements.tableLayer.classList.remove('show');
+            elements.tableButton.classList.remove('active');
+        }
+
+        // 표 삽입
+        function insertTable() {
+            const table = document.createElement('table');
+            table.className = 'demo-table';
+            
+            // 스타일에 따른 클래스 추가
+            table.classList.add(`table-${state.selectedDesign}`);
+            table.classList.add(`table-${state.selectedStyle}`);
+            table.classList.add(`table-${state.selectedLine}`);
+
+            const tbody = document.createElement('tbody');
+            
+            for (let i = 0; i < state.selectedRows; i++) {
+                const row = document.createElement('tr');
+                
+                for (let j = 0; j < state.selectedCols; j++) {
+                    let cell;
+                    let isHeader = false;
+                    
+                    // 스타일에 따른 헤더 결정
+                    switch (state.selectedStyle) {
+                        case 'header':
+                            isHeader = (i === 0);
+                            break;
+                        case 'column':
+                            isHeader = (j === 0);
+                            break;
+                        case 'complex':
+                            isHeader = (i === 0 || j === 0);
+                            break;
+                    }
+                    
+                    cell = document.createElement(isHeader ? 'th' : 'td');
+                    cell.contentEditable = true;
+                    cell.textContent = isHeader ? `헤더 ${i+1}-${j+1}` : `셀 ${i+1}-${j+1}`;
+                    
+                    row.appendChild(cell);
+                }
+                
+                tbody.appendChild(row);
+            }
+            
+            table.appendChild(tbody);
+            
+            // 커서 위치에 삽입
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(table);
+                
+                // 표 뒤에 줄바꿈 추가
+                const br = document.createElement('br');
+                table.parentNode.insertBefore(br, table.nextSibling);
+                
+                // 커서를 표 뒤로 이동
+                const newRange = document.createRange();
+                newRange.setStartAfter(br);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+            
+            hideTableLayer();
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            elements.tableButton.addEventListener('click', showTableLayer);
+            elements.overlay.addEventListener('click', hideTableLayer);
+            elements.insertButton.addEventListener('click', insertTable);
+            
+            // ESC 키로 레이어 닫기
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && elements.tableLayer.classList.contains('show')) {
+                    hideTableLayer();
+                }
+            });
+        }
+
+        // 초기화
+        function init() {
+            createGrid();
+            setupGridEvents();
+            setupDropdowns();
+            setupEventListeners();
+            
+            // 기본 선택 (1x1)
+            updateSelection(0, 0, 0, 0);
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

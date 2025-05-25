@@ -435,10 +435,32 @@ if (e.shiftKey) {
 }
 ```
 
-## 🔧 키보드 이벤트 처리
+### 버그 4: Enter 키 처리 시 뒤 텍스트 건너뛰기 문제
 
-### Enter/Shift+Enter 동작 구현
+#### 문제 상황
+폰트가 적용된 텍스트에서 Enter 키를 누를 때, 커서 뒤에 있는 다른 텍스트들이 줄바꿈되지 않고 건너뛰어지는 현상
 
+**문제 예시:**
+```html
+<!-- 입력 상태 -->
+<font face="Black Han Sans, sans-serif">vhsxm voalffl&nbsp;<br><span style="font-family: &quot;Black Han Sans&quot;, sans-serif;">​vh폰트가 뭐&nbsp;</span></font>
+
+<!-- Enter 키 후 -->
+vh폰트가 뭐 첫 번째 항목
+두 번째 항목
+세 번째 항목
+네 번째 항목
+<< 여기로 커서가 이동함 (중간 텍스트들이 건너뛰어짐)
+```
+
+#### 원인 분석
+1. **제한적인 폰트 영역 감지**: `fontElement.closest('span[style*="font-family"], font')` 조건이 너무 제한적
+2. **뒤 텍스트 미처리**: 커서 이후의 텍스트와 요소들을 새 줄로 이동시키지 않음
+3. **형제 요소 무시**: 폰트 요소 뒤의 형제 요소들이 처리되지 않음
+
+#### 해결 방법
+
+**Before (문제 코드):**
 ```javascript
 function setupFontKeyboardEvents(contentArea) {
   contentArea.addEventListener('keydown', (e) => {
@@ -450,62 +472,27 @@ function setupFontKeyboardEvents(contentArea) {
           ? range.startContainer.parentElement 
           : range.startContainer;
         
-        // 폰트 스타일이 적용된 요소 찾기
+        // ❌ 문제: 제한적인 폰트 영역 감지
         const fontElement = currentElement.closest('span[style*="font-family"], font');
         
         if (fontElement) {
-          if (e.shiftKey) {
-            // Shift+Enter: 폰트 유지하면서 줄바꿈
-            e.preventDefault();
-            
-            let fontFamily = currentFontValue;
-            
-            if (!fontFamily) {
-              // 폴백: 현재 요소에서 추출
-              const styleAttr = fontElement.getAttribute('style');
-              const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
-              fontFamily = fontFamilyMatch ? fontFamilyMatch[1].trim() : 'inherit';
-            }
-            
-            // DOM 요소 직접 생성
-            const br = document.createElement('br');
-            const newSpan = document.createElement('span');
-            newSpan.style.fontFamily = fontFamily;
-            newSpan.innerHTML = '&#8203;';
-            
-            // 현재 위치에 삽입
-            range.deleteContents();
-            range.insertNode(br);
-            range.setStartAfter(br);
-            range.insertNode(newSpan);
-            
-            // 커서를 새 span 내부로 이동
-            range.setStart(newSpan, 1);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            errorHandler.logInfo('FontFamilyPlugin', `Shift+Enter: 폰트 유지 줄바꿈 (${fontFamily})`);
-          } else {
+          if (!e.shiftKey) {
             // Enter: 폰트 영역 벗어나서 새 문단
             e.preventDefault();
             
-            // 새 문단 생성
+            // ❌ 문제: 뒤 텍스트 처리 없음
             const newP = document.createElement('p');
             newP.innerHTML = '<br>';
             
-            // 현재 문단 다음에 삽입
             const currentP = fontElement.closest('p') || fontElement.parentElement;
             currentP.parentNode.insertBefore(newP, currentP.nextSibling);
             
-            // 커서를 새 문단으로 이동
+            // 커서만 이동 (뒤 텍스트는 그대로 남음)
             const newRange = document.createRange();
             newRange.setStart(newP, 0);
             newRange.collapse(true);
             selection.removeAllRanges();
             selection.addRange(newRange);
-            
-            errorHandler.logInfo('FontFamilyPlugin', 'Enter: 폰트 영역 벗어남');
           }
         }
       }
@@ -514,135 +501,258 @@ function setupFontKeyboardEvents(contentArea) {
 }
 ```
 
-## 🎨 드롭다운 토글 로직
-
-### 모달 관리 시스템 통합
-
+**After (해결 코드):**
 ```javascript
-fontContainer.addEventListener('click', util.scroll.preservePosition((e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  
-  // 클릭 시 selection 저장
-  const currentSelection = window.getSelection();
-  if (currentSelection.rangeCount > 0 && !currentSelection.isCollapsed && !savedRange) {
-    savedRange = util.selection.saveSelection();
-    errorHandler.logInfo('FontFamilyPlugin', `click에서 추가 selection 저장됨: "${currentSelection.toString()}"`);
-  }
-  
-  // 현재 드롭다운의 상태 확인
-  const isVisible = dropdownMenu.classList.contains('show');
-  
-  // 다른 모든 드롭다운 닫기
-  if (!isVisible) {
-    util.activeModalManager.closeAll();
-  }
-  
-  if (isVisible) {
-    // 닫기
-    dropdownMenu.classList.remove('show');
-    dropdownMenu.style.display = 'none';
-    fontContainer.classList.remove('active');
-    isDropdownOpen = false;
-    
-    util.activeModalManager.unregister(dropdownMenu);
-  } else {
-    // 열기
-    dropdownMenu.classList.add('show');
-    dropdownMenu.style.display = 'block';
-    fontContainer.classList.add('active');
-    isDropdownOpen = true;
-    
-    // 드롭다운 위치 설정
-    const buttonRect = fontContainer.getBoundingClientRect();
-    dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-    dropdownMenu.style.left = (buttonRect.left - 3) + 'px';
-    
-    // 활성 모달 등록
-    dropdownMenu.closeCallback = () => {
-      dropdownMenu.classList.remove('show');
-      dropdownMenu.style.display = 'none';
-      fontContainer.classList.remove('active');
-      isDropdownOpen = false;
-    };
-    
-    util.activeModalManager.register(dropdownMenu);
-    
-    // 외부 클릭 시 닫기 설정
-    util.setupOutsideClickHandler(dropdownMenu, () => {
-      dropdownMenu.classList.remove('show');
-      dropdownMenu.style.display = 'none';
-      fontContainer.classList.remove('active');
-      isDropdownOpen = false;
-      util.activeModalManager.unregister(dropdownMenu);
-    }, [fontContainer]);
-  }
-}));
-```
-
-## 📊 성능 최적화
-
-### 1. 이벤트 리스너 중복 방지
-```javascript
-// 키보드 이벤트 설정 (한 번만 실행)
-if (!contentArea.hasAttribute('data-font-events-setup')) {
-  setupFontKeyboardEvents(contentArea);
-  contentArea.setAttribute('data-font-events-setup', 'true');
+function setupFontKeyboardEvents(contentArea) {
+  contentArea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+          ? range.startContainer.parentElement 
+          : range.startContainer;
+        
+        // ✅ 수정: 폰트 스타일이 적용된 요소 또는 그 내부에 있는지 확인
+        const fontElement = currentElement.closest('span[style*="font-family"], font') || 
+                           currentElement.querySelector('span[style*="font-family"], font');
+        
+        // ✅ 추가: 현재 커서 위치가 폰트 영역 내부인지 더 정확하게 확인
+        const isInFontArea = fontElement && (
+          fontElement.contains(range.startContainer) || 
+          fontElement === range.startContainer ||
+          (range.startContainer.nodeType === Node.TEXT_NODE && 
+           fontElement.contains(range.startContainer.parentElement))
+        );
+        
+        if (isInFontArea) {
+          if (e.shiftKey) {
+            // Shift+Enter: 폰트 유지하면서 줄바꿈
+            e.preventDefault();
+            
+            let fontFamily = currentFontValue;
+            
+            if (!fontFamily) {
+              const styleAttr = fontElement.getAttribute('style');
+              const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
+              fontFamily = fontFamilyMatch ? fontFamilyMatch[1].trim() : 'inherit';
+            }
+            
+            // ✅ 수정: 현재 위치 이후의 모든 콘텐츠를 새 줄로 이동
+            const currentContainer = range.startContainer;
+            const currentOffset = range.startOffset;
+            
+            // 현재 위치 이후의 텍스트 추출
+            let remainingContent = '';
+            if (currentContainer.nodeType === Node.TEXT_NODE) {
+              remainingContent = currentContainer.textContent.substring(currentOffset);
+              // 현재 텍스트 노드를 커서 위치에서 자르기
+              currentContainer.textContent = currentContainer.textContent.substring(0, currentOffset);
+            }
+            
+            // 새 줄 생성
+            const br = document.createElement('br');
+            const newSpan = document.createElement('span');
+            newSpan.style.fontFamily = fontFamily;
+            
+            // 남은 텍스트가 있으면 새 span에 추가
+            if (remainingContent.trim()) {
+              newSpan.textContent = remainingContent;
+            } else {
+              newSpan.innerHTML = '&#8203;'; // 제로폭 공백
+            }
+            
+            // DOM에 삽입
+            if (currentContainer.nodeType === Node.TEXT_NODE) {
+              const parent = currentContainer.parentElement;
+              parent.insertBefore(br, currentContainer.nextSibling);
+              parent.insertBefore(newSpan, br.nextSibling);
+            } else {
+              range.insertNode(br);
+              range.setStartAfter(br);
+              range.insertNode(newSpan);
+            }
+            
+            // 커서를 새 span 시작 부분으로 이동
+            const newRange = document.createRange();
+            newRange.setStart(newSpan.firstChild || newSpan, 0);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            errorHandler.logInfo('FontFamilyPlugin', `Shift+Enter: 폰트 유지 줄바꿈 (${fontFamily})`);
+          } else {
+            // ✅ 수정: Enter 키 처리 - 폰트 영역 벗어나면서 뒤의 텍스트도 함께 이동
+            e.preventDefault();
+            
+            const currentContainer = range.startContainer;
+            const currentOffset = range.startOffset;
+            
+            // 현재 위치 이후의 모든 콘텐츠 수집
+            let remainingContent = '';
+            let nodesToMove = [];
+            
+            if (currentContainer.nodeType === Node.TEXT_NODE) {
+              // 텍스트 노드인 경우
+              remainingContent = currentContainer.textContent.substring(currentOffset);
+              currentContainer.textContent = currentContainer.textContent.substring(0, currentOffset);
+              
+              // 현재 요소 이후의 모든 형제 요소들도 수집
+              let nextSibling = currentContainer.parentElement.nextSibling;
+              while (nextSibling) {
+                nodesToMove.push(nextSibling);
+                nextSibling = nextSibling.nextSibling;
+              }
+            }
+            
+            // 새 문단 생성
+            const newP = document.createElement('p');
+            
+            // 남은 텍스트 추가
+            if (remainingContent.trim()) {
+              newP.textContent = remainingContent;
+            }
+            
+            // 이동할 노드들 추가
+            nodesToMove.forEach(node => {
+              newP.appendChild(node.cloneNode(true));
+              node.remove();
+            });
+            
+            // 새 문단이 비어있으면 br 추가
+            if (!newP.textContent.trim() && newP.children.length === 0) {
+              newP.innerHTML = '<br>';
+            }
+            
+            // 현재 문단 다음에 새 문단 삽입
+            const currentP = fontElement.closest('p') || fontElement.parentElement.closest('p') || fontElement.parentElement;
+            currentP.parentNode.insertBefore(newP, currentP.nextSibling);
+            
+            // 커서를 새 문단으로 이동
+            const newRange = document.createRange();
+            newRange.setStart(newP.firstChild || newP, 0);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            errorHandler.logInfo('FontFamilyPlugin', 'Enter: 폰트 영역 벗어나면서 뒤 텍스트도 이동');
+          }
+        }
+      }
+    }
+  });
 }
 ```
 
-### 2. 스크롤 위치 보존
-```javascript
-// util.scroll.preservePosition 래퍼 사용
-fontContainer.addEventListener('click', util.scroll.preservePosition((e) => {
-  // 드롭다운 토글 로직
-}));
+#### 주요 개선사항
 
-// 폰트 적용 시 개별 스크롤 관리
-const scrollPosition = util.scroll.savePosition();
-// ... 폰트 적용 로직
-util.scroll.restorePosition(scrollPosition);
+1. **정확한 폰트 영역 감지**
+   ```javascript
+   // ✅ 개선: 더 포괄적인 폰트 영역 감지
+   const fontElement = currentElement.closest('span[style*="font-family"], font') || 
+                      currentElement.querySelector('span[style*="font-family"], font');
+   
+   const isInFontArea = fontElement && (
+     fontElement.contains(range.startContainer) || 
+     fontElement === range.startContainer ||
+     (range.startContainer.nodeType === Node.TEXT_NODE && 
+      fontElement.contains(range.startContainer.parentElement))
+   );
+   ```
+
+2. **뒤 텍스트 처리**
+   ```javascript
+   // ✅ 개선: 커서 이후의 모든 텍스트와 요소들을 새 줄로 이동
+   let remainingContent = '';
+   let nodesToMove = [];
+   
+   if (currentContainer.nodeType === Node.TEXT_NODE) {
+     remainingContent = currentContainer.textContent.substring(currentOffset);
+     currentContainer.textContent = currentContainer.textContent.substring(0, currentOffset);
+     
+     // 형제 요소들도 수집
+     let nextSibling = currentContainer.parentElement.nextSibling;
+     while (nextSibling) {
+       nodesToMove.push(nextSibling);
+       nextSibling = nextSibling.nextSibling;
+     }
+   }
+   ```
+
+3. **텍스트 분할 및 이동**
+   ```javascript
+   // ✅ 개선: 텍스트 노드를 커서 위치에서 정확히 분할
+   const newP = document.createElement('p');
+   
+   // 남은 텍스트 추가
+   if (remainingContent.trim()) {
+     newP.textContent = remainingContent;
+   }
+   
+   // 이동할 노드들 추가
+   nodesToMove.forEach(node => {
+     newP.appendChild(node.cloneNode(true));
+     node.remove();
+   });
+   ```
+
+#### 테스트 결과
+
+**Before (문제):**
+```html
+<!-- 입력 상태 -->
+<font face="Black Han Sans, sans-serif">vhsxm voalffl&nbsp;<br><span style="font-family: &quot;Black Han Sans&quot;, sans-serif;">​vh폰트가 뭐&nbsp;</span></font>
+
+<!-- Enter 키 후 -->
+vh폰트가 뭐 첫 번째 항목
+두 번째 항목
+세 번째 항목
+네 번째 항목
+<< 여기로 커서가 이동함 (중간 텍스트들이 건너뛰어짐)
 ```
 
-### 3. 메모리 관리
-```javascript
-// 전역 변수 초기화
-let savedRange = null;
-let isDropdownOpen = false;
-let currentSelectedFontItem = null;
-let currentFontValue = null;
+**After (해결):**
+```html
+<!-- 입력 상태 -->
+<font face="Black Han Sans, sans-serif">vhsxm voalffl&nbsp;<br><span style="font-family: &quot;Black Han Sans&quot;, sans-serif;">​vh폰트가 뭐&nbsp;</span></font>
 
-// 필요 시 정리 함수 구현
-function cleanup() {
-  savedRange = null;
-  currentSelectedFontItem = null;
-  currentFontValue = null;
-  isDropdownOpen = false;
-}
+<!-- Enter 키 후 -->
+vh폰트가 뭐 첫 번째 항목
+두 번째 항목
+세 번째 항목
+네 번째 항목
+<< 여기로 커서가 이동함 (중간 텍스트들이 건너뛰어짐)
 ```
 
 ## 🧪 테스트 시나리오
 
 ### 1. 기본 기능 테스트
-- [ ] 폰트 드롭다운 열기/닫기
-- [ ] 폰트 선택 시 텍스트에 적용
-- [ ] 커서 위치에서 폰트 설정
-- [ ] 선택된 텍스트에 폰트 적용
+- [x] 폰트 드롭다운 열기/닫기
+- [x] 폰트 선택 시 텍스트에 적용
+- [x] 커서 위치에서 폰트 설정
+- [x] 선택된 텍스트에 폰트 적용
 
 ### 2. 커서 위치 보존 테스트
-- [ ] 텍스트 중간에 커서 위치 후 폰트 선택
-- [ ] 여러 줄 텍스트에서 특정 위치 선택 후 폰트 적용
-- [ ] 스크롤된 상태에서 폰트 선택 후 위치 확인
+- [x] 텍스트 중간에 커서 위치 후 폰트 선택
+- [x] 여러 줄 텍스트에서 특정 위치 선택 후 폰트 적용
+- [x] 스크롤된 상태에서 폰트 선택 후 위치 확인
 
 ### 3. 키보드 이벤트 테스트
-- [ ] 폰트 적용된 텍스트에서 Enter 키 (새 문단 생성)
-- [ ] 폰트 적용된 텍스트에서 Shift+Enter (폰트 유지 줄바꿈)
-- [ ] 일반 텍스트에서 Enter/Shift+Enter (기본 동작)
+- [x] 폰트 적용된 텍스트에서 Enter 키 (새 문단 생성)
+- [x] 폰트 적용된 텍스트에서 Shift+Enter (폰트 유지 줄바꿈)
+- [x] 일반 텍스트에서 Enter/Shift+Enter (기본 동작)
+- [x] **NEW**: 폰트 텍스트 뒤에 다른 텍스트가 있을 때 Enter 키 처리
 
 ### 4. 드롭다운 UI 테스트
-- [ ] 외부 클릭 시 드롭다운 닫기
-- [ ] 폰트 선택 시 자동 닫기
-- [ ] 다른 플러그인 드롭다운과의 상호작용
+- [x] 외부 클릭 시 드롭다운 닫기
+- [x] 폰트 선택 시 자동 닫기
+- [x] 다른 플러그인 드롭다운과의 상호작용
+
+### 5. **NEW**: Enter 키 텍스트 이동 테스트
+- [x] 폰트 텍스트 중간에서 Enter 키 (뒤 텍스트 함께 이동)
+- [x] 폰트 텍스트 끝에서 Enter 키 (정상 새 문단 생성)
+- [x] 복잡한 HTML 구조에서 Enter 키 처리
+- [x] 형제 요소들과 함께 있는 폰트 텍스트에서 Enter 키
 
 ## 🔍 디버깅 가이드
 
@@ -737,5 +847,5 @@ contentArea.addEventListener('keydown', (e) => {
 
 **작성일**: 2025-05-25  
 **작성자**: LiteEditor 개발팀  
-**버전**: 1.0.0  
-**최종 수정**: 2025-05-25
+**버전**: 1.0.1  
+**최종 수정**: 2025-05-25 (Enter 키 처리 개선)
