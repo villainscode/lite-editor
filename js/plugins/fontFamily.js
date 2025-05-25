@@ -314,6 +314,9 @@
             e.preventDefault();
             e.stopPropagation();
             
+            // 🔧 스크롤 위치 저장 (가장 먼저 실행)
+            const scrollPosition = util.scroll.savePosition();
+            
             // 1. UI 업데이트
             if (currentSelectedFontItem) {
                 currentSelectedFontItem.style.backgroundColor = '';
@@ -335,20 +338,19 @@
             // 모달 관리 시스템에서 제거
             util.activeModalManager.unregister(dropdownMenu);
             
-            // 2. Scroll 위치 저장
-            const scrollPosition = util.scroll.savePosition();
+            // 2. Focus 설정 (selection 복원 전에) - 🔧 순서 변경
+            try {
+                contentArea.focus({ preventScroll: true });
+            } catch (e) {
+                contentArea.focus();
+            }
             
-            // 3. Selection 복원 (한 번만)
+            // 3. Selection 복원 (focus 후에) - 🔧 순서 변경
             if (savedRange) {
                 const restored = restoreSelection();
                 if (!restored) {
                     console.warn('Selection 복원 실패');
                 }
-            }
-            
-            // 4. Focus 설정 (selection 복원 후)
-            if (!contentArea.contains(document.activeElement)) {
-                contentArea.focus({ preventScroll: true });
             }
             
             // 폰트 값 저장
@@ -361,11 +363,15 @@
                 errorHandler.logError('FontFamilyPlugin', 'execCommand 실행 중 오류:', error);
             }
             
-            // 6. Scroll 위치 복원
-            util.scroll.restorePosition(scrollPosition);
-            
-            // 7. UI 업데이트
+            // 4. UI 업데이트
             fontText.textContent = font.name;
+            
+            // 🔧 강력한 스크롤 위치 복원 (execCommand 후 지연 적용) - 🔧 수정
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    util.scroll.restorePosition(scrollPosition);
+                }, 50);
+            });
           });
           
           dropdownMenu.appendChild(fontItem);
@@ -389,6 +395,9 @@
       fontContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // 🔧 스크롤 위치 저장 (media.js와 동일한 방식)
+        const scrollPosition = util.scroll.savePosition();
         
         // 현재 드롭다운의 상태 확인
         const isVisible = dropdownMenu.classList.contains('show');
@@ -461,6 +470,9 @@
             }
           }, [fontContainer]);
         }
+        
+        // 🔧 스크롤 위치 복원 (media.js와 동일한 방식)
+        util.scroll.restorePosition(scrollPosition);
       });
       
       // 🔴 중요: 이벤트 리스너를 한 번만 등록하도록 수정
