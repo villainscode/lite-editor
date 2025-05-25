@@ -129,7 +129,7 @@
             // 폰트명 업데이트
             fontText.textContent = matchedFont.name;
             
-            // 🔴 중요: 드롭다운에서 해당 폰트 항목 선택 표시
+            // 🔧 1단계 최적화: DOM 쿼리 캐싱만 적용
             const dropdownMenu = document.getElementById('font-family-dropdown');
             if (dropdownMenu) {
               // 기존 선택 해제
@@ -137,8 +137,12 @@
                 currentSelectedFontItem.style.backgroundColor = '';
               }
               
-              // 현재 폰트에 해당하는 드롭다운 항목 찾기
-              const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+              // 🔧 성능 개선: fontItems 캐싱
+              if (!dropdownMenu._cachedFontItems) {
+                dropdownMenu._cachedFontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+              }
+              const fontItems = dropdownMenu._cachedFontItems;
+              
               fontItems.forEach(item => {
                 const itemFontFamily = item.style.fontFamily;
                 if (itemFontFamily && itemFontFamily.includes(currentFontFamily.split(',')[0])) {
@@ -157,16 +161,15 @@
       } else {
         // 🔴 중요: 폰트 영역 외부 - 기본 상태로 완전 복원
         fontContainer.classList.remove('active');
-        fontContainer.style.backgroundColor = '';  // 인라인 스타일 제거
-        fontContainer.style.color = '';             // 인라인 스타일 제거
-        icon.style.color = '';                      // 아이콘 색상도 기본으로
+        fontContainer.style.backgroundColor = '';
+        fontContainer.style.color = '';
+        icon.style.color = '';
         fontText.textContent = 'Font Family';
         
-        // 드롭다운 선택 해제
+        // 🔧 1단계 최적화: 캐싱된 요소 사용
         const dropdownMenu = document.getElementById('font-family-dropdown');
-        if (dropdownMenu) {
-          const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
-          fontItems.forEach(item => {
+        if (dropdownMenu && dropdownMenu._cachedFontItems) {
+          dropdownMenu._cachedFontItems.forEach(item => {
             item.style.backgroundColor = '';
           });
         }
@@ -377,6 +380,12 @@
           
           // 모달 관리 시스템에서 제거
           util.activeModalManager.unregister(dropdownMenu);
+          
+          // 🔧 6단계 최적화: 외부 클릭 핸들러 정리
+          if (outsideClickCleanup) {
+            outsideClickCleanup();
+            outsideClickCleanup = null;
+          }
         } else {
           // 열기
           dropdownMenu.classList.add('show');
@@ -395,18 +404,31 @@
             dropdownMenu.style.display = 'none';
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
+            
+            // �� 6단계 최적화: 닫힐 때도 정리
+            if (outsideClickCleanup) {
+              outsideClickCleanup();
+              outsideClickCleanup = null;
+            }
           };
           
-          // 드롭다운 열기 시 이전 핸들러 정리
+          // 🔧 6단계 최적화: 이전 핸들러가 있으면 완전히 정리 후 새로 등록
           if (outsideClickCleanup) {
             outsideClickCleanup();
+            outsideClickCleanup = null;
           }
+          
           outsideClickCleanup = util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
+            
+            // 🔧 6단계 최적화: 자동 정리
+            if (outsideClickCleanup) {
+              outsideClickCleanup = null;
+            }
           }, [fontContainer]);
         }
       });
@@ -415,8 +437,13 @@
       if (!contentArea.hasAttribute('data-font-events-setup')) {
         setupFontKeyboardEvents(contentArea, fontContainer, fontText, icon);
         
+        // 🔧 2단계 최적화: 디바운스 적용
+        const debouncedUpdateState = util.events.debounce(() => {
+          updateFontButtonState(fontContainer, fontText, icon);
+        }, 150); // 150ms 디바운스
+        
         // 이벤트 핸들러를 변수에 저장하여 재사용
-        const keyupHandler = () => updateFontButtonState(fontContainer, fontText, icon);
+        const keyupHandler = debouncedUpdateState;
         const clickHandler = (e) => {
           if (isDropdownOpen && !fontContainer.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
@@ -425,7 +452,7 @@
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
           }
-          updateFontButtonState(fontContainer, fontText, icon);
+          debouncedUpdateState();
         };
         
         contentArea.addEventListener('keyup', keyupHandler);
