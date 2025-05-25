@@ -386,12 +386,15 @@
             
             <br><br>
             <p><strong>📋 완전한 설치 예시:</strong></p>
+
+            <h4>🔹 분리 모드 (Separated Mode) - 권장</h4>
+            <p><strong>특징:</strong> 툴바와 콘텐츠 영역을 별도로 배치 가능, 레이아웃 자유도 높음</p>
             <pre class="code-block">
 &lt;!DOCTYPE html&gt;
 &lt;html lang="ko"&gt;
 &lt;head&gt;
     &lt;meta charset="UTF-8"&gt;
-    &lt;title&gt;LiteEditor 예시&lt;/title&gt;
+    &lt;title&gt;LiteEditor 분리 모드&lt;/title&gt;
     
     &lt;!-- CSS 로더 --&gt;
     &lt;link rel="stylesheet" href="css/loader.css"&gt;
@@ -415,8 +418,8 @@
     // 모든 스크립트 로드 완료 후 에디터 초기화
     document.addEventListener('lite-editor-loaded', function() {
         const editor = LiteEditor.init('#lite-editor-content', {
-            separatedMode: true,
-            toolbarTarget: '#lite-editor-toolbar',
+            separatedMode: true,                    // 분리 모드 활성화
+            toolbarTarget: '#lite-editor-toolbar', // 툴바 대상 지정
             plugins: [
                 'fontFamily', 'heading', 'fontColor', 'emphasis',
                 'bold', 'italic', 'underline', 'strike',
@@ -426,117 +429,112 @@
                 'align', 'formatIndent',
                 'historyInit', 'undo', 'redo', 'reset'
             ],
-            dividers: [4, 8, 12, 16, 19, 22]
+            dividers: [4, 8, 12, 16, 19, 22],
+            dimensions: {
+                editor: {
+                    width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
+                    height: '650px'
+                },
+                toolbar: {
+                    height: '42px'
+                },
+                content: {
+                    height: '608px',
+                    minHeight: '608px'
+                }
+            }
         });
     });
     &lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;
             </pre>
-            
-            <br>
-            <p><strong>✅ 필수 구성 요소:</strong></p>
-            <ul>
-                <li><strong>CSS 로더</strong>: <code>css/loader.css</code> - 모든 스타일 포함</li>
-                <li><strong>JS 로더</strong>: <code>js/loader.js</code> - 모든 스크립트 로드</li>
-                <li><strong>HTML 구조</strong>: <code>.lite-editor</code> 컨테이너 필수</li>
-                <li><strong>초기화 코드</strong>: <code>lite-editor-loaded</code> 이벤트 대기</li>
-            </ul>
-            
-            <br>
-            <p><strong>🚀 간단한 설치 (최소 구성):</strong></p>
+
+            <h4>🔹 통합 모드 (Integrated Mode) - 기본값</h4>
+            <p><strong>특징:</strong> 자동으로 완전한 에디터 생성, dimensions 설정 모두 적용됨</p>
             <pre class="code-block">
-&lt;!-- 최소 HTML 구조 --&gt;
-&lt;div class="lite-editor" id="simple-editor"&gt;
-    &lt;div id="toolbar"&gt;&lt;/div&gt;
-    &lt;div id="content" contenteditable="true"&gt;&lt;/div&gt;
-&lt;/div&gt;
-
-&lt;!-- CSS/JS 로더 --&gt;
-&lt;link rel="stylesheet" href="css/loader.css"&gt;
-&lt;script src="js/loader.js"&gt;&lt;/script&gt;
-
-&lt;script&gt;
-document.addEventListener('lite-editor-loaded', function() {
-    LiteEditor.init('#content', {
-        separatedMode: true,
-        toolbarTarget: '#toolbar',
-        plugins: ['bold', 'italic', 'underline', 'reset']
-    });
-});
-&lt;/script&gt;
-            </pre>
-            
-            <br>
-            <p><strong>📋 통합 모드 (더 간단한 구조):</strong></p>
-            <pre class="code-block">
-&lt;!-- 통합 모드: 툴바와 콘텐츠가 자동 생성 --&gt;
-&lt;div id="editor"&gt;기존 내용&lt;/div&gt;
-
-&lt;script&gt;
-document.addEventListener('lite-editor-loaded', function() {
-    // 자동으로 .lite-editor 컨테이너 생성
-    const editor = LiteEditor.init('#editor', {
-        plugins: ['bold', 'italic', 'underline', 'align', 'reset']
-    });
-});
-&lt;/script&gt;
-            </pre>
-            
-            <br>
-            <p><strong>⚠️ 주의사항:</strong></p>
-            <ul>
-                <li><code>lite-editor-loaded</code> 이벤트를 반드시 기다려야 함</li>
-                <li><code>.lite-editor</code> 컨테이너는 히스토리 시스템에 필수</li>
-                <li>CSS와 JS 로더를 모두 포함해야 정상 작동</li>
-            </ul>
-
-            <p>분리 모드 초기화 예시</p>
-            <pre class="code-block">
-&lt;!-- 통합 스크립트 로더 --&gt;
-&lt;script src="js/loader.js"&gt;&lt;/script&gt;
-
-&lt;script&gt;
-// 디버그 모드를 명시적으로 활성화
-window.DEBUG_MODE = true;
-
-// 모든 스크립트 로드 완료 후 에디터 초기화
-document.addEventListener('lite-editor-loaded', function() {
-    // ✅ 분리 모드: 툴바와 콘텐츠 영역이 분리된 구조
-    const editor = LiteEditor.init('#lite-editor-content', {
-        separatedMode: true,
-        toolbarTarget: '#lite-editor-toolbar',
-        plugins: [
-            'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
-            'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
-            'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
-            'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
-            'unorderedList', 'orderedList', 'checkList',              // 목록 
-            'align', 'formatIndent',                                  // 정렬과 인덴트
-            'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
-        ],
-        dividers: [4, 8, 12, 16, 19, 22],
-        dimensions: {
-            editor: {
-                width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 960px 이상 권장)
-                maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
-                height: '650px'    // 에디터 전체 높이 (고정, 650px 이상 권장)
-            },
-            toolbar: {
-                height: '42px'     // 툴바 높이 (고정)
-            },
-            content: {
-                height: '608px',   // 콘텐츠 영역 높이 (650px - 42px)
-                minHeight: '608px' // 콘텐츠 영역 최소 높이
-            }
-        }
-    });
+&lt;!DOCTYPE html&gt;
+&lt;html lang="ko"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;LiteEditor 통합 모드&lt;/title&gt;
     
-    // 디버그 정보 표시
-    errorHandler.logDebug('Core', 'LiteEditor 초기화 완료 - 분리 모드');
-});
-&lt;/script&gt;
+    &lt;!-- CSS 로더 --&gt;
+    &lt;link rel="stylesheet" href="css/loader.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- 원본 요소 (LiteEditor가 완전히 대체함) --&gt;
+    &lt;div id="editor"&gt;
+        &lt;p&gt;기존 내용이 있다면 여기에 작성하세요...&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;!-- JavaScript 로더 --&gt;
+    &lt;script src="js/loader.js"&gt;&lt;/script&gt;
+    
+    &lt;script&gt;
+    // 모든 스크립트 로드 완료 후 에디터 초기화
+    document.addEventListener('lite-editor-loaded', function() {
+        const editor = LiteEditor.init('#editor', {
+            // separatedMode: false (기본값이므로 생략 가능)
+            plugins: [
+                'fontFamily', 'heading', 'fontColor', 'emphasis',
+                'bold', 'italic', 'underline', 'strike',
+                'link', 'imageUpload', 'table', 'media',
+                'line','blockquote', 'code', 'codeBlock',
+                'unorderedList', 'orderedList', 'checkList',
+                'align', 'formatIndent',
+                'historyInit', 'undo', 'redo', 'reset'
+            ],
+            dividers: [4, 8, 12, 16, 19, 22],
+            dimensions: {
+                editor: {
+                    width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
+                    height: '650px',
+                    maxWidth: '100%'
+                },
+                toolbar: {
+                    height: '42px'
+                },
+                content: {
+                    height: '608px',
+                    minHeight: '608px'
+                }
+            }
+        });
+    });
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
             </pre>
+
+            <h4>📊 모드 비교</h4>
+            <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+                <tr style="background-color: #f8f9fa;">
+                    <th style="border: 1px solid #ddd; padding: 8px;">구분</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">분리 모드</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">통합 모드</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>HTML 구조</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">사용자 정의</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">자동 생성</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>레이아웃 제어</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">높음</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">제한적</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>dimensions 적용</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">부분적 (버그)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">완전 적용</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>설치 복잡도</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">중간</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">간단</td>
+                </tr>
+            </table>
         </div>
     </div>
 
@@ -567,7 +565,7 @@ document.addEventListener('lite-editor-loaded', function() {
                 dividers: [4, 8, 12, 16, 19, 22],
                 dimensions: {
                     editor: {
-                        width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 960px 이상 권장)
+                        width: '1120px',    // 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
                         maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
                         height: '650px'    // 에디터 전체 높이 (고정, 650px 이상 권장)
                     },

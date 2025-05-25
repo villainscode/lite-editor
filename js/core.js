@@ -314,50 +314,62 @@ const LiteEditor = (function() {
     
     // 에디터 크기 설정 (사용자 정의 dimensions 적용)
     if (config.dimensions) {
-      // 통합 모드에서만 에디터 컨테이너 크기 적용
-      if (mode === 'integrated' && config.dimensions.editor) {
-        if (config.dimensions.editor.width) {
-          editorContainer.style.width = config.dimensions.editor.width;
+      const { editor, toolbar: toolbarDim, content } = config.dimensions;
+      
+      // 타겟 요소 결정
+      const editorTarget = mode === 'integrated' ? editorContainer : null;
+      const widthTargets = editorTarget ? [editorTarget] : [toolbar, contentArea];
+      const heightTarget = editorTarget || contentArea;
+      
+      // 에디터 전체 크기 적용
+      if (editor) {
+        if (editor.width) {
+          widthTargets.forEach(target => {
+            target.style.width = editor.width;
+          });
         }
-        if (config.dimensions.editor.height) {
-          editorContainer.style.height = config.dimensions.editor.height;
+        
+        if (editor.height) {
+          if (editorTarget) {
+            editorTarget.style.height = editor.height;
+          } else {
+            const toolbarHeight = parseInt(toolbarDim?.height || '42px');
+            const contentHeight = parseInt(editor.height) - toolbarHeight;
+            contentArea.style.height = contentHeight + 'px';
+            contentArea.style.maxHeight = contentHeight + 'px';
+            contentArea.style.overflowY = 'auto';
+          }
         }
-        if (config.dimensions.editor.maxWidth) {
-          editorContainer.style.maxWidth = config.dimensions.editor.maxWidth;
+        
+        if (editor.maxWidth) {
+          widthTargets.forEach(target => target.style.maxWidth = editor.maxWidth);
         }
       }
       
-      // 툴바 크기 적용
-      if (config.dimensions.toolbar) {
-        if (config.dimensions.toolbar.width) {
-          toolbar.style.width = config.dimensions.toolbar.width;
-        }
-        if (config.dimensions.toolbar.height) {
-          toolbar.style.height = config.dimensions.toolbar.height;
-          toolbar.style.minHeight = config.dimensions.toolbar.height;
-          toolbar.style.maxHeight = config.dimensions.toolbar.height;
-          toolbar.style.overflow = 'hidden';
-        }
+      // 툴바/콘텐츠 개별 크기 적용
+      if (toolbarDim?.width) toolbar.style.width = toolbarDim.width;
+      if (toolbarDim?.height) {
+        Object.assign(toolbar.style, {
+          height: toolbarDim.height,
+          minHeight: toolbarDim.height,
+          maxHeight: toolbarDim.height,
+          overflow: 'hidden'
+        });
       }
       
-      // 콘텐츠 영역 크기 적용
-      if (config.dimensions.content) {
-        if (config.dimensions.content.width) {
-          contentArea.style.width = config.dimensions.content.width;
-        }
-        if (config.dimensions.content.height) {
-          contentArea.style.height = config.dimensions.content.height;
-          contentArea.style.maxHeight = config.dimensions.content.height;
-          contentArea.style.overflowY = 'auto';
-        }
-        if (config.dimensions.content.minHeight) {
-          contentArea.style.minHeight = config.dimensions.content.minHeight;
-        }
+      if (content?.width) contentArea.style.width = content.width;
+      if (content?.height) {
+        Object.assign(contentArea.style, {
+          height: content.height,
+          maxHeight: content.height,
+          overflowY: 'auto'
+        });
       }
+      if (content?.minHeight) contentArea.style.minHeight = content.minHeight;
       
-      // 통합 모드에서 자동 높이 계산이 아닌 경우 컨테이너 내부 요소 조정
-      if (mode === 'integrated' && config.dimensions.editor && config.dimensions.editor.height && config.dimensions.editor.height !== 'auto') {
-        editorContainer.style.overflow = 'hidden';
+      // 통합 모드 오버플로우
+      if (editorTarget && editor?.height && editor.height !== 'auto') {
+        editorTarget.style.overflow = 'hidden';
       }
     }
     
