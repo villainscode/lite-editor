@@ -18,14 +18,6 @@
     // 🔧 selection 저장 함수
     function saveSelection() {
         savedRange = util.selection ? util.selection.saveSelection() : null;
-        }
-
-    // 🔧 에디터 요소 찾기
-    function getEditorElements() {
-        return {
-            container: document.querySelector('#lite-editor'),
-            content: document.querySelector('.lite-editor-content')
-        };
     }
 
     // 🔧 모달 템플릿
@@ -374,7 +366,7 @@
         selectedImage.style.border = '2px solid #4285f4';
         
         errorHandler.colorLog && errorHandler.colorLog(MODULE_NAME, '이미지 선택됨', { id: imageWrapper.id }, '#ff9800');
-    }
+        }
 
         function deselectImage() {
         const MODULE_NAME = 'IMAGE_UPLOAD';
