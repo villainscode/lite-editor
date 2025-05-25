@@ -13,72 +13,42 @@
     // PluginUtil 참조
     const util = window.PluginUtil || {};
     
-    // 🔧 디버깅 헬퍼 함수 추가
-    const debugLog = (step, message, data) => {
-        if (window.errorHandler && window.errorHandler.colorLog) {
-            window.errorHandler.colorLog('TablePlugin', `${step}: ${message}`, data, '#ff5722');
-        } else {
-            console.log(`[TablePlugin] ${step}: ${message}`, data || '');
-        }
-    };
-    
-    // 추가: util 메서드들 안전성 체크
-    if (!util.selection) {
-        debugLog('INIT', 'PluginUtil.selection이 필요합니다.', null);
-    }
-    if (!util.dom) {
-        debugLog('INIT', 'PluginUtil.dom이 필요합니다.', null);
-    }
-    if (!util.styles) {
-        debugLog('INIT', 'PluginUtil.styles이 필요합니다.', null);
-    }
-    if (!util.activeModalManager) {
-        debugLog('INIT', 'PluginUtil.activeModalManager이 필요합니다.', null);
-    }
-    
     // 상태 관리
     const state = {
         isGridLayerVisible: false,
         savedRange: null,
         gridLayer: null,
-        cleanupFn: null, // 이벤트 정리 함수
+        cleanupFn: null,
         tableButton: null
     };
     
     // 선택 영역 관리
     const selectionManager = {
+        // 현재 선택 영역을 저장
         saveSelection() {
-            debugLog('SELECTION', '선택 영역 저장 시도', null);
             if (util.selection && util.selection.saveSelection) {
                 state.savedRange = util.selection.saveSelection();
-                debugLog('SELECTION', '선택 영역 저장 완료', { savedRange: !!state.savedRange });
-            } else {
-                debugLog('SELECTION', '선택 영역 저장 실패 - util.selection 없음', null);
             }
         },
         
+        // 저장된 선택 영역을 복원
         restoreSelection() {
-            debugLog('SELECTION', '선택 영역 복원 시도', { hasSavedRange: !!state.savedRange });
             if (state.savedRange && util.selection && util.selection.restoreSelection) {
-                const result = util.selection.restoreSelection(state.savedRange);
-                debugLog('SELECTION', '선택 영역 복원 완료', { result });
-            } else {
-                debugLog('SELECTION', '선택 영역 복원 실패', { 
-                    hasSavedRange: !!state.savedRange,
-                    hasUtil: !!util.selection 
-                });
+                util.selection.restoreSelection(state.savedRange);
             }
         }
     };
     
     // 스타일 관리
     const styleManager = {
+        // 테이블 플러그인 CSS 파일 로드
         addTableStyles() {
             if (util.styles && util.styles.loadCssFile) {
                 util.styles.loadCssFile(STYLE_ID, CSS_PATH);
             }
         },
         
+        // 그리드 레이어 호버 효과 스타일 추가
         addTableHoverStyles() {
             const styleId = 'tableHoverStyles';
             if (document.getElementById(styleId)) return;
@@ -101,11 +71,11 @@
     
     // 컬럼 리사이즈 관리
     const resizerManager = {
-        // ✅ 이벤트 핸들러 재사용을 위한 바인딩 캐시
+        // 이벤트 핸들러 재사용을 위한 바인딩 캐시
         _boundHandlers: null,
         
+        // 리사이저 매니저 초기화
         init() {
-            // ✅ 한 번만 바인딩
             this._boundHandlers = {
                 handleResizeStart: this.handleResizeStart.bind(this),
                 handleResizeMove: this.handleResizeMove.bind(this),
@@ -113,7 +83,7 @@
             };
         },
         
-        // 리사이즈 상태 (최소 필요 상태만 유지)
+        // 리사이즈 상태 관리
         state: {
             active: null // 현재 활성화된 리사이저 상태 정보
         },
@@ -136,10 +106,10 @@
         
         // 테이블 레이아웃 설정
         setupTableLayout(table) {
-            // 테이블 레이아웃을 fixed로 설정
+            // 테이블 레이아웃을 fixed로 설정하여 컬럼 너비 고정
             table.style.tableLayout = 'fixed';
             
-            // 테이블 너비 설정 (픽셀 단위로 고정)
+            // 테이블 너비를 픽셀 단위로 고정
             if (!table.style.width || table.style.width.indexOf('%') !== -1) {
                 table.style.width = table.offsetWidth + 'px';
             }
@@ -167,14 +137,14 @@
             });
         },
         
-        // 셀에 리사이저 추가 최적화
+        // 셀에 리사이저 추가
         addResizerToCell(cell) {
             if (cell.querySelector('.resizer')) return;
             
             cell.style.position = 'relative';
             const resizer = this.createResizerElement();
             
-            // ✅ 캐시된 핸들러 사용
+            // 캐시된 핸들러 사용
             resizer.addEventListener('mousedown', this._boundHandlers.handleResizeStart);
             cell.appendChild(resizer);
         },
@@ -185,7 +155,7 @@
             resizer.className = 'resizer';
             resizer.contentEditable = 'false';
             
-            // 필수 인라인 스타일만 적용 (나머지는 CSS로 처리)
+            // 리사이저 스타일 설정
             Object.assign(resizer.style, {
                 position: 'absolute',
                 top: '0',
@@ -241,7 +211,7 @@
             });
         },
         
-        // 리사이징 중 처리 (정적 메서드로 정의)
+        // 리사이징 중 처리
         handleResizeMove(e) {
             const state = this.state;
             if (!state.active) return;
@@ -255,17 +225,17 @@
             const deltaX = e.clientX - state.active.startX;
             const newWidth = state.active.startWidth + deltaX;
             
-            // 최소 너비 제한
+            // 최소 너비 제한 (30px)
             if (newWidth > 30) {
-                // 현재 셀 너비만 조정
+                // 현재 셀 너비 조정
                 state.active.cell.style.width = newWidth + 'px';
                 
-                // 테이블 전체 너비도 조정 (다른 셀은 그대로 유지)
+                // 테이블 전체 너비도 조정
                 state.active.table.style.width = (state.active.startTableWidth + deltaX) + 'px';
             }
         },
         
-        // 리사이징 종료 처리 (정적 메서드로 정의)
+        // 리사이징 종료 처리
         handleResizeEnd(e) {
             const state = this.state;
             if (!state.active) return;
@@ -287,6 +257,7 @@
                 // 상태 초기화
                 state.active = null;
             } finally {
+                // 안전장치: 이벤트 리스너 제거 보장
                 document.removeEventListener('mousemove', this._boundHandlers.handleResizeMove);
                 document.removeEventListener('mouseup', this._boundHandlers.handleResizeEnd);
                 state.active = null;
@@ -295,7 +266,6 @@
         
         // 에디터 상태 업데이트 알림
         notifyEditorUpdate() {
-            // 🔧 에디터 ID 변경: #lite-editor → #lite-editor-content
             const editor = document.querySelector('#lite-editor-content');
             if (editor && typeof util !== 'undefined' && util.editor && util.editor.dispatchEditorEvent) {
                 util.editor.dispatchEditorEvent(editor);
@@ -313,27 +283,21 @@
         }
     };
     
-    // ✅ 초기화
+    // 리사이저 매니저 초기화
     resizerManager.init();
     
     // 그리드 레이어 관리
     const gridLayerManager = {
+        // 그리드 레이어 토글
         toggle(tableButton) {
-            debugLog('BUTTON_CLICK', '테이블 버튼 클릭됨', { 
-                isVisible: state.isGridLayerVisible,
-                hasButton: !!tableButton 
-            });
-            
             // 현재 스크롤 위치 저장
             const currentScrollY = window.scrollY;
             
             if (state.isGridLayerVisible) {
-                debugLog('LAYER', '그리드 레이어 숨기기', null);
                 this.hideGridLayer();
                 return;
             }
             
-            debugLog('LAYER', '그리드 레이어 표시 시작', null);
             this.showGridLayer(tableButton);
             
             // 스크롤 위치 복원
@@ -344,25 +308,19 @@
             });
         },
         
+        // 그리드 레이어 표시
         showGridLayer(buttonElement) {
-            debugLog('LAYER_SHOW', '그리드 레이어 생성 시작', null);
-            
+            // 현재 선택 영역 저장
             selectionManager.saveSelection();
             
             // 다른 열린 모달 모두 닫기
             if (util.activeModalManager && util.activeModalManager.closeAll) {
                 util.activeModalManager.closeAll();
-                debugLog('LAYER_SHOW', '기존 모달 닫기 완료', null);
             }
             
             // 그리드 레이어 생성
             state.gridLayer = this.createGridLayer();
             state.isGridLayerVisible = true;
-            
-            debugLog('LAYER_SHOW', '그리드 레이어 생성 완료', { 
-                hasGridLayer: !!state.gridLayer,
-                isVisible: state.isGridLayerVisible 
-            });
             
             // 레이어 위치 설정 및 표시
             this.positionAndShowLayer(buttonElement);
@@ -376,10 +334,9 @@
                     this.hideGridLayer();
                 }, [buttonElement]);
             }
-            
-            debugLog('LAYER_SHOW', '그리드 레이어 표시 완료', null);
         },
         
+        // 레이어 위치 설정 및 표시
         positionAndShowLayer(buttonElement) {
             // 버튼 위치 기반으로 레이어 위치 설정
             const buttonRect = buttonElement.getBoundingClientRect();
@@ -401,6 +358,7 @@
             state.gridLayer.style.display = 'block';
         },
         
+        // 그리드 레이어 숨기기
         hideGridLayer() {
             if (!state.gridLayer) return;
             
@@ -418,21 +376,19 @@
             }
             state.isGridLayerVisible = false;
             
-            // 모달 이벤트 정리 (필요 없으므로 제거 가능)
+            // 모달 이벤트 정리
             if (state.cleanupFn) {
                 state.cleanupFn();
                 state.cleanupFn = null;
             }
         },
         
+        // 그리드 레이어 DOM 생성
         createGridLayer() {
-            debugLog('GRID_CREATE', '그리드 레이어 DOM 생성 시작', null);
-            
             // 기존 레이어 삭제
             const existingLayer = document.querySelector('.grid-layer');
             if (existingLayer) {
                 existingLayer.remove();
-                debugLog('GRID_CREATE', '기존 레이어 제거됨', null);
             }
             
             // DOM 생성 함수 안전성 체크
@@ -450,10 +406,6 @@
                     });
                     return el;
                 };
-            
-            debugLog('GRID_CREATE', 'createElement 함수 준비됨', { 
-                hasUtilDom: !!(util.dom && util.dom.createElement) 
-            });
 
             // 새 레이어 생성
             const gridLayer = createElement('div', {
@@ -493,7 +445,7 @@
                 'Solid'
             );
             
-            // 버튼 컨테이너 생성 (우측 정렬용)
+            // 버튼 컨테이너 생성
             const buttonContainer = createElement('div', {
                 className: 'button-container'
             });
@@ -513,7 +465,7 @@
                 cursor: 'pointer'
             });
             
-            // 아이콘 추가
+            // 삽입 버튼 아이콘 추가
             const buttonIcon = createElement('div', {
                 innerHTML: `
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#5f6368">
@@ -541,13 +493,11 @@
             gridLayer.appendChild(title);
         gridLayer.appendChild(gridContainer);
         
-            // 그리드 레이어에 클릭 이벤트 추가
+            // 그리드 레이어 클릭 이벤트 - 드롭다운 외부 클릭 시 닫기
             gridLayer.addEventListener('click', (e) => {
-                // 클릭 이벤트가 드롭다운 버튼이나 드롭다운 메뉴 내부가 아닌 경우에만 처리
                 const isDropdownButton = e.target.closest('.dropdown-button');
                 const isDropdownMenu = e.target.closest('.dropdown-menu');
                 
-                // 드롭다운 버튼이나 메뉴가 아닌 영역 클릭 시 모든 드롭다운 닫기
                 if (!isDropdownButton && !isDropdownMenu) {
                     // 레이어 내 모든 드롭다운 메뉴 닫기
                     const dropdowns = gridLayer.querySelectorAll('.dropdown-menu');
@@ -561,10 +511,7 @@
         
         // 삽입 버튼 클릭 이벤트
         insertButton.addEventListener('click', () => {
-            debugLog('INSERT_CLICK', '삽입 버튼 클릭됨', null);
-            
             const dimensions = getSelectedDimensions();
-            debugLog('INSERT_CLICK', '선택된 크기 확인', dimensions);
             
             if (dimensions) {
                 const selectedStyle = styleDropdown.getValue().toLowerCase();
@@ -576,16 +523,13 @@
                     line: selectedLine
                 };
                 
-                debugLog('INSERT_CLICK', '테이블 옵션 설정됨', tableOptions);
-                
+                // 테이블 삽입 실행
                 tableManager.insertTable(dimensions.rows, dimensions.cols, tableOptions);
                 this.hideGridLayer();
-            } else {
-                debugLog('INSERT_CLICK', '선택된 크기가 없음 - 테이블 생성 중단', null);
             }
         });
         
-            // 스타일 추가
+            // 호버 스타일 추가
             styleManager.addTableHoverStyles();
         
             // 이벤트 전파 방지
@@ -597,18 +541,19 @@
         return gridLayer;
         },
         
+        // 그리드 테이블 생성 (크기 선택용)
         createGridTable() {
             const gridTable = util.dom.createElement('table', {
                 className: 'grid'
             });
             
-            // ✅ DocumentFragment 사용으로 DOM 조작 최적화
+            // DocumentFragment 사용으로 DOM 조작 최적화
             const fragment = document.createDocumentFragment();
             
             let isMouseDown = false;
             let startRow = null, startCol = null, endRow = null, endCol = null;
             
-            // 그리드 셀 생성 - Fragment 활용
+            // 그리드 셀 생성
             for (let i = 0; i < GRID_SIZE; i++) {
                 const tr = util.dom.createElement('tr');
                 const rowFragment = document.createDocumentFragment();
@@ -617,15 +562,15 @@
                     const td = util.dom.createElement('td');
                     td.dataset.row = i;
                     td.dataset.col = j;
-                    rowFragment.appendChild(td);  // ✅ Fragment에 추가
+                    rowFragment.appendChild(td);
                 }
                 
-                tr.appendChild(rowFragment);  // ✅ 한 번에 모든 셀 추가
+                tr.appendChild(rowFragment);
                 fragment.appendChild(tr);
             }
             
             const tbody = util.dom.createElement('tbody');
-            tbody.appendChild(fragment);  // ✅ 한 번에 모든 행 추가
+            tbody.appendChild(fragment);
             gridTable.appendChild(tbody);
             
             // 선택 영역 지우기
@@ -667,7 +612,7 @@
                 };
             }
             
-            // 마우스 이벤트 핸들러
+            // 마우스 이벤트 핸들러 - 드래그로 테이블 크기 선택
             tbody.addEventListener('mousedown', e => {
                 if (e.target.tagName === 'TD') {
                     isMouseDown = true;
@@ -697,6 +642,7 @@
             return { gridTable, getSelectedDimensions };
         },
         
+        // 스타일드 드롭다운 생성 (Style, Line 선택용)
         createStyledDropdown(label, options, defaultValue, width = '140px') {
             const group = util.dom.createElement('div', {
                 className: 'form-group'
@@ -706,14 +652,13 @@
                 textContent: label
             });
             
-            // 드롭다운 컨테이너 - 상대 위치 설정
+            // 드롭다운 컨테이너
             const dropdownContainer = util.dom.createElement('div', {
                 className: 'relative inline-block'
             }, {
                 width: width
             });
             
-            // 버튼 컨테이너
             const buttonContainer = util.dom.createElement('div');
             
             // 선택 버튼
@@ -737,7 +682,7 @@
                 border: '1px solid #d1d5db'
             });
             
-            // 선택된 텍스트
+            // 선택된 텍스트 표시
             const selectedText = util.dom.createElement('span', {
                 className: 'selected-text',
                 textContent: defaultValue
@@ -761,7 +706,6 @@
             });
             
             arrowIcon.appendChild(path);
-            
             button.appendChild(selectedText);
             button.appendChild(arrowIcon);
             buttonContainer.appendChild(button);
@@ -812,7 +756,7 @@
                     flexShrink: '0'
                 });
                 
-                // 메뉴 아이콘 생성
+                // 메뉴 아이콘 생성 (Line 드롭다운과 Style 드롭다운 구분)
                 const isLineDropdown = label === 'Line';
                 
                 if (isLineDropdown) {
@@ -847,7 +791,7 @@
                     
                     iconCell.appendChild(lineIcon);
                 } else {
-                    // Style 드롭다운용 아이콘
+                    // Style 드롭다운용 테이블 아이콘
                     const tableIcon = util.dom.createElement('div', {}, {
                         width: '27px',
                         height: '27px',
@@ -982,46 +926,24 @@
     
     // 테이블 생성 및 삽입
     const tableManager = {
+        // 테이블을 에디터에 삽입
         insertTable(rows, cols, tableOptions = {}) {
-            debugLog('TABLE_INSERT', '테이블 삽입 시작', { 
-                rows, 
-                cols, 
-                tableOptions 
-            });
-            
-            // 🔧 에디터 ID 변경: #lite-editor → #lite-editor-content
+            // 에디터 요소 찾기
             const editor = document.querySelector('#lite-editor-content');
             if (!editor) {
-                debugLog('TABLE_INSERT', '에디터 요소를 찾을 수 없음', {
-                    liteEditor: !!document.querySelector('#lite-editor'),
-                    liteEditorContent: !!document.querySelector('#lite-editor-content'),
-                    contentEditableElements: document.querySelectorAll('[contenteditable="true"]').length
-                });
                 return;
             }
             
-            debugLog('TABLE_INSERT', '에디터 요소 확인됨', { 
-                editorId: editor.id,
-                editorClass: editor.className,
-                hasContent: !!editor.innerHTML,
-                isContentEditable: editor.contentEditable
-            });
-            
+            // 에디터 포커스 및 선택 영역 복원
             editor.focus();
             selectionManager.restoreSelection();
             
             // 현재 선택 영역 확인
             const selection = window.getSelection();
-            debugLog('TABLE_INSERT', '현재 선택 영역 상태', {
-                rangeCount: selection.rangeCount,
-                isCollapsed: selection.rangeCount > 0 ? selection.getRangeAt(0).collapsed : null
-            });
             
             // 테이블 스타일 설정
             const style = tableOptions.style || 'basic';
             const line = tableOptions.line || 'solid';
-            
-            debugLog('TABLE_INSERT', '테이블 스타일 설정', { style, line });
             
             // 스타일에 따른 클래스 설정
             let tableClass = '';
@@ -1040,20 +962,13 @@
                 tableClass += ' lite-table-no-border';
             }
             
-            debugLog('TABLE_INSERT', '테이블 클래스 설정됨', { tableClass });
-            
-            // 테이블 생성
+            // 테이블 요소 생성
             const table = util.dom.createElement('table', {
                 className: tableClass
             }, {
                 width: '100%',
                 borderCollapse: 'collapse',
-                tableLayout: 'fixed'
-            });
-            
-            debugLog('TABLE_INSERT', '테이블 요소 생성됨', { 
-                tagName: table.tagName,
-                className: table.className 
+                tableLayout: 'fixed' // 컬럼 너비 고정을 위한 설정
             });
             
             // 선 스타일 적용
@@ -1065,15 +980,12 @@
             }
             
             table.style.border = borderStyle;
-            debugLog('TABLE_INSERT', '테이블 보더 스타일 적용됨', { borderStyle });
             
             // 테이블 바디 생성
             const tbody = util.dom.createElement('tbody');
             
-            // 통합된 테이블 구조 생성
-            debugLog('TABLE_INSERT', '테이블 구조 생성 시작', null);
+            // 테이블 구조 생성
             this.createTableStructure(tbody, rows, cols, borderStyle, style);
-            debugLog('TABLE_INSERT', '테이블 구조 생성 완료', null);
             
             table.appendChild(tbody);
             
@@ -1083,61 +995,24 @@
                 range.deleteContents();
                 range.insertNode(table);
                 
-                debugLog('TABLE_INSERT', '테이블 DOM에 삽입 완료', null);
-                
                 // 테이블에 리사이저 초기화
                 resizerManager.initTableResizers(table);
-                debugLog('TABLE_INSERT', '테이블 리사이저 초기화 완료', null);
-                
-                // 테이블 뒤에 줄바꿈 추가
-                const br = util.dom.createElement('br');
-                table.parentNode.insertBefore(br, table.nextSibling);
-                
-                // 커서 위치 이동
-                const newRange = document.createRange();
-                newRange.setStartAfter(br);
-                newRange.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
-                
-                debugLog('TABLE_INSERT', '커서 위치 설정 완료', null);
                 
                 // 에디터 상태 업데이트
                 util.editor.dispatchEditorEvent(editor);
-                debugLog('TABLE_INSERT', '에디터 이벤트 발생 완료', null);
-                
-                debugLog('TABLE_INSERT', '테이블 삽입 전체 과정 완료', {
-                    tableInDom: !!document.querySelector('table'),
-                    tableParent: table.parentNode ? table.parentNode.tagName : null
-                });
                 
             } catch (error) {
-                debugLog('TABLE_INSERT', '테이블 삽입 중 오류 발생', { 
-                    error: error.message,
-                    stack: error.stack 
-                });
+                console.error('테이블 삽입 중 오류:', error);
             }
         },
         
-        // 통합된 테이블 구조 생성 함수
+        // 테이블 구조 생성 (행, 열, 셀)
         createTableStructure(tbody, rows, cols, borderStyle, tableType) {
-            debugLog('TABLE_STRUCTURE', '테이블 구조 생성 시작', { 
-                rows, 
-                cols, 
-                borderStyle, 
-                tableType 
-            });
-            
-            // 🔧 에디터 ID 변경: #lite-editor → #lite-editor-content
+            // 에디터 너비 기반으로 셀 너비 계산
             const editorWidth = (document.querySelector('#lite-editor-content')?.clientWidth || 600) * 0.95;
             const cellWidth = Math.floor(editorWidth / cols);
             
-            debugLog('TABLE_STRUCTURE', '셀 너비 계산됨', { 
-                editorWidth, 
-                cellWidth 
-            });
-            
-            // 문서 프래그먼트를 사용하여 DOM 삽입 최소화
+            // DocumentFragment를 사용하여 DOM 삽입 최소화
             const fragment = document.createDocumentFragment();
             
             for (let i = 0; i < rows; i++) {
@@ -1149,17 +1024,17 @@
                     
                     switch (tableType) {
                         case 'header':
-                            isHeader = (i === 0);
+                            isHeader = (i === 0); // 첫 번째 행
                             break;
                         case 'column':
-                            isHeader = (j === 0);
+                            isHeader = (j === 0); // 첫 번째 열
                             break;
                         case 'complex':
-                            isHeader = (i === 0 || j === 0);
+                            isHeader = (i === 0 || j === 0); // 첫 번째 행과 열
                             break;
                     }
                     
-                    // 셀에 명시적 너비 지정 (픽셀 단위)
+                    // 셀에 명시적 너비 지정
                     const cellStyles = {
                         width: cellWidth + 'px'
                     };
@@ -1171,17 +1046,13 @@
                 fragment.appendChild(row);
             }
             
-            // 최적화된 DOM 업데이트 (한 번에 모든 행 추가)
+            // 한 번에 모든 행 추가
             tbody.appendChild(fragment);
-            
-            debugLog('TABLE_STRUCTURE', '테이블 구조 생성 완료', { 
-                rowsCreated: rows,
-                colsCreated: cols 
-            });
         },
         
+        // 개별 셀 생성
         createCell(isHeader, borderStyle, styles = {}) {
-            // 공통 셀 생성 로직
+            // 헤더 셀(th) 또는 일반 셀(td) 결정
             const tag = isHeader ? 'th' : 'td';
             const defaultStyles = {
                 padding: '5px 5px',
@@ -1190,14 +1061,14 @@
             };
             
             if (isHeader) {
-                // 배경색 제거, 폰트 굵기만 유지
+                // 헤더 셀은 굵은 글씨
                 defaultStyles.fontWeight = 'bold';
             }
             
             // 추가 스타일 적용
             const cellStyles = {...defaultStyles, ...styles};
             
-            // 셀 생성
+            // 셀 생성 (편집 가능하도록 설정)
             return util.dom.createElement(tag, {
                 contentEditable: true
             }, cellStyles);
@@ -1209,18 +1080,16 @@
         title: 'Table',
         icon: 'grid_on', 
         customRender: function(toolbar, contentArea) {
-            debugLog('PLUGIN_INIT', '테이블 플러그인 초기화 시작', null);
-            
-            // 스타일 추가
+            // 테이블 플러그인 스타일 추가
             styleManager.addTableStyles();
             
-            // 버튼 생성
+            // 테이블 버튼 생성
             const tableButton = util.dom.createElement('button', {
                 className: 'lite-editor-button lite-editor-table-button',
                 title: 'Insert Table'
             });
 
-            // 아이콘 추가
+            // 테이블 아이콘 추가
             const tableIcon = util.dom.createElement('i', {
                 className: 'material-icons',
                 textContent: 'grid_on'
@@ -1231,59 +1100,46 @@
             // 버튼 참조 저장
             state.tableButton = tableButton;
             
-            debugLog('PLUGIN_INIT', '테이블 버튼 생성 완료', { 
-                hasButton: !!tableButton,
-                hasIcon: !!tableIcon 
-            });
-            
-            // 클릭 이벤트 추가
+            // 클릭 이벤트 추가 - 그리드 레이어 토글
             tableButton.addEventListener('click', e => {
-                debugLog('BUTTON_EVENT', '테이블 버튼 클릭 이벤트 발생', {
-                    eventType: e.type,
-                    target: e.target.tagName
-                });
-                
                 e.preventDefault();
                 e.stopPropagation();
                 gridLayerManager.toggle(tableButton);
             });
-            
-            debugLog('PLUGIN_INIT', '테이블 플러그인 초기화 완료', null);
             
             // 에디터 로드 후 기존 테이블 리사이저 초기화
             setTimeout(() => {
                 resizerManager.initAllTables(contentArea);
             }, 0);
             
-            // 에디터 콘텐츠 변경 감지를 위한 최적화된 MutationObserver
+            // 에디터 콘텐츠 변경 감지를 위한 MutationObserver
             const tableObserver = new MutationObserver(mutations => {
-                // ✅ 조기 종료 패턴으로 성능 최적화
+                // 테이블 관련 변경만 체크하여 성능 최적화
                 for (const mutation of mutations) {
                     if (mutation.type === 'childList') {
-                        // ✅ 테이블 관련 변경만 체크
                         for (const node of mutation.addedNodes) {
                             if (node.nodeName === 'TABLE' || 
                                 (node.nodeType === 1 && node.classList && node.classList.contains('table-related'))) {
                                 
-                                // ✅ 디바운스로 중복 호출 방지
+                                // 디바운스로 중복 호출 방지
                                 clearTimeout(this.initTimeout);
                                 this.initTimeout = setTimeout(() => {
                                     resizerManager.initAllTables(contentArea);
                                 }, 100);
-                                return; // ✅ 조기 종료
+                                return;
                             }
                         }
                     }
                 }
             });
             
-            // ✅ 더 제한적인 감시 설정
+            // 직접 자식만 감시하여 성능 최적화
             tableObserver.observe(contentArea, {
                 childList: true,
-                subtree: false  // 직접 자식만 감시
+                subtree: false
             });
             
-            // ✅ cleanup 함수 정의 및 즉시 등록
+            // cleanup 함수 정의
             const cleanup = () => {
                 if (tableObserver) {
                     tableObserver.disconnect();
@@ -1291,13 +1147,13 @@
                 }
             };
             
-            // ✅ 전역에 등록하여 다른 곳에서 호출 가능
+            // 전역에 등록하여 다른 곳에서 호출 가능
             if (window.tablePluginCleanup) {
                 window.tablePluginCleanup(); // 이전 인스턴스 정리
             }
             window.tablePluginCleanup = cleanup;
             
-            // ✅ 페이지 언로드 시 정리
+            // 페이지 언로드 시 정리
             const handleBeforeUnload = () => {
                 cleanup();
                 window.removeEventListener('beforeunload', handleBeforeUnload);
