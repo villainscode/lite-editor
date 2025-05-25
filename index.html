@@ -380,58 +380,66 @@
         <div class="demo-section">
             <h2>사용 방법</h2>
             <p>다음과 같은 하나의 스크립트만으로 LiteEditor를 추가할 수 있습니다.</p>
+            <p>에디터 Toolbar의 영역과 편집이 가능한 content 영역 역시 분리할 수 있습니다</p><br>
             
+            <br><br>
+            &lt;!-- 툴바 영역 (원하는 위치에 배치 가능) --&gt;<br>
+            &lt;div id="lite-editor-toolbar"&gt;&lt;/div&gt;<br><br>
+
+            &lt;!-- 에디터 콘텐츠 영역 --&gt;<br>
+            &lt;div id="lite-editor-content" contenteditable="true"&gt;<br>
+            &lt;/div&gt;<br>
+            <br>
+            <p>분리 모드 초기화 예시</p>
             <pre class="code-block">
-  &lt;!-- CSS 통합 로더 --&gt;
-  &lt;link rel="stylesheet" href="css/loader.css"&gt;
-  
-  &lt;!-- 에디터가 표시될 영역 정의 --&gt;
-  &lt;div id="lite-editor" contenteditable="true"&gt;
-      &lt;!-- 초기 콘텐츠 (선택 사항) --&gt;
-      &lt;h2&gt;초기 콘텐츠&lt;/h2&gt;
-      &lt;p&gt;여기에 기본 내용을 넣을 수 있습니다.&lt;/p&gt;
-  &lt;/div&gt;
-  
+
+            </pre>
+            <pre class="code-block">
+
   &lt;!-- 통합 스크립트 로더 --&gt;
   &lt;script src="js/loader.js"&gt;&lt;/script&gt;
   
   &lt;script&gt;
-      // 디버그 모드를 활성화 (선택 사항)
-      window.DEBUG_MODE = true;
-      
-      // 모든 스크립트 로드 완료 후 에디터 초기화
-      document.addEventListener('lite-editor-loaded', function() {
-          // 에디터 초기화
-          const editor = LiteEditor.init('#lite-editor', {
-              // 사용할 플러그인 목록 지정
-              plugins: [
-                  'fontFamily', 'heading', 'fontColor', 'emphasis',        // 폰트서식 
-                  'bold', 'italic', 'underline', 'strike',                 // 폰트포맷 
-                  'link', 'imageUpload', 'table', 'media',                 // 오브젝트 삽입 
-                  'line','blockquote', 'code', 'codeBlock',                // 인용 및 코드 
-                  'unorderedList', 'orderedList', 'checkList',             // 목록 
-                  'align', 'formatIndent',                                 // 정렬과 인덴트
-                  'historyInit', 'undo', 'redo', 'reset',                  // 실행 취소/되돌리기  
-              ],
-              // 구분선 위치 정의
-              dividers: [4, 8, 12, 16, 19, 22],
-              // 에디터 크기 설정 (너비와 높이)
-              dimensions: {
-                  editor: {
-                      width: '1020px',    // 에디터 전체 너비 (최소너비 980px 이상 권장)
-                      maxWidth: '100%',   // 최대 너비
-                      height: '650px'     // 에디터 전체 높이
-                  },
-                  toolbar: {
-                      height: '42px'      // 툴바 높이
-                  },
-                  content: {
-                      height: '608px',    // 콘텐츠 영역 높이
-                      minHeight: '608px'  // 콘텐츠 영역 최소 높이
-                  }
+  // 디버그 모드를 명시적으로 활성화
+  window.DEBUG_MODE = true;
+
+  // 직접 콘솔에 로그 출력
+  console.log('[DEBUG] 디버그 모드 활성화됨');
+  // 모든 스크립트 로드 완료 후 에디터 초기화
+  document.addEventListener('lite-editor-loaded', function() {
+      // ✅ 1단계: 기존 HTML 구조 유지 (통합 모드)
+      const editor = LiteEditor.init('#lite-editor-content', {
+          separatedMode: true,
+          toolbarTarget: '#lite-editor-toolbar',
+          plugins: [
+              'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
+              'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
+              'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
+              'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
+              'unorderedList', 'orderedList', 'checkList',              // 목록 
+              'align', 'formatIndent',                                  // 정렬과 인덴트
+              'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+          ],
+          dividers: [4, 8, 12, 16, 19, 22],
+          dimensions: {
+              editor: {
+                  width: '1020px',    // 에디터 전체 너비 (최대 아이콘시 960px 이상 권장)
+                  maxWidth: '100%',  // 최대 너비 (뷰포트보다 크지 않도록)
+                  height: '650px'    // 에디터 전체 높이 (고정, 650px 이상 권장)
+              },
+              toolbar: {
+                  height: '42px'     // 툴바 높이 (고정)
+              },
+              content: {
+                  height: '608px',   // 콘텐츠 영역 높이 (650px - 42px)
+                  minHeight: '608px' // 콘텐츠 영역 최소 높이
               }
-          });
+          }
       });
+      
+      // 디버그 정보 표시
+      // console.log('LiteEditor 초기화 완료');
+      errorHandler.logDebug('Core', 'LiteEditor 초기화 완료 - 통합 모드');
   &lt;/script&gt;
               </pre>
         </div>

@@ -385,12 +385,12 @@ const LiteEditor = (function() {
       destroy: () => {
         // 이벤트 리스너 제거, DOM 요소 정리 등
         if (mode === 'integrated') {
-          if (isTextarea) {
-            originalElement.style.display = '';
-            editorContainer.remove();
-          } else {
-            originalElement.innerHTML = contentArea.innerHTML;
-            editorContainer.remove();
+        if (isTextarea) {
+          originalElement.style.display = '';
+          editorContainer.remove();
+        } else {
+          originalElement.innerHTML = contentArea.innerHTML;
+          editorContainer.remove();
           }
         } else {
           // 분리 모드에서는 개별 정리

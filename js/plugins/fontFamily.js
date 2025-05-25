@@ -183,7 +183,7 @@
           
           fontItem.addEventListener('mouseout', () => {
             if (fontItem !== currentSelectedFontItem) {
-              fontItem.style.backgroundColor = '';
+            fontItem.style.backgroundColor = '';
             }
           });
           
@@ -232,7 +232,7 @@
                 if (restoredSelection.rangeCount > 0) {
                     hasSelection = !restoredSelection.isCollapsed;
                     errorHandler.logInfo('FontFamilyPlugin', `복원된 selection: "${restoredSelection.toString()}", collapsed: ${restoredSelection.isCollapsed}`);
-                }
+            }
             } else if (currentSelection.rangeCount > 0) {
                 hasSelection = !currentSelection.isCollapsed;
                 errorHandler.logInfo('FontFamilyPlugin', `현재 selection: "${currentSelection.toString()}", collapsed: ${currentSelection.isCollapsed}`);
@@ -258,7 +258,7 @@
                 }
                 
                 // execCommand 실행
-                document.execCommand('fontName', false, font.value);
+            document.execCommand('fontName', false, font.value);
                 
                 // scroll position 복원
                 util.scroll.restorePosition(scrollPosition, 50);
