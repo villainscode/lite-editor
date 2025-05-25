@@ -70,21 +70,6 @@
   }
 
   /**
-   * URL 유효성 검사
-   * @param {string} url - 검사할 URL
-   * @returns {boolean} - 유효성 여부
-   */
-  function isValidYouTubeUrl(url) {
-    // URL에 youtube 또는 youtu.be가 포함되어 있는지만 확인
-    // 더 적극적으로 수용하는 방식 사용
-    return (
-      url.includes('youtube.com') || 
-      url.includes('youtu.be') || 
-      parseYouTubeID(url) !== null
-    );
-  }
-  
-  /**
    * 선택 영역 저장
    */
   function saveSelection() {
@@ -168,7 +153,6 @@
       wrapper.style.height = '360px';
       wrapper.style.position = 'relative';
       wrapper.style.margin = '10px 0';
-      wrapper.style.resize = 'both';
       wrapper.style.overflow = 'hidden';
       wrapper.style.border = '2px solid #e0e0e0';
       wrapper.style.boxSizing = 'border-box';
@@ -186,10 +170,12 @@
       resizeHandle.style.backgroundImage = 'linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%)';
       resizeHandle.style.cursor = 'nwse-resize';
       resizeHandle.style.zIndex = '10';
-      
+
+
       wrapper.contentEditable = false;
       wrapper.appendChild(iframe);
       wrapper.appendChild(resizeHandle);
+      setupVideoResizeHandle(wrapper, resizeHandle);
       
       // 에디터에 삽입
       const selection = window.getSelection();
@@ -230,6 +216,13 @@
       
       // 선택 영역 초기화
       clearSelection();
+      
+      // 리사이즈 시작 시
+      document.body.style.pointerEvents = 'none';
+      wrapper.style.pointerEvents = 'auto';
+      
+      // 리사이즈 종료 시
+      document.body.style.pointerEvents = '';
       
     } catch (error) {
       errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
@@ -366,41 +359,15 @@
       const processVideoUrl = (url) => {
         url = url.trim();
         
-        // 보안 검사: HTML 태그 감지
-        if (url.indexOf('<') !== -1 || url.indexOf('>') !== -1) {
-          // 드롭다운 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          mediaButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
-          util.activeModalManager.unregister(dropdownMenu);
-          
-          // 경고 메시지 표시 (지연 적용)
-          setTimeout(() => {
-            errorHandler.showUserAlert('P902');
-          }, 300);
-          
+        // 인라인 YouTube URL 검증
+        if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+          errorHandler.showUserAlert('P903');
           return;
         }
         
-        // 기존 YouTube URL 유효성 검사 대신 SecurityManager 사용
+        // 보안 검증
         if (!LiteEditorSecurity.isDomainAllowed(url)) {
-          // 드롭다운 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          mediaButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          // 모달 관리 시스템에서 제거
-          util.activeModalManager.unregister(dropdownMenu);
-          
-          // 경고 메시지 표시 (지연 적용)
-          setTimeout(() => {
-            errorHandler.showUserAlert('P903');
-          }, 300);
-          
+          errorHandler.showUserAlert('P903');
           return;
         }
         
@@ -499,4 +466,49 @@
       return mediaButton;
     }
   });
+
+  // imageUpload.js의 setupResizeHandle 함수를 media.js에 적용
+  function setupVideoResizeHandle(wrapper, resizeHandle) {
+    let isResizing = false;
+    let startX, startY, startWidth, startHeight;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      const rect = wrapper.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+      
+      document.addEventListener('mousemove', handleResize);
+      document.addEventListener('mouseup', stopResize);
+    });
+
+    function handleResize(e) {
+      if (!isResizing) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      const newWidth = startWidth + deltaX;
+      const newHeight = startHeight + deltaY;
+      
+      if (newWidth > 100 && newHeight > 60) {
+        wrapper.style.width = newWidth + 'px';
+        wrapper.style.height = newHeight + 'px';
+      }
+    }
+
+    function stopResize() {
+      if (!isResizing) return;
+      
+      isResizing = false;
+      document.removeEventListener('mousemove', handleResize);
+      document.removeEventListener('mouseup', stopResize);
+    }
+  }
 })();
