@@ -104,15 +104,57 @@
         fontContainer.style.color = '#1a73e8';
         icon.style.color = '#1a73e8';
         
-        const styleAttr = fontElement.getAttribute('style');
-        const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
-        if (fontFamilyMatch) {
-          const fontFamily = fontFamilyMatch[1].trim().replace(/['"]/g, '');
+        // ✅ 추가: 현재 폰트에 해당하는 드롭다운 항목 선택
+        let currentFontFamily = null;
+        
+        // font 태그의 face 속성에서 폰트 추출
+        if (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) {
+          currentFontFamily = fontElement.getAttribute('face');
+        } 
+        // span 태그의 style 속성에서 폰트 추출
+        else {
+          const styleAttr = fontElement.getAttribute('style');
+          const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
+          if (fontFamilyMatch) {
+            currentFontFamily = fontFamilyMatch[1].trim().replace(/['"]/g, '');
+          }
+        }
+        
+        if (currentFontFamily) {
+          errorHandler.colorLog('FontFamilyPlugin', `현재 폰트 감지: ${currentFontFamily}`);
+          
           // 캐시된 데이터 사용
           const fonts = getCachedFontData();
-          const matchedFont = fonts.find(f => f.value && f.value.includes(fontFamily.split(',')[0]));
+          const matchedFont = fonts.find(f => f.value && f.value.includes(currentFontFamily.split(',')[0]));
+          
           if (matchedFont) {
+            // ✅ 폰트명 업데이트
             fontText.textContent = matchedFont.name;
+            
+            // ✅ 드롭다운에서 해당 폰트 항목 선택 표시
+            const dropdownMenu = document.getElementById('font-family-dropdown');
+            if (dropdownMenu) {
+              // 기존 선택 해제
+              if (currentSelectedFontItem) {
+                currentSelectedFontItem.style.backgroundColor = '';
+              }
+              
+              // 현재 폰트에 해당하는 드롭다운 항목 찾기
+              const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+              fontItems.forEach(item => {
+                const itemFontFamily = item.style.fontFamily;
+                if (itemFontFamily && itemFontFamily.includes(currentFontFamily.split(',')[0])) {
+                  item.style.backgroundColor = '#e9e9e9';
+                  currentSelectedFontItem = item;
+                  errorHandler.colorLog('FontFamilyPlugin', `드롭다운 항목 선택: ${matchedFont.name}`);
+                } else {
+                  item.style.backgroundColor = '';
+                }
+              });
+            }
+            
+            // 전역 상태 업데이트
+            currentFontValue = matchedFont.value;
           }
         }
       } else {
@@ -123,11 +165,20 @@
         icon.style.color = '';                      // 아이콘 색상도 기본으로
         fontText.textContent = 'Font Family';
         
-        currentFontValue = null;
-        if (currentSelectedFontItem) {
-          currentSelectedFontItem.style.backgroundColor = '';
-          currentSelectedFontItem = null;
+        // ✅ 추가: 드롭다운 선택 해제
+        const dropdownMenu = document.getElementById('font-family-dropdown');
+        if (dropdownMenu) {
+          const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+          fontItems.forEach(item => {
+            item.style.backgroundColor = '';
+          });
         }
+        
+        // 전역 상태 초기화
+        currentFontValue = null;
+        currentSelectedFontItem = null;
+        
+        errorHandler.colorLog('FontFamilyPlugin', '폰트 영역 벗어남 - 기본 상태로 복원');
       }
     }
   }
