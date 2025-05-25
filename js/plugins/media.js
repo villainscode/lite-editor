@@ -28,6 +28,12 @@
   // CSS 파일 로드
   util.styles.loadCssFile(`${PLUGIN_ID}-css`, CSS_PATH);
   
+  // ✅ 개선안: 단일 Observer + WeakMap 관리
+  const videoObservers = new WeakMap();
+
+  // ✅ 개선안: WeakMap 기반 cleanup 관리
+  const resizeCleanupMap = new WeakMap();
+
   /**
    * YouTube URL에서 video ID 추출
    * @param {string} url - YouTube URL
@@ -171,11 +177,9 @@
       resizeHandle.style.cursor = 'nwse-resize';
       resizeHandle.style.zIndex = '10';
 
-
       wrapper.contentEditable = false;
       wrapper.appendChild(iframe);
       wrapper.appendChild(resizeHandle);
-      setupVideoResizeHandle(wrapper, resizeHandle);
       
       // 에디터에 삽입
       const selection = window.getSelection();
@@ -200,29 +204,10 @@
       }
       
       // 크기 변경 감지를 위한 MutationObserver 설정
-      if (window.MutationObserver) {
-        const observer = new MutationObserver(mutations => {
-          // 에디터 이벤트 발생 (수정사항 적용)
-          if (util.editor && util.editor.dispatchEditorEvent) {
-            util.editor.dispatchEditorEvent(contentArea);
-          }
-        });
-        
-        observer.observe(wrapper, {
-          attributes: true,
-          attributeFilter: ['style']
-        });
-      }
+      setupVideoObserver(wrapper, contentArea);
       
       // 선택 영역 초기화
       clearSelection();
-      
-      // 리사이즈 시작 시
-      document.body.style.pointerEvents = 'none';
-      wrapper.style.pointerEvents = 'auto';
-      
-      // 리사이즈 종료 시
-      document.body.style.pointerEvents = '';
       
     } catch (error) {
       errorHandler.logError('MediaPlugin', errorHandler.codes.PLUGINS.MEDIA.INSERT, error);
@@ -467,48 +452,107 @@
     }
   });
 
-  // imageUpload.js의 setupResizeHandle 함수를 media.js에 적용
+  // ✅ 개선된 media.js 리사이즈 핸들
   function setupVideoResizeHandle(wrapper, resizeHandle) {
     let isResizing = false;
     let startX, startY, startWidth, startHeight;
 
-    resizeHandle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      isResizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      
-      const rect = wrapper.getBoundingClientRect();
-      startWidth = rect.width;
-      startHeight = rect.height;
-      
-      document.addEventListener('mousemove', handleResize);
-      document.addEventListener('mouseup', stopResize);
-    });
-
+    // 내부 함수로 정의 (imageUpload.js 방식)
     function handleResize(e) {
-      if (!isResizing) return;
-      
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-      
-      const newWidth = startWidth + deltaX;
-      const newHeight = startHeight + deltaY;
-      
-      if (newWidth > 100 && newHeight > 60) {
-        wrapper.style.width = newWidth + 'px';
-        wrapper.style.height = newHeight + 'px';
-      }
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        const newWidth = startWidth + deltaX;
+        const newHeight = startHeight + deltaY;
+        
+        if (newWidth > 100 && newHeight > 60) {
+            wrapper.style.width = newWidth + 'px';
+            wrapper.style.height = newHeight + 'px';
+        }
     }
 
     function stopResize() {
-      if (!isResizing) return;
-      
-      isResizing = false;
-      document.removeEventListener('mousemove', handleResize);
-      document.removeEventListener('mouseup', stopResize);
+        if (!isResizing) return;
+        
+        isResizing = false;
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', stopResize);
     }
+
+    // 단순한 mousedown 핸들러 (키보드 이벤트 차단 제거)
+    resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = wrapper.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+        
+        document.addEventListener('mousemove', handleResize);
+        document.addEventListener('mouseup', stopResize);
+    });
   }
+
+  /**
+   * ✅ 개선안: 단일 Observer + WeakMap 관리
+   * @param {HTMLElement} wrapper - 동영상 래퍼 요소
+   * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
+   */
+  function setupVideoObserver(wrapper, contentArea) {
+    if (videoObservers.has(wrapper)) return; // 중복 방지
+    
+    const observer = new MutationObserver(mutations => {
+      if (util.editor && util.editor.dispatchEditorEvent) {
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+    });
+    
+    observer.observe(wrapper, {
+      attributes: true,
+      attributeFilter: ['style']
+    });
+    
+    videoObservers.set(wrapper, observer);
+    
+    // 요소 제거 감지 및 Observer 정리
+    const removalObserver = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.removedNodes.forEach(node => {
+          if (node === wrapper || node.contains?.(wrapper)) {
+            observer.disconnect();
+            removalObserver.disconnect();
+            videoObservers.delete(wrapper);
+          }
+        });
+      });
+    });
+    
+    removalObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // ✅ 개선안: 플러그인 레벨 cleanup
+  function cleanup() {
+    // 모든 Observer 정리
+    videoObservers.forEach((observer, wrapper) => {
+      observer.disconnect();
+    });
+    
+    // 모든 리사이즈 이벤트 정리
+    resizeCleanupMap.forEach((cleanup, wrapper) => {
+      cleanup();
+    });
+    
+    // 전역 변수 초기화
+    savedRange = null;
+    isDropdownOpen = false;
+  }
+
+  // 페이지 언로드 시 정리
+  window.addEventListener('beforeunload', cleanup);
 })();
