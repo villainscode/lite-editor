@@ -4,7 +4,11 @@
   "description": "경량 웹 에디터 라이브러리",
   "main": "js/core.js",
   "scripts": {
-    "start": "http-server"
+    "start": "NODE_ENV=development http-server",
+    "dev": "NODE_ENV=development http-server -p 8080",
+    "build": "NODE_ENV=production npm run build:js && npm run build:css",
+    "serve:prod": "NODE_ENV=production http-server -p 3000",
+    "serve:dev": "NODE_ENV=development http-server -p 8080 --cors"
   },
   "keywords": [
     "editor",
@@ -12,6 +16,18 @@
     "rich-text",
     "javascript"
   ],
-  "author": "",
-  "license": "MIT"
+  "author": {
+    "name": "subnote lite-editor team in korea",
+    "email": "teamsubnote@gmail.com",
+    "url": "https://subnote.cc"
+  },
+  "license": "Apache License 2.0 with Commons Clause",
+  "config": {
+    "environment": "development",
+    "version": "1.0.05",
+    "cacheBusting": {
+      "development": "timestamp",
+      "production": "version"
+    }
+  }
 }

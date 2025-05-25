@@ -561,11 +561,27 @@ const PluginUtil = (function() {
         loadCssFile(id, href) {
             if (document.getElementById(id)) return true;
             
+            // 환경 설정 기반 캐시 버스터 적용
+            let finalHref = href;
+            if (window.LiteEditorConfig?.cacheBusting.enabled) {
+                const config = window.LiteEditorConfig;
+                switch (config.cacheBusting.strategy) {
+                    case 'timestamp':
+                        finalHref = `${href}?t=${Date.now()}`;
+                        break;
+                    case 'version':
+                        finalHref = `${href}?v=${config.version}`;
+                        break;
+                    default:
+                        finalHref = href;
+                }
+            }
+            
             const linkEl = dom.createElement('link', {
                 id: id,
                 rel: 'stylesheet',
                 type: 'text/css',
-                href: href
+                href: finalHref
             });
             
             document.head.appendChild(linkEl);
