@@ -454,25 +454,67 @@
               
               errorHandler.logInfo('FontFamilyPlugin', `Shift+Enter: 폰트 유지 줄바꿈 (${fontFamily})`);
             } else {
-              // ✅ 수정: Enter 키 처리 - 텍스트 분할하지 않고 단순히 새 빈 문단만 생성
+              // ✅ 수정: Enter 키 처리 - 폰트 요소 바로 다음에 새 문단 생성
               e.preventDefault();
               
-              errorHandler.colorLog('FontFamilyPlugin', 'Enter: 새 빈 문단 생성 (텍스트 분할 없음)');
+              errorHandler.colorLog('FontFamilyPlugin', 'Enter: 폰트 요소 다음에 새 문단 생성');
               
-              // 새 빈 문단 생성 (폰트 없음)
-              const newP = document.createElement('p');
-              newP.innerHTML = '<br>';
+              // 현재 폰트 요소 찾기 (font 태그 또는 span 태그)
+              const currentFontElement = fontElement.tagName === 'FONT' ? fontElement : fontElement.closest('font');
               
-              // 현재 문단 다음에 새 문단 삽입
-              const currentP = fontElement.closest('p') || fontElement.parentElement.closest('p') || fontElement.parentElement;
-              currentP.parentNode.insertBefore(newP, currentP.nextSibling);
-              
-              // 커서를 새 문단으로 이동 (폰트 영역 벗어남)
-              const newRange = document.createRange();
-              newRange.setStart(newP, 0);
-              newRange.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(newRange);
+              if (currentFontElement) {
+                // 폰트 요소 다음의 모든 콘텐츠 수집
+                const parentP = currentFontElement.parentElement;
+                const remainingNodes = [];
+                
+                // 폰트 요소 다음의 모든 형제 노드들 수집
+                let nextSibling = currentFontElement.nextSibling;
+                while (nextSibling) {
+                  remainingNodes.push(nextSibling);
+                  nextSibling = nextSibling.nextSibling;
+                }
+                
+                errorHandler.colorLog('FontFamilyPlugin', '폰트 요소 다음 노드들', remainingNodes);
+                
+                // 새 문단 생성
+                const newP = document.createElement('p');
+                
+                // 수집된 노드들을 새 문단으로 이동
+                if (remainingNodes.length > 0) {
+                  remainingNodes.forEach(node => {
+                    newP.appendChild(node); // 실제로 이동 (복사가 아님)
+                  });
+                } else {
+                  newP.innerHTML = '<br>';
+                }
+                
+                // 현재 문단 다음에 새 문단 삽입
+                parentP.parentNode.insertBefore(newP, parentP.nextSibling);
+                
+                // 커서를 새 문단 시작으로 이동
+                const newRange = document.createRange();
+                newRange.setStart(newP.firstChild || newP, 0);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+                
+                errorHandler.colorLog('FontFamilyPlugin', '새 문단 생성 완료', {
+                  새문단내용: newP.innerHTML
+                });
+              } else {
+                // 폴백: 기본 빈 문단 생성
+                const newP = document.createElement('p');
+                newP.innerHTML = '<br>';
+                
+                const currentP = range.startContainer.closest('p') || range.startContainer.parentElement.closest('p');
+                currentP.parentNode.insertBefore(newP, currentP.nextSibling);
+                
+                const newRange = document.createRange();
+                newRange.setStart(newP, 0);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              }
               
               // UI 상태 업데이트
               setTimeout(() => {
