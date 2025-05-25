@@ -286,6 +286,13 @@
    * 키보드 이벤트 핸들러 (전역)
    */
   const handleChecklistKeys = PluginUtil.events.throttle(function(event) {
+    // ✅ 리사이즈 중일 때는 키보드 이벤트 무시
+    if (document.querySelector('.video-resize-handle:active') || 
+        document.querySelector('.image-resize-handle:active') ||
+        document.querySelector('[data-resizing="true"]')) {
+        return;
+    }
+    
     // Enter 또는 Tab 키가 아니면 무시
     if (event.key !== 'Enter' && event.key !== 'Tab') return;
     
@@ -541,5 +548,5 @@
   });
   
   // 전역 키보드 이벤트 리스너 등록 (캡처링 단계에서 처리)
-  document.addEventListener('keydown', handleChecklistKeys, true);
+  document.addEventListener('keydown', handleChecklistKeys, false);
 })();

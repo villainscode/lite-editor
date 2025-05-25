@@ -11,6 +11,7 @@
     const scripts = [
         // 코어 라이브러리
         'js/data/version.js',
+        'js/data/videoList.js',
         'js/error-handler.js',
         'js/core.js',
         'js/security-manager.js',

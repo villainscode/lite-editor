@@ -562,5 +562,5 @@
   }, 100); // 100ms 쓰로틀링 적용
     
   // Tab 키 이벤트 리스너 등록 (캡처링 단계에서 처리)
-  document.addEventListener('keydown', handleTabKey, true);
+  document.addEventListener('keydown', handleTabKey, false);
 })();

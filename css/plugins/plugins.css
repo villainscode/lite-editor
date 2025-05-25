@@ -52,6 +52,13 @@
   vertical-align: middle;
 }
 
+/* 리사이즈 핸들 예외 처리 */
+.video-resize-handle.material-icons,
+.image-resize-handle.material-icons {
+  width: 10px !important;
+  height: 10px !important;
+}
+
 .lite-editor-button:hover {
   color: #1a73e8 !important;  /* Google Blue */
   background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */

@@ -4,22 +4,102 @@
  */
 
 const LiteEditorSecurity = (function() {
-  // 허용된 도메인 목록 (기본값)
-  const DEFAULT_ALLOWED_DOMAINS = [
-    'youtube.com',
-    'www.youtube.com',
-    'youtu.be',
-    'vimeo.com',
-    'player.vimeo.com',
-    'dailymotion.com',
-    'www.dailymotion.com'
-  ];
-  
   // 사용자 정의 허용 도메인
   let customAllowedDomains = [];
   
-  // 모든 허용된 도메인 (기본 + 사용자 정의)
-  let allowedDomains = [...DEFAULT_ALLOWED_DOMAINS];
+  // ✅ 모든 허용된 도메인 목록 가져오기 (함수명 통일)
+  function getAllowedDomainsList() {
+    const videoDomains = window.LiteEditorVideoData?.ALLOWED_VIDEO_DOMAINS || [];
+    return [...videoDomains, ...customAllowedDomains];
+  }
+  
+  /**
+   * 플랫폼별 URL 패턴 정의
+   */
+  const VIDEO_PLATFORM_PATTERNS = {
+    youtube: [
+      // 일반 유튜브 링크
+      /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/))([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)/,
+      // 짧은 링크
+      /(?:youtu\.be\/)([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)?/,
+      // 쇼츠 링크
+      /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})(?:&|\?|$|\/|#)?/
+    ],
+    
+    vimeo: [
+      // 일반 Vimeo 링크
+      /(?:vimeo\.com\/)(\d+)(?:\/([a-zA-Z0-9]+))?/,
+      // 임베드 링크
+      /(?:player\.vimeo\.com\/video\/)(\d+)(?:\?h=([a-zA-Z0-9]+))?/
+    ],
+    
+    wistia: [
+      // Wistia 임베드 링크
+      /(?:fast\.wistia\.(?:net|com)\/embed\/iframe\/)([a-zA-Z0-9]+)/,
+      // Wistia 미디어 링크
+      /(?:wistia\.com\/medias\/)([a-zA-Z0-9]+)/
+    ],
+    
+    dailymotion: [
+      // 일반 Dailymotion 링크
+      /(?:dailymotion\.com\/video\/)([a-zA-Z0-9]+)/,
+      // 임베드 링크
+      /(?:geo\.dailymotion\.com\/player(?:\/[a-zA-Z0-9]+)?\.html\?video=)([a-zA-Z0-9]+)/
+    ],
+    
+    kakao: [
+      // 카카오TV 링크: https://tv.kakao.com/v/455367854
+      /(?:tv\.kakao\.com\/v\/)([0-9]+)/
+    ],
+    
+    naver: [
+      // 네이버TV 링크: https://tv.naver.com/v/77160696
+      /(?:tv\.naver\.com\/v\/)([0-9]+)/,
+      // 네이버 단축 링크: https://naver.me/FeNzXpoH (다시 추가!)
+      /(?:naver\.me\/)([a-zA-Z0-9]+)/
+    ]
+  };
+
+  /**
+   * 플랫폼별 임베드 설정
+   */
+  const VIDEO_EMBED_CONFIG = {
+    youtube: {
+      baseUrl: 'https://www.youtube.com/embed/',
+      defaultParams: 'enablejsapi=0&rel=0&modestbranding=1',
+      allowAttributes: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+    },
+    
+    vimeo: {
+      baseUrl: 'https://player.vimeo.com/video/',
+      defaultParams: '',
+      allowAttributes: 'autoplay; fullscreen; picture-in-picture'
+    },
+    
+    wistia: {
+      baseUrl: 'https://fast.wistia.net/embed/iframe/',
+      defaultParams: '',
+      allowAttributes: 'autoplay; fullscreen'
+    },
+    
+    dailymotion: {
+      baseUrl: 'https://geo.dailymotion.com/player.html?video=',
+      defaultParams: '',
+      allowAttributes: 'autoplay; fullscreen; picture-in-picture'
+    },
+    
+    kakao: {
+      baseUrl: 'https://tv.kakao.com/embed/player/cliplink/',
+      defaultParams: '',
+      allowAttributes: 'autoplay; fullscreen'
+    },
+    
+    naver: {
+      baseUrl: 'https://tv.naver.com/embed/',
+      defaultParams: '',
+      allowAttributes: 'autoplay; fullscreen'
+    }
+  };
   
   /**
    * 도메인이 허용 목록에 있는지 확인
@@ -33,6 +113,7 @@ const LiteEditorSecurity = (function() {
       // URL 파싱
       const urlObj = new URL(url);
       const domain = urlObj.hostname;
+      const allowedDomains = getAllowedDomainsList();
       
       // 도메인 확인
       return allowedDomains.some(allowedDomain => {
@@ -44,6 +125,71 @@ const LiteEditorSecurity = (function() {
       errorHandler.logError('SecurityManager', errorHandler.codes.SECURITY.URL_PARSE, e);
       return false;
     }
+  }
+
+  /**
+   * 동영상 URL 도메인 검증 함수
+   * @param {string} url - 검증할 URL
+   * @returns {boolean} - 허용된 도메인인지 여부
+   */
+  function isVideoUrlAllowed(url) {
+    try {
+      const urlObj = new URL(url);
+      const videoDomains = getAllowedDomainsList();
+      return videoDomains.some(domain => 
+        urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 동영상 플랫폼 감지 함수
+   * @param {string} url - 분석할 URL
+   * @returns {Object|null} - 플랫폼 정보 또는 null
+   */
+  function detectVideoPlatform(url) {
+    // URL에서 불필요한 @ 기호 제거
+    url = url.replace(/^@/, '');
+    
+    // 네이버 단축 URL 감지 시 null 반환 (별도 처리)
+    if (/naver\.me\//.test(url)) {
+      return null;
+    }
+    
+    for (const [platform, patterns] of Object.entries(VIDEO_PLATFORM_PATTERNS)) {
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) {
+          return {
+            platform,
+            id: match[1],
+            hash: match[2] || null,
+            originalUrl: url
+          };
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * 플랫폼별 임베드 URL 생성
+   * @param {string} platform - 플랫폼 이름
+   * @param {string} videoId - 비디오 ID
+   * @param {Object} options - 추가 옵션
+   * @returns {string} 임베드 URL
+   */
+  function createEmbedUrl(platform, videoId, options = {}) {
+    const config = VIDEO_EMBED_CONFIG[platform];
+    if (!config) return '';
+    
+    const params = options.params || config.defaultParams;
+    const paramString = params ? `?${params}` : '';
+    
+    return `${config.baseUrl}${videoId}${paramString}`;
   }
   
   /**
@@ -66,9 +212,9 @@ const LiteEditorSecurity = (function() {
       }
       
       // 중복 확인 후 추가
-      if (!allowedDomains.includes(cleanDomain)) {
+      const allDomains = getAllowedDomainsList();
+      if (!allDomains.includes(cleanDomain)) {
         customAllowedDomains.push(cleanDomain);
-        allowedDomains.push(cleanDomain);
       }
     });
   }
@@ -81,22 +227,17 @@ const LiteEditorSecurity = (function() {
     const domainsArray = Array.isArray(domains) ? domains : [domains];
     
     domainsArray.forEach(domain => {
-      // 사용자 정의 목록에서 제거
+      // 사용자 정의 목록에서만 제거 (기본 도메인과 비디오 도메인은 제거 불가)
       customAllowedDomains = customAllowedDomains.filter(d => d !== domain);
-      
-      // 기본 도메인은 제거할 수 없음
-      if (!DEFAULT_ALLOWED_DOMAINS.includes(domain)) {
-        allowedDomains = allowedDomains.filter(d => d !== domain);
-      }
     });
   }
   
   /**
-   * 모든 허용된 도메인 목록 가져오기
+   * ✅ 모든 허용된 도메인 목록 가져오기 (공개 API)
    * @returns {string[]} 허용된 도메인 목록
    */
   function getAllowedDomains() {
-    return [...allowedDomains];
+    return getAllowedDomainsList();
   }
   
   /**
@@ -108,11 +249,11 @@ const LiteEditorSecurity = (function() {
   }
   
   /**
-   * 기본 허용 도메인 목록 가져오기
-   * @returns {string[]} 기본 허용 도메인 목록
+   * ✅ 동영상 허용 도메인 목록 가져오기
+   * @returns {string[]} 동영상 허용 도메인 목록
    */
-  function getDefaultAllowedDomains() {
-    return [...DEFAULT_ALLOWED_DOMAINS];
+  function getVideoAllowedDomains() {
+    return window.LiteEditorVideoData?.ALLOWED_VIDEO_DOMAINS || [];
   }
   
   /**
@@ -120,7 +261,6 @@ const LiteEditorSecurity = (function() {
    */
   function resetAllowedDomains() {
     customAllowedDomains = [];
-    allowedDomains = [...DEFAULT_ALLOWED_DOMAINS];
   }
   
   /**
@@ -267,12 +407,19 @@ const LiteEditorSecurity = (function() {
     isValidUrl,
     addAllowedDomain,
     removeAllowedDomain,
-    getAllowedDomains,
+    getAllowedDomains,           // ✅ 공개 API
+    getAllowedDomainsList,       // ✅ 내부/외부 모두 사용 가능
     getCustomAllowedDomains,
-    getDefaultAllowedDomains,
+    getVideoAllowedDomains,      // ✅ 추가
     resetAllowedDomains,
     createSafeIframe,
-    createSafeYouTubeEmbed
+    createSafeYouTubeEmbed,
+    // 새로 추가된 동영상 관련 함수들
+    isVideoUrlAllowed,
+    detectVideoPlatform,
+    createEmbedUrl,
+    VIDEO_PLATFORM_PATTERNS,
+    VIDEO_EMBED_CONFIG
   };
 })();
 
