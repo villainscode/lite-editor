@@ -1,0 +1,525 @@
+<h1>LiteEditor 전체 기능 및 파일 구조 목록</h1>
+<h2>📋 개요</h2>
+<p>LiteEditor의 모든 JavaScript 파일과 CSS 파일의 역할 및 기능을 체계적으로 정리한 문서입니다.</p>
+<h2>🗂️ 파일 구조</h2>
+<pre><code>lite-editor/
+├── js/
+│ ├── data/ # 데이터 파일
+│ │ ├── colors.js # 색상 팔레트 데이터
+│ │ ├── fontList.js # 폰트 목록 데이터
+│ │ └── videoList.js # 동영상 도메인 허용 목록
+│ ├── plugins/ # 플러그인 파일
+│ │ ├── align.js # 텍스트 정렬 (좌/중/우/양쪽)
+│ │ ├── bulletList.js # 불릿 목록 생성/편집
+│ │ ├── checkList.js # 체크리스트 생성/편집
+│ │ ├── codeBlock.js # 코드 블록 삽입/하이라이팅
+│ │ ├── emphasis.js # 텍스트 강조 (굵게/기울임/밑줄)
+│ │ ├── fontColor.js # 폰트 색상 선택
+│ │ ├── fontFamily.js # 폰트 패밀리 선택
+│ │ ├── heading.js # 제목 스타일 (H1-H6)
+│ │ ├── imageUpload.js # 이미지 업로드/리사이즈
+│ │ ├── line.js # 구분선 삽입
+│ │ ├── link.js # 하이퍼링크 생성/편집
+│ │ ├── media.js # 동영상 삽입/리사이즈
+│ │ ├── numberedList.js # 번호 목록 생성/편집
+│ │ ├── plugin-util.js # 플러그인 공통 유틸리티
+│ │ └── table.js # 테이블 생성/편집
+│ ├── core.js # 핵심 엔진 (에디터 초기화/이벤트)
+│ ├── error-handler.js # 오류 처리/로깅 시스템
+│ ├── loader.js # 파일 동적 로딩 관리
+│ ├── modal.js # 모달/레이어 관리
+│ └── security-manager.js # 보안 검증/URL 관리
+└── css/
+├── plugins/ # 플러그인 CSS
+│ ├── align.css # 정렬 드롭다운 스타일
+│ ├── bulletList.css # 불릿 목록 스타일
+│ ├── checkList.css # 체크박스 스타일
+│ ├── codeBlock.css # 코드 블록 스타일/하이라이팅
+│ ├── emphasis.css # 강조 버튼 스타일
+│ ├── fontColor.css # 색상 팔레트 스타일
+│ ├── fontFamily.css # 폰트 드롭다운 스타일
+│ ├── heading.css # 제목 드롭다운 스타일
+│ ├── imageUpload.css # 이미지 업로드/리사이즈 스타일
+│ ├── line.css # 구분선 스타일
+│ ├── link.css # 링크 모달 스타일
+│ ├── media.css # 동영상 래퍼/리사이즈 스타일
+│ ├── numberedList.css # 번호 목록 스타일
+│ ├── plugins.css # 플러그인 공통 스타일
+│ └── table.css # 테이블 스타일/컨트롤
+├── core.css # 에디터 핵심 스타일 (툴바/콘텐츠)
+└── modal.css # 모달 오버레이/박스 스타일
+
+</code></pre>
+<h2>🔧 Core 시스템 파일</h2>
+<h3>1. js/core.js</h3>
+<p><strong>역할</strong>: LiteEditor의 핵심 엔진<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>에디터 초기화 및 설정</li>
+<li>플러그인 등록 시스템</li>
+<li>기본 편집 기능 (텍스트 입력, 선택, 복사/붙여넣기)</li>
+<li>키보드 단축키 처리</li>
+<li>에디터 이벤트 관리</li>
+<li>DOM 조작 및 콘텐츠 관리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/core.css</code></p>
+<ul>
+<li>에디터 기본 스타일</li>
+<li>툴바 레이아웃</li>
+<li>콘텐츠 영역 스타일</li>
+<li>기본 타이포그래피</li>
+</ul>
+<h3>2. js/error-handler.js</h3>
+<p><strong>역할</strong>: 통합 오류 처리 및 로깅 시스템<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>오류 코드 체계 관리</li>
+<li>컬러 로깅 시스템 (<code>colorLog</code>)</li>
+<li>선택 영역 로깅 (<code>logSelectionOffsets</code>)</li>
+<li>사용자 알림 표시 (<code>showUserAlert</code>)</li>
+<li>디버깅 정보 수집</li>
+<li>오류 레벨별 분류 (INFO, WARN, ERROR)</li>
+</ul>
+<p><strong>관련 CSS</strong>: 없음 (로깅 전용)</p>
+<h3>3. js/loader.js</h3>
+<p><strong>역할</strong>: 파일 동적 로딩 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>JavaScript 파일 순차 로딩</li>
+<li>CSS 파일 로딩</li>
+<li>의존성 관리</li>
+<li>로딩 순서 제어</li>
+<li>로딩 완료 콜백 처리</li>
+</ul>
+<p><strong>로딩 순서</strong>:</p>
+<pre><code class="language-javascript">// 1. 데이터 파일
+'js/data/colors.js',
+'js/data/fontList.js', 
+'js/data/videoList.js',
+
+// 2. 핵심 시스템
+'js/error-handler.js',
+'js/security-manager.js',
+'js/modal.js',
+
+// 3. 플러그인 유틸리티
+'js/plugins/plugin-util.js',
+
+// 4. 개별 플러그인들
+'js/plugins/align.js',
+'js/plugins/fontColor.js',
+// ... 기타 플러그인들
+
+// 5. 핵심 엔진 (마지막)
+'js/core.js'
+</code></pre>
+<p><strong>관련 CSS</strong>: 없음 (로더 전용)</p>
+<h3>4. js/modal.js</h3>
+<p><strong>역할</strong>: 모달 및 레이어 관리 시스템<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>모달 창 생성 및 관리</li>
+<li>레이어 우선순위 제어</li>
+<li>외부 클릭 감지</li>
+<li>ESC 키 처리</li>
+<li>모달 스택 관리</li>
+<li>활성 모달 추적</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/modal.css</code></p>
+<ul>
+<li>모달 오버레이 스타일</li>
+<li>모달 콘텐츠 박스</li>
+<li>애니메이션 효과</li>
+<li>z-index 관리</li>
+</ul>
+<h3>5. js/security-manager.js</h3>
+<p><strong>역할</strong>: 보안 검증 및 URL 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>URL 유효성 검사 (<code>isValidUrl</code>)</li>
+<li>이미지 URL 검증 (<code>isValidImageUrl</code>)</li>
+<li>동영상 URL 검증 (<code>isVideoUrlAllowed</code>)</li>
+<li>동영상 플랫폼 감지 (<code>detectVideoPlatform</code>)</li>
+<li>임베드 URL 생성 (<code>createEmbedUrl</code>)</li>
+<li>안전한 iframe 생성 (<code>createSafeIframe</code>)</li>
+<li>XSS 방지</li>
+<li>도메인 허용 목록 관리</li>
+</ul>
+<p><strong>지원 플랫폼</strong>:</p>
+<ul>
+<li>YouTube, Vimeo, Wistia, Dailymotion</li>
+<li>카카오TV, 네이버TV</li>
+</ul>
+<p><strong>관련 CSS</strong>: 없음 (보안 로직 전용)</p>
+<h2>📊 Data 파일</h2>
+<h3>1. js/data/colors.js</h3>
+<p><strong>역할</strong>: 색상 데이터 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>폰트 색상 팔레트 정의</li>
+<li>배경색 팔레트 정의</li>
+<li>색상 그룹 분류</li>
+<li>다국어 색상명 지원</li>
+</ul>
+<p><strong>데이터 구조</strong>:</p>
+<pre><code class="language-javascript">LiteEditorColorData = {
+  getFontColors: () =&gt; [...],
+  getBackgroundColors: () =&gt; [...]
+}
+</code></pre>
+<h3>2. js/data/fontList.js</h3>
+<p><strong>역할</strong>: 폰트 목록 데이터 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>웹 폰트 목록 정의</li>
+<li>시스템 폰트 목록</li>
+<li>폰트 그룹 분류</li>
+<li>폰트 패밀리 값 매핑</li>
+<li>다국어 폰트명 지원</li>
+</ul>
+<p><strong>데이터 구조</strong>:</p>
+<pre><code class="language-javascript">LiteEditorFontData = {
+  getFonts: () =&gt; [
+    { type: 'group_header', name: '그룹명' },
+    { type: 'divider' },
+    { name: '폰트명', value: 'font-family 값' }
+  ]
+}
+</code></pre>
+<h3>3. js/data/videoList.js</h3>
+<p><strong>역할</strong>: 동영상 도메인 허용 목록<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>허용된 동영상 도메인 정의</li>
+<li>플랫폼별 도메인 분류</li>
+<li>보안 정책 데이터</li>
+</ul>
+<p><strong>데이터 구조</strong>:</p>
+<pre><code class="language-javascript">LiteEditorVideoData = {
+  ALLOWED_VIDEO_DOMAINS: [
+    'youtube.com', 'youtu.be',
+    'vimeo.com', 'tv.kakao.com',
+    'tv.naver.com', 'naver.me'
+  ]
+}
+</code></pre>
+<h2>🔌 Plugin 시스템</h2>
+<h3>js/plugins/plugin-util.js</h3>
+<p><strong>역할</strong>: 플러그인 공통 유틸리티<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>DOM 조작 유틸리티 (<code>util.dom</code>)</li>
+<li>선택 영역 관리 (<code>util.selection</code>)</li>
+<li>스크롤 위치 보존 (<code>util.scroll</code>)</li>
+<li>스타일 로딩 (<code>util.styles</code>)</li>
+<li>레이어 위치 설정 (<code>util.layer</code>)</li>
+<li>에디터 이벤트 (<code>util.editor</code>)</li>
+<li>활성 모달 관리 (<code>util.activeModalManager</code>)</li>
+<li>외부 클릭 핸들러 (<code>util.setupOutsideClickHandler</code>)</li>
+</ul>
+<p><strong>핵심 함수들</strong>:</p>
+<pre><code class="language-javascript">// DOM 유틸리티
+util.dom.createElement(tag, attributes, styles)
+
+// 선택 영역 관리
+util.selection.saveSelection()
+util.selection.restoreSelection(range)
+util.selection.normalizeSelectionRange()
+
+// 스크롤 관리
+util.scroll.savePosition()
+util.scroll.restorePosition(position)
+util.scroll.preservePosition(callback)
+
+// 모달 관리
+util.activeModalManager.register(modal)
+util.activeModalManager.unregister(modal)
+util.activeModalManager.closeAll()
+</code></pre>
+<p><strong>관련 CSS</strong>: <code>css/plugins/plugins.css</code></p>
+<ul>
+<li>공통 플러그인 스타일</li>
+<li>드롭다운 기본 스타일</li>
+<li>버튼 공통 스타일</li>
+</ul>
+<h2>📝 텍스트 편집 플러그인</h2>
+<h3>1. js/plugins/fontFamily.js</h3>
+<p><strong>역할</strong>: 폰트 패밀리 선택<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>폰트 드롭다운 UI</li>
+<li>폰트 적용 (<code>execCommand('fontName')</code>)</li>
+<li>커서 위치 보존</li>
+<li>Enter/Shift+Enter 키 처리</li>
+<li>폰트 영역 관리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/fontFamily.css</code></p>
+<ul>
+<li>폰트 드롭다운 스타일</li>
+<li>폰트 미리보기</li>
+<li>호버 효과</li>
+</ul>
+<h3>2. js/plugins/fontColor.js</h3>
+<p><strong>역할</strong>: 폰트 색상 선택<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>색상 팔레트 UI</li>
+<li>색상 적용 (<code>execCommand('foreColor')</code>)</li>
+<li>색상 그룹 표시</li>
+<li>최근 사용 색상</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/fontColor.css</code></p>
+<ul>
+<li>색상 팔레트 레이아웃</li>
+<li>색상 칩 스타일</li>
+<li>그룹 헤더 스타일</li>
+</ul>
+<h3>3. js/plugins/emphasis.js</h3>
+<p><strong>역할</strong>: 텍스트 강조 (굵게, 기울임, 밑줄)<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>굵게 (<code>execCommand('bold')</code>)</li>
+<li>기울임 (<code>execCommand('italic')</code>)</li>
+<li>밑줄 (<code>execCommand('underline')</code>)</li>
+<li>토글 상태 관리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/emphasis.css</code></p>
+<ul>
+<li>강조 버튼 스타일</li>
+<li>활성 상태 표시</li>
+</ul>
+<h3>4. js/plugins/heading.js</h3>
+<p><strong>역할</strong>: 제목 스타일 적용<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>H1~H6 제목 태그 적용</li>
+<li>제목 드롭다운 UI</li>
+<li>블록 레벨 변환</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/heading.css</code></p>
+<ul>
+<li>제목 드롭다운 스타일</li>
+<li>제목 미리보기</li>
+</ul>
+<h3>5. js/plugins/align.js</h3>
+<p><strong>역할</strong>: 텍스트 정렬<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>좌측 정렬 (<code>execCommand('justifyLeft')</code>)</li>
+<li>중앙 정렬 (<code>execCommand('justifyCenter')</code>)</li>
+<li>우측 정렬 (<code>execCommand('justifyRight')</code>)</li>
+<li>양쪽 정렬 (<code>execCommand('justifyFull')</code>)</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/align.css</code></p>
+<ul>
+<li>정렬 드롭다운 스타일</li>
+<li>정렬 아이콘</li>
+</ul>
+<h2>📋 목록 플러그인</h2>
+<h3>1. js/plugins/bulletList.js</h3>
+<p><strong>역할</strong>: 불릿 목록 생성<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>불릿 목록 생성/해제</li>
+<li>중첩 목록 지원</li>
+<li>들여쓰기/내어쓰기</li>
+<li>Tab/Shift+Tab 처리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/bulletList.css</code></p>
+<ul>
+<li>불릿 스타일</li>
+<li>들여쓰기 스타일</li>
+</ul>
+<h3>2. js/plugins/numberedList.js</h3>
+<p><strong>역할</strong>: 번호 목록 생성<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>번호 목록 생성/해제</li>
+<li>중첩 번호 목록</li>
+<li>번호 스타일 관리</li>
+<li>자동 번호 증가</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/numberedList.css</code></p>
+<ul>
+<li>번호 스타일</li>
+<li>중첩 목록 스타일</li>
+</ul>
+<h3>3. js/plugins/checkList.js</h3>
+<p><strong>역할</strong>: 체크리스트 생성<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>체크박스 목록 생성</li>
+<li>체크 상태 토글</li>
+<li>체크박스 스타일링</li>
+<li>키보드 네비게이션</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/checkList.css</code></p>
+<ul>
+<li>체크박스 스타일</li>
+<li>체크 상태 표시</li>
+<li>리스트 아이템 스타일</li>
+</ul>
+<h2>🎨 미디어 플러그인</h2>
+<h3>1. js/plugins/imageUpload.js</h3>
+<p><strong>역할</strong>: 이미지 업로드 및 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>이미지 URL 삽입</li>
+<li>파일 업로드</li>
+<li>이미지 리사이즈</li>
+<li>드래그 앤 드롭</li>
+<li>복사/붙여넣기</li>
+<li>이미지 선택 관리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/imageUpload.css</code></p>
+<ul>
+<li>이미지 래퍼 스타일</li>
+<li>리사이즈 핸들</li>
+<li>모달 스타일</li>
+<li>드래그 피드백</li>
+</ul>
+<h3>2. js/plugins/media.js</h3>
+<p><strong>역할</strong>: 동영상 삽입 및 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>다중 플랫폼 동영상 지원</li>
+<li>동영상 URL 검증</li>
+<li>동영상 리사이즈</li>
+<li>보안 검증 통합</li>
+<li>플랫폼별 임베드 생성</li>
+</ul>
+<p><strong>지원 플랫폼</strong>:</p>
+<ul>
+<li>YouTube, Vimeo, Wistia</li>
+<li>Dailymotion, 카카오TV, 네이버TV</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/media.css</code></p>
+<ul>
+<li>동영상 래퍼 스타일</li>
+<li>리사이즈 핸들</li>
+<li>드롭다운 스타일</li>
+</ul>
+<h3>3. js/plugins/link.js</h3>
+<p><strong>역할</strong>: 하이퍼링크 생성 및 관리<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>링크 생성 (<code>execCommand('createLink')</code>)</li>
+<li>링크 편집</li>
+<li>링크 제거</li>
+<li>URL 유효성 검사</li>
+<li>새 창 열기 옵션</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/link.css</code></p>
+<ul>
+<li>링크 모달 스타일</li>
+<li>링크 입력 폼</li>
+<li>링크 미리보기</li>
+</ul>
+<h2>🔧 구조 플러그인</h2>
+<h3>1. js/plugins/table.js</h3>
+<p><strong>역할</strong>: 테이블 생성 및 편집<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>테이블 생성</li>
+<li>행/열 추가/삭제</li>
+<li>셀 병합/분할</li>
+<li>테이블 스타일링</li>
+<li>테이블 리사이즈</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/table.css</code></p>
+<ul>
+<li>테이블 기본 스타일</li>
+<li>테이블 컨트롤</li>
+<li>셀 선택 표시</li>
+</ul>
+<h3>2. js/plugins/line.js</h3>
+<p><strong>역할</strong>: 구분선 삽입<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>수평선 삽입 (<code>&lt;hr&gt;</code>)</li>
+<li>다양한 선 스타일</li>
+<li>선 두께 조절</li>
+<li>선 색상 변경</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/line.css</code></p>
+<ul>
+<li>구분선 스타일</li>
+<li>선 변형 효과</li>
+</ul>
+<h3>3. js/plugins/codeBlock.js</h3>
+<p><strong>역할</strong>: 코드 블록 생성<br>
+<strong>기능</strong>:</p>
+<ul>
+<li>코드 블록 생성</li>
+<li>문법 하이라이팅</li>
+<li>언어 선택</li>
+<li>코드 복사 기능</li>
+<li>들여쓰기 관리</li>
+</ul>
+<p><strong>관련 CSS</strong>: <code>css/plugins/codeBlock.css</code></p>
+<ul>
+<li>코드 블록 스타일</li>
+<li>문법 하이라이팅</li>
+<li>코드 폰트 설정</li>
+</ul>
+<h2>🔗 의존성 관계</h2>
+<pre><code class="language-mermaid">graph TD
+    A[core.js] --&gt; B[plugin-util.js]
+    B --&gt; C[error-handler.js]
+    B --&gt; D[security-manager.js]
+    B --&gt; E[modal.js]
+    
+    F[fontFamily.js] --&gt; B
+    F --&gt; G[fontList.js]
+    
+    H[fontColor.js] --&gt; B
+    H --&gt; I[colors.js]
+    
+    J[media.js] --&gt; B
+    J --&gt; D
+    J --&gt; K[videoList.js]
+    
+    L[imageUpload.js] --&gt; B
+    L --&gt; D
+    
+    M[All Plugins] --&gt; B
+    M --&gt; C
+</code></pre>
+<h2>📋 CSS 파일 전체 목록</h2>
+<h3>Core CSS</h3>
+<ul>
+<li><code>css/core.css</code> - 에디터 핵심 스타일</li>
+<li><code>css/modal.css</code> - 모달 시스템 스타일</li>
+</ul>
+<h3>Plugin CSS</h3>
+<ul>
+<li><code>css/plugins/plugins.css</code> - 플러그인 공통 스타일</li>
+<li><code>css/plugins/align.css</code> - 정렬 플러그인</li>
+<li><code>css/plugins/bulletList.css</code> - 불릿 목록</li>
+<li><code>css/plugins/checkList.css</code> - 체크리스트</li>
+<li><code>css/plugins/codeBlock.css</code> - 코드 블록</li>
+<li><code>css/plugins/emphasis.css</code> - 텍스트 강조</li>
+<li><code>css/plugins/fontColor.css</code> - 폰트 색상</li>
+<li><code>css/plugins/fontFamily.css</code> - 폰트 패밀리</li>
+<li><code>css/plugins/heading.css</code> - 제목 스타일</li>
+<li><code>css/plugins/imageUpload.css</code> - 이미지 업로드</li>
+<li><code>css/plugins/line.css</code> - 구분선</li>
+<li><code>css/plugins/link.css</code> - 하이퍼링크</li>
+<li><code>css/plugins/media.css</code> - 동영상 미디어</li>
+<li><code>css/plugins/numberedList.css</code> - 번호 목록</li>
+<li><code>css/plugins/table.css</code> - 테이블</li>
+</ul>
+<h2>🚀 로딩 순서 및 초기화</h2>
+<ol>
+<li><strong>데이터 파일 로드</strong>: colors.js, fontList.js, videoList.js</li>
+<li><strong>시스템 파일 로드</strong>: error-handler.js, security-manager.js, modal.js</li>
+<li><strong>유틸리티 로드</strong>: plugin-util.js</li>
+<li><strong>플러그인 로드</strong>: 모든 플러그인 파일들</li>
+<li><strong>핵심 엔진 로드</strong>: core.js (마지막)</li>
+<li><strong>CSS 로드</strong>: 각 플러그인별 CSS 동적 로드</li>
+</ol>
+<hr>
+<p><strong>작성일</strong>: 2025-05-25<br>
+<strong>작성자</strong>: LiteEditor 개발팀<br>
+<strong>버전</strong>: 1.0.0<br>
+<strong>총 파일 수</strong>: JavaScript 20개, CSS 17개</p>

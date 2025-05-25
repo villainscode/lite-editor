@@ -16,6 +16,7 @@
   let savedRange = null;          // 임시로 저장된 선택 영역
   let isDropdownOpen = false;
   let currentSelectedFontItem = null;
+  let currentFontValue = null; // ✅ 추가: 현재 선택된 폰트 값 저장
   
   // 선택 영역 저장 함수 (util 사용)
   function saveSelection() {
@@ -188,20 +189,11 @@
           });
           
           // 클릭 이벤트 - 글꼴 적용 (커서 상태에서도 작동하도록 수정)
-          fontItem.addEventListener('click', util.scroll.preservePosition((e) => {
+          fontItem.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
-            // 즉시 contentArea에 포커스를 주어 selection 컨텍스트 유지
-            try {
-                if (contentArea && contentArea.isConnected) {
-                    contentArea.focus({ preventScroll: true });
-                }
-            } catch (e) {
-                console.warn('contentArea focus 실패:', e);
-            }
-            
-            // UI 업데이트 먼저
+            // 1. UI 업데이트
             if (currentSelectedFontItem) {
                 currentSelectedFontItem.style.backgroundColor = '';
             }
@@ -213,67 +205,47 @@
             fontContainer.style.color = '#1a73e8';            
             icon.style.color = '#1a73e8';                     
             
-            // 드롭다운 닫기
+            // ✅ 추가: 드롭다운 닫기
             dropdownMenu.style.display = 'none';
             dropdownMenu.classList.remove('show');
             fontContainer.classList.remove('active');
             isDropdownOpen = false;
             
-            // 🔧 selection 상태 확인 및 복원
-            let hasSelection = false;
-            const currentSelection = window.getSelection();
+            // ✅ 추가: 모달 관리 시스템에서 제거
+            util.activeModalManager.unregister(dropdownMenu);
             
+            // 2. Scroll 위치 저장
+            const scrollPosition = util.scroll.savePosition();
+            
+            // 3. Selection 복원 (한 번만)
             if (savedRange) {
                 const restored = restoreSelection();
-                errorHandler.logInfo('FontFamilyPlugin', `저장된 selection 복원: ${restored}`);
-                
-                // 복원 후 다시 확인
-                const restoredSelection = window.getSelection();
-                if (restoredSelection.rangeCount > 0) {
-                    hasSelection = !restoredSelection.isCollapsed;
-                    errorHandler.logInfo('FontFamilyPlugin', `복원된 selection: "${restoredSelection.toString()}", collapsed: ${restoredSelection.isCollapsed}`);
-            }
-            } else if (currentSelection.rangeCount > 0) {
-                hasSelection = !currentSelection.isCollapsed;
-                errorHandler.logInfo('FontFamilyPlugin', `현재 selection: "${currentSelection.toString()}", collapsed: ${currentSelection.isCollapsed}`);
-            }
-            
-            // 글꼴 적용을 위한 스타일 주입
-            injectFontFamilyStyles();
-            
-            // 🔧 글꼴 적용 - collapsed selection에서도 실행
-            errorHandler.logInfo('FontFamilyPlugin', `글꼴 적용 중: ${font.name} 값: ${font.value}, hasSelection: ${hasSelection}`);
-            
-            try {
-                const beforeSelection = window.getSelection();
-                const isCollapsed = beforeSelection.isCollapsed;
-                
-                // scroll position 저장
-                const scrollPosition = util.scroll.savePosition();
-                
-                if (isCollapsed) {
-                    errorHandler.logInfo('FontFamilyPlugin', '커서 위치에서 폰트 설정 - 다음 타이핑에 적용됨');
-                } else {
-                    errorHandler.logInfo('FontFamilyPlugin', `선택된 텍스트에 폰트 적용: "${beforeSelection.toString()}"`);
+                if (!restored) {
+                    console.warn('Selection 복원 실패');
                 }
-                
-                // execCommand 실행
-            document.execCommand('fontName', false, font.value);
-                
-                // scroll position 복원
-                util.scroll.restorePosition(scrollPosition, 50);
-                
-                // execCommand 후 확인
-                const afterSelection = window.getSelection();
-                errorHandler.logInfo('FontFamilyPlugin', `execCommand 후 selection: "${afterSelection.toString()}"`);
-                
+            }
+            
+            // 4. Focus 설정 (selection 복원 후)
+            if (!contentArea.contains(document.activeElement)) {
+                contentArea.focus({ preventScroll: true });
+            }
+            
+            // ✅ 폰트 값 저장
+            currentFontValue = font.value;
+            
+            // 5. execCommand 실행
+            try {
+                document.execCommand('fontName', false, font.value);
             } catch (error) {
                 errorHandler.logError('FontFamilyPlugin', 'execCommand 실행 중 오류:', error);
             }
             
-            // UI 업데이트
+            // 6. Scroll 위치 복원
+            util.scroll.restorePosition(scrollPosition);
+            
+            // 7. UI 업데이트
             fontText.textContent = font.name;
-          }));
+          });
           
           dropdownMenu.appendChild(fontItem);
         });
@@ -286,9 +258,9 @@
       fontContainer.addEventListener('mousedown', (e) => {
         // 🔧 mousedown 시점에 미리 selection 저장 (click 전에)
         const currentSelection = window.getSelection();
-        if (currentSelection.rangeCount > 0 && !currentSelection.isCollapsed) {
+        if (currentSelection.rangeCount > 0) {
           savedRange = util.selection.saveSelection();
-          errorHandler.logInfo('FontFamilyPlugin', `mousedown에서 selection 저장됨: "${currentSelection.toString()}"`);
+          errorHandler.logInfo('FontFamilyPlugin', `mousedown에서 selection 저장됨: collapsed=${currentSelection.isCollapsed}`);
         }
       });
 
@@ -353,7 +325,88 @@
         }
       }));
       
+      // 키보드 이벤트 설정 (한 번만 실행)
+      if (!contentArea.hasAttribute('data-font-events-setup')) {
+        setupFontKeyboardEvents(contentArea);
+        contentArea.setAttribute('data-font-events-setup', 'true');
+      }
+      
       return fontContainer;
     }
   });
+
+  // 전역 키보드 이벤트 리스너 추가 (플러그인 등록 후)
+  function setupFontKeyboardEvents(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+            ? range.startContainer.parentElement 
+            : range.startContainer;
+          
+          // 폰트 스타일이 적용된 요소 찾기
+          const fontElement = currentElement.closest('span[style*="font-family"], font');
+          
+          if (fontElement) {
+            if (e.shiftKey) {
+              // Shift+Enter: 폰트 유지하면서 줄바꿈
+              e.preventDefault();
+              
+              // ✅ 가장 안전한 방법: DOM 요소 직접 생성
+              let fontFamily = currentFontValue;
+              
+              if (!fontFamily) {
+                // 폴백: 현재 요소에서 추출
+                const styleAttr = fontElement.getAttribute('style');
+                const fontFamilyMatch = styleAttr?.match(/font-family:\s*([^;]+)/);
+                fontFamily = fontFamilyMatch ? fontFamilyMatch[1].trim() : 'inherit';
+              }
+              
+              // DOM 요소 직접 생성
+              const br = document.createElement('br');
+              const newSpan = document.createElement('span');
+              newSpan.style.fontFamily = fontFamily; // 안전한 속성 설정
+              newSpan.innerHTML = '&#8203;'; // 제로폭 공백
+              
+              // 현재 위치에 삽입
+              range.deleteContents();
+              range.insertNode(br);
+              range.setStartAfter(br);
+              range.insertNode(newSpan);
+              
+              // 커서를 새 span 내부로 이동
+              range.setStart(newSpan, 1);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              
+              errorHandler.logInfo('FontFamilyPlugin', `Shift+Enter: 폰트 유지 줄바꿈 (${fontFamily})`);
+            } else {
+              // Enter: 폰트 영역 벗어나서 새 문단
+              e.preventDefault();
+              
+              // 새 문단 생성
+              const newP = document.createElement('p');
+              newP.innerHTML = '<br>';
+              
+              // 현재 문단 다음에 삽입
+              const currentP = fontElement.closest('p') || fontElement.parentElement;
+              currentP.parentNode.insertBefore(newP, currentP.nextSibling);
+              
+              // 커서를 새 문단으로 이동
+              const newRange = document.createRange();
+              newRange.setStart(newP, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+              
+              errorHandler.logInfo('FontFamilyPlugin', 'Enter: 폰트 영역 벗어남');
+            }
+          }
+        }
+      }
+    });
+  }
 })();
