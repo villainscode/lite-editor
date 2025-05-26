@@ -138,7 +138,7 @@
 <body class="demo-page">
     <div class="demo-container">
         <div class="demo-header">
-            <h1>LiteEditor 플러그인 데모</h1>
+            <h1>LiteEditor 플러그인 데모 <span id="version-display" style="font-size: 0.6em; color: #666; font-weight: normal;"></span></h1>
         </div>
 
         <div class="demo-section">
@@ -560,13 +560,18 @@
     <script src="js/loader.js"></script>
     
     <script>
-        // 디버그 모드를 명시적으로 활성화
+        // 디버그 모드를 명시적으로 활성화 (loader.js 로드 전에 설정)
         window.DEBUG_MODE = true;
+        console.log('[DEBUG] 디버그 모드 활성화됨 - index.html에서 설정');
 
-        // 직접 콘솔에 로그 출력
-        console.log('[DEBUG] 디버그 모드 활성화됨');
-        // 모든 스크립트 로드 완료 후 에디터 초기화
+        // 버전 정보 표시
         document.addEventListener('lite-editor-loaded', function() {
+            // 버전 정보 표시 (스크립트 로드 완료 후)
+            const versionDisplay = document.getElementById('version-display');
+            if (window.LiteEditorVersion && versionDisplay) {
+                versionDisplay.textContent = window.LiteEditorVersion.version;
+            }
+            
             // ✅ 분리 모드: 업데이트된 HTML 구조 사용
             const editor = LiteEditor.init('#lite-editor-content', {
                 separatedMode: true,
@@ -596,9 +601,6 @@
                     }
                 }
             });
-            
-            // 디버그 정보 표시
-            errorHandler.logDebug('Core', 'LiteEditor 초기화 완료 - 분리 모드');
         });
     </script>
 </body>

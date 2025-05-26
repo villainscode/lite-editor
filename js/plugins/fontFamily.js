@@ -375,7 +375,78 @@
           });
           
           dropdownMenu.appendChild(fontItem);
+
+          // 폰트 항목에 키보드 접근성 추가
+          fontItem.setAttribute('tabindex', '0');
+
+          // Enter/Space 키로 폰트 선택
+          fontItem.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fontItem.click();
+            }
+          });
         });
+        
+        // 폰트 목록 생성 완료 후 드롭다운 키보드 네비게이션 추가
+        setTimeout(() => {
+          const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+          
+          // 드롭다운 메뉴 키보드 네비게이션
+          dropdownMenu.addEventListener('keydown', (e) => {
+            const currentIndex = Array.from(fontItems).findIndex(item => item === document.activeElement);
+            
+            switch(e.key) {
+              case 'Tab':
+                if (e.shiftKey) {
+                  // Shift+Tab: 첫 번째 항목에서 fontContainer로 돌아감
+                  if (currentIndex <= 0) {
+                    e.preventDefault();
+                    dropdownMenu.classList.remove('show');
+                    dropdownMenu.style.display = 'none';
+                    fontContainer.classList.remove('active');
+                    isDropdownOpen = false;
+                    util.activeModalManager.unregister(dropdownMenu);
+                    fontContainer.focus();
+                  }
+                } else {
+                  // Tab: 마지막 항목에서 드롭다운 닫고 다음 툴바 버튼으로
+                  if (currentIndex >= fontItems.length - 1) {
+                    e.preventDefault();
+                    dropdownMenu.classList.remove('show');
+                    dropdownMenu.style.display = 'none';
+                    fontContainer.classList.remove('active');
+                    isDropdownOpen = false;
+                    util.activeModalManager.unregister(dropdownMenu);
+                    // 브라우저가 자동으로 다음 탭 가능한 요소(heading)로 이동
+                  }
+                }
+                break;
+                
+              case 'Escape':
+                e.preventDefault();
+                dropdownMenu.classList.remove('show');
+                dropdownMenu.style.display = 'none';
+                fontContainer.classList.remove('active');
+                isDropdownOpen = false;
+                util.activeModalManager.unregister(dropdownMenu);
+                fontContainer.focus();
+                break;
+                
+              case 'ArrowDown':
+                e.preventDefault();
+                const nextItem = fontItems[currentIndex + 1] || fontItems[0];
+                nextItem.focus();
+                break;
+                
+              case 'ArrowUp':
+                e.preventDefault();
+                const prevItem = fontItems[currentIndex - 1] || fontItems[fontItems.length - 1];
+                prevItem.focus();
+                break;
+            }
+          });
+        }, 0);
       });
       
       // 6. 드롭다운을 document.body에 직접 추가 (정렬 플러그인과 동일)
@@ -433,6 +504,14 @@
           const buttonRect = fontContainer.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = (buttonRect.left - 3) + 'px';
+          
+          // ✅ 첫 번째 폰트 항목에 포커스
+          setTimeout(() => {
+            const firstFontItem = dropdownMenu.querySelector('div[style*="font-family"]');
+            if (firstFontItem) {
+              firstFontItem.focus();
+            }
+          }, 0);
           
           // ✅ 수정: 드롭다운을 열 때 activeModalManager에 등록
           util.activeModalManager.register(dropdownMenu);
@@ -501,6 +580,14 @@
         contentArea.addEventListener('click', clickHandler);
         contentArea.setAttribute('data-font-events-setup', 'true');
       }
+      
+      // 키보드 접근성: Enter/Space 키로 드롭다운 열기
+      fontContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fontContainer.click(); // 기존 클릭 이벤트 트리거
+        }
+      });
       
       return fontContainer;
     }
