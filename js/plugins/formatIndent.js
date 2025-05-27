@@ -83,12 +83,16 @@
           const spacesToRemove = Math.min(INDENT_SIZE, getLeadingSpaces(text.substring(lineStart)));
           
           if (spacesToRemove > 0) {
+            // 현재 커서 위치 저장
+            const originalOffset = range.startOffset;
+            
             // 공백 제거
             const newText = text.substring(0, lineStart) + text.substring(lineStart + spacesToRemove);
             range.startContainer.textContent = newText;
             
-            // 커서 위치 조정
-            range.setStart(range.startContainer, Math.max(lineStart, range.startOffset - spacesToRemove));
+            // 커서 위치 조정 - 제거된 공백만큼 앞으로 이동하되 줄 시작보다 앞으로는 가지 않음
+            const newOffset = Math.max(lineStart, originalOffset - spacesToRemove);
+            range.setStart(range.startContainer, newOffset);
             range.collapse(true);
             selection.removeAllRanges();
             selection.addRange(range);
@@ -130,7 +134,8 @@
    * @returns {HTMLElement} 생성된 버튼 요소
    */
   function createButton(icon, title) {
-    const container = document.createElement('div');
+    const container = document.createElement('button');
+    container.type = 'button';
     container.className = 'lite-editor-button';
     container.setAttribute('title', title);
     
@@ -174,6 +179,54 @@
       return containerWrapper;
     }
   });
+  
+  /**
+   * Tab 키 이벤트 핸들러 (일반 텍스트용)
+   */
+  function handleTabKey(event) {
+    // Tab 키가 아니면 무시
+    if (event.key !== 'Tab') return;
+    
+    // 에디터 영역 찾기
+    const contentArea = event.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    // 리스트 내부인지 확인 (리스트는 각각의 플러그인에서 처리)
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      let node = range.startContainer;
+      
+      // 부모 노드들을 확인하여 리스트 내부인지 검사
+      while (node && node !== contentArea) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // 리스트 요소들인지 확인
+          if (node.tagName === 'LI' || 
+              (node.tagName === 'UL' && node.hasAttribute('data-lite-editor-bullet')) ||
+              (node.tagName === 'OL' && node.hasAttribute('data-lite-editor-number')) ||
+              node.classList.contains('checklist-item')) {
+            return; // 리스트 내부이면 해당 플러그인에서 처리하도록 함
+          }
+        }
+        node = node.parentNode;
+      }
+    }
+    
+    // 기본 동작 방지
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // 들여쓰기/내어쓰기 실행
+    if (event.shiftKey) {
+      handleIndentation(contentArea, 'outdent');
+    } else {
+      handleIndentation(contentArea, 'indent');
+    }
+  }
+  
+  // Tab 키 이벤트 리스너 등록
+  document.addEventListener('keydown', handleTabKey, false);
+  
   
   // 외부에서 사용할 수 있도록 함수 노출
   window.LiteEditor = window.LiteEditor || {};
