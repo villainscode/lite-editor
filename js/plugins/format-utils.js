@@ -4,15 +4,68 @@
  */
 
 (function() {
-  // Safe selection getter - adds error handling for selection retrieval
-  function getSafeSelection() {
+  // PluginUtil의 selection 유틸리티 사용
+  const getSafeSelection = () => {
+    if (window.PluginUtil && window.PluginUtil.selection) {
+      return window.PluginUtil.selection.getSafeSelection();
+    }
+    // 폴백: 기존 방식
     try {
       return window.getSelection();
     } catch (error) {
-      errorHandler.logError('FormatUtils', errorHandler.codes.COMMON.SELECTION_GET, error);
+      if (window.errorHandler) {
+        errorHandler.logError('FormatUtils', errorHandler.codes.COMMON.SELECTION_GET, error);
+      }
       return null;
     }
-  }
+  };
+
+  // 선택 영역 저장/복원 헬퍼 함수들 (상단으로 이동)
+  const saveSelection = () => {
+    // 1순위: PluginUtil 사용
+    if (window.PluginUtil && window.PluginUtil.selection) {
+      return window.PluginUtil.selection.saveSelection();
+    }
+    // 2순위: 기존 liteEditorSelection 사용
+    else if (window.liteEditorSelection) {
+      window.liteEditorSelection.save();
+      return window.liteEditorSelection.get();
+    }
+    // 3순위: 직접 구현
+    else {
+      const sel = getSafeSelection();
+      if (sel && sel.rangeCount > 0) {
+        return sel.getRangeAt(0).cloneRange();
+      }
+    }
+    return null;
+  };
+
+  const restoreSelection = (savedRange) => {
+    // 1순위: PluginUtil 사용
+    if (window.PluginUtil && window.PluginUtil.selection && savedRange) {
+      return window.PluginUtil.selection.restoreSelection(savedRange);
+    }
+    // 2순위: 기존 liteEditorSelection 사용
+    else if (window.liteEditorSelection) {
+      window.liteEditorSelection.restore();
+      return true;
+    }
+    // 3순위: 직접 구현
+    else if (savedRange) {
+      try {
+        const sel = getSafeSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+          return true;
+        }
+      } catch (e) {
+        console.warn('선택 영역 복원 실패:', e);
+      }
+    }
+    return false;
+  };
 
   // 전역 네임스페이스 생성
   window.LiteEditorUtils = window.LiteEditorUtils || {};
@@ -38,10 +91,8 @@
     }
     buttonElement.setAttribute('data-processing', 'true');
     
-    // 현재 선택 영역 저장
-    if (window.liteEditorSelection) {
-      window.liteEditorSelection.save();
-    }
+    // 현재 선택 영역 저장 (헬퍼 함수 사용)
+    const savedRange = saveSelection();
 
     // 포커스 확인
     if (document.activeElement !== contentArea) {
@@ -51,10 +102,8 @@
     // 안정적인 실행을 위한 적절한 지연 시간 설정
     setTimeout(function executeCommand() {
       try {
-        // 선택 영역 복원
-        if (window.liteEditorSelection) {
-          window.liteEditorSelection.restore();
-        }
+        // 선택 영역 복원 (헬퍼 함수 사용)
+        restoreSelection(savedRange);
         
         // 포커스 유지 및 명령 실행
         contentArea.focus();
@@ -66,7 +115,9 @@
           contentArea.dispatchEvent(new Event('input', { bubbles: true }));
         }, 10);
       } catch (error) {
-        errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.APPLY, error);
+        if (window.errorHandler) {
+          errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.APPLY, error);
+        }
         buttonElement.removeAttribute('data-processing');
       }
     }, 10);
@@ -91,10 +142,8 @@
     }
     buttonElement.setAttribute('data-processing', 'true');
     
-    // 3. 현재 선택 영역 저장
-    if (window.liteEditorSelection) {
-      window.liteEditorSelection.save();
-    }
+    // 3. 현재 선택 영역 저장 (헬퍼 함수 사용)
+    const savedRange = saveSelection();
 
     // 4. 포커스 확인
     if (document.activeElement !== contentArea) {
@@ -141,9 +190,8 @@
     // 8. 안정적인 실행을 위한 적절한 지연 시간 설정
     setTimeout(function executeCommand() {
       try {
-        // 9. 선택 영역 복원
-        if (window.liteEditorSelection) {
-          const restored = window.liteEditorSelection.restore();
+        // 9. 선택 영역 복원 (헬퍼 함수 사용)
+        restoreSelection(savedRange);
           
           // 10. 안정적인 명령 실행 순서 보장
           setTimeout(function() {
@@ -151,7 +199,7 @@
               // 11. 모바일 브라우저에서도 작동하도록 Range 확인
               if (!isSelectionValid()) {
                 // 선택이 유효하지 않으면 다시 복원 시도
-                window.liteEditorSelection.restore();
+                restoreSelection(savedRange);
               }
               
               // 12. 추가 포커스 유지(일부 브라우저에서 필요)
@@ -226,24 +274,29 @@
                     contentArea.focus();
                   } else {
                     // 선택이 유효하지 않으면 다시 복원 시도
-                    window.liteEditorSelection.restore();
+                    restoreSelection(savedRange);
                   }
                 }
                 
                 // 17. 처리 상태 플래그 제거
                 buttonElement.removeAttribute('data-processing');
-                errorHandler.logInfo('FormatUtils', '코드 서식 적용 완료');
+                if (window.errorHandler) {
+                  errorHandler.logInfo('FormatUtils', '코드 서식 적용 완료');
+                }
               }, 10);
             } catch (innerError) {
-              errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, innerError);
+              if (window.errorHandler) {
+                errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, innerError);
+              }
               buttonElement.removeAttribute('data-processing');
             }
           }, 20); // 명령 실행 전 지연
+        } catch (outerError) {
+          if (window.errorHandler) {
+            errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, outerError);
+          }
+          buttonElement.removeAttribute('data-processing');
         }
-      } catch (outerError) {
-        errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, outerError);
-        buttonElement.removeAttribute('data-processing');
-      }
     }, 50); // 주요 실행 지연
   };
   
@@ -293,10 +346,7 @@
       if (node.nodeType === 1) { // 요소 노드
         const nodeName = node.nodeName.toLowerCase();
         if (tagNames.includes(nodeName)) {
-          // 요소를 확인한 후, 원래 DOM에서 해당하는 요소 찾기
-          const originalNodeXPath = getXPathForElement(node, tempDiv);
-          const originalNode = getElementByXPath(originalNodeXPath, document.body);
-          return originalNode || node; // 원본 노드를 찾지 못하면 임시 노드 반환
+          return node; // 임시 노드 반환
         }
       }
     }
@@ -317,25 +367,23 @@
       contentArea.focus();
     }
     
-    // 현재 선택 영역 저장
-    if (window.liteEditorSelection) {
-      window.liteEditorSelection.save();
-    }
+    // 현재 선택 영역 저장 (헬퍼 함수 사용)
+    const savedRange = saveSelection();
     
     // 선택 영역 확인
     const selection = getSafeSelection();
     if (!selection || selection.rangeCount === 0) {
-      errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.NO_SELECTION, e);
+      if (window.errorHandler) {
+        errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.NO_SELECTION, e);
+      }
       return;
     }
     
     // 지연 시간 조정 (100ms -> 10ms)
     setTimeout(() => {
       try {
-        // 선택 영역 복원
-        if (window.liteEditorSelection) {
-          window.liteEditorSelection.restore();
-        }
+        // 선택 영역 복원 (헬퍼 함수 사용)
+        restoreSelection(savedRange);
         
         // 팀막처럼 선택 영역이 유지되는지 확인
         // 포커스 유지를 위해 다시 한 번 포커스
@@ -346,18 +394,19 @@
         
         // 지연 후 선택 영역 재복원 (중요!)
         setTimeout(() => {
-          if (window.liteEditorSelection) {
-            window.liteEditorSelection.restore();
-            
-            // 포커스 유지
-            contentArea.focus();
-          }
+          restoreSelection(savedRange);
+          
+          // 포커스 유지
+          contentArea.focus();
         }, 10);
       } catch (e) {
-        errorHandler.logInfo('FormatUtils', '서식 적용 완료');
+        if (window.errorHandler) {
+          errorHandler.logInfo('FormatUtils', '서식 적용 완료');
+        }
       }
     }, 10);
   };
+  
   // 선택 영역 관리를 위한 문서 레벨 이벤트 수신기
   document.addEventListener('click', function(e) {
     const sel = getSafeSelection();
