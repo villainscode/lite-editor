@@ -123,8 +123,18 @@
       
       const fontElement = currentElement.closest('span[style*="font-family"], font');
       
-      if (fontElement) {
-        // 🔴 중요: 폰트 영역 내부 - 활성 상태 설정
+      // 🔧 핵심 수정: 사용자가 명시적으로 설정한 폰트만 "폰트 영역"으로 인식
+      const isUserSetFont = fontElement && currentFontValue && (
+        // font 태그는 항상 사용자 설정으로 간주
+        fontElement.tagName === 'FONT' ||
+        // span 태그는 currentFontValue와 일치할 때만 사용자 설정으로 간주
+        (fontElement.tagName === 'SPAN' && 
+         fontElement.style.fontFamily && 
+         currentFontValue.includes(getFirstFontName(fontElement.style.fontFamily)))
+      );
+      
+      if (isUserSetFont) {
+        // 사용자가 설정한 폰트 영역 - 활성 상태 설정
         fontContainer.classList.add('active');
         fontContainer.style.backgroundColor = '#e9e9e9';
         fontContainer.style.color = '#1a73e8';
@@ -186,14 +196,14 @@
           }
         }
       } else {
-        // 🔴 중요: 폰트 영역 외부 - 기본 상태로 완전 복원
+        // 🔧 핵심 수정: 시스템 폰트 또는 비폰트 영역 - 기본 상태 유지
         fontContainer.classList.remove('active');
         fontContainer.style.backgroundColor = '';
         fontContainer.style.color = '';
         icon.style.color = '';
         fontText.textContent = 'Font Family';
         
-        // 🔧 1단계 최적화: 캐싱된 요소 사용
+        // 드롭다운 선택 해제
         const dropdownMenu = document.getElementById('font-family-dropdown');
         if (dropdownMenu && dropdownMenu._cachedFontItems) {
           dropdownMenu._cachedFontItems.forEach(item => {
@@ -201,8 +211,7 @@
           });
         }
         
-        // 전역 상태 초기화
-        currentFontValue = null;
+        // 전역 상태 초기화 (단, 사용자가 설정한 currentFontValue는 유지)
         currentSelectedFontItem = null;
       }
     }
