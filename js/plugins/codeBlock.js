@@ -398,8 +398,40 @@
         </div>
       `;
       
-      // 에디터에 삽입
-      document.execCommand('insertHTML', false, codeBlockHTML);
+      // 에디터에 삽입 + 자동 개행 처리
+      const codeBlockWithBreak = codeBlockHTML + '<p><br></p>';
+      document.execCommand('insertHTML', false, codeBlockWithBreak);
+      
+      // 삽입 후 커서를 새로운 P 태그로 이동
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        // 방금 삽입된 코드 블록 다음의 P 태그 찾기
+        const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block');
+        const newCodeBlock = codeBlocks[codeBlocks.length - 1];
+        
+        if (newCodeBlock && newCodeBlock.nextElementSibling && newCodeBlock.nextElementSibling.tagName === 'P') {
+          const nextP = newCodeBlock.nextElementSibling;
+          const br = nextP.querySelector('br');
+          
+          if (br) {
+            // BR 태그 앞에 커서 위치
+            range.setStartBefore(br);
+            range.collapse(true);
+          } else {
+            // P 태그 시작에 커서 위치
+            range.setStart(nextP, 0);
+            range.collapse(true);
+          }
+          
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // 포커스 설정
+          contentArea.focus();
+        }
+      }, 10);
       
       // 방금 삽입된 코드 블록 찾고 하이라이팅 적용
       const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
