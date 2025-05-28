@@ -716,45 +716,22 @@
     const contentArea = event.target.closest('[contenteditable="true"]');
     if (!contentArea || !contentArea.isConnected) return;
     
-    // 🔧 디버깅: Tab 키 이벤트 시작
-    if (window.errorHandler) {
-      errorHandler.colorLog('FormatIndent', '⌨️ Tab 키 이벤트 감지', {
-        shiftKey: event.shiftKey,
-        target: event.target.tagName,
-        contentAreaFound: !!contentArea,
-        isConnected: contentArea.isConnected
-      }, '#3f51b5');
-      errorHandler.selectionLog.start(contentArea);
-    }
-    
     // E1: 리스트 내부 감지
     if (isInListContext(contentArea)) {
-      if (window.errorHandler) {
-        errorHandler.colorLog('FormatIndent', '📋 리스트 컨텍스트 감지 → 처리 중단', {
-          inList: true
-        }, '#ff9800');
-      }
-      return;
+      // 🔧 핵심 수정: 리스트 컨텍스트에서는 완전히 이벤트를 다른 핸들러에게 위임
+      return; // preventDefault 호출하지 않음
     }
     
+    // 🔧 일반 텍스트에서만 preventDefault 호출
     event.preventDefault();
     event.stopPropagation();
     
     const command = event.shiftKey ? 'outdent' : 'indent';
-    
-    // 🔧 디버깅: 명령 실행 전 최종 상태
-    if (window.errorHandler) {
-      errorHandler.colorLog('FormatIndent', '🚀 Tab 명령 실행 시작', {
-        command: command,
-        shiftKey: event.shiftKey
-      }, '#673ab7');
-    }
-    
     handleIndentation(contentArea, command);
   }
   
   /**
-   * 리스트 컨텍스트 확인 (E1)
+   * 리스트 컨텍스트 확인 (E1) - 수정됨
    */
   function isInListContext(contentArea) {
     try {
@@ -766,12 +743,14 @@
       
       while (node && node !== contentArea) {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          if (node.tagName === 'LI' || 
-              (node.tagName === 'UL' && node.hasAttribute('data-lite-editor-bullet')) ||
-              (node.tagName === 'OL' && node.hasAttribute('data-lite-editor-number')) ||
-              node.classList.contains('checklist-item')) {
-            return true;
+          // 🔧 수정: 체크리스트만 formatIndent에서 처리하지 않음
+          // bulletList와 numberedList는 각자의 플러그인에서 처리하도록 함
+          if (node.classList.contains('checklist-item')) {
+            return true; // 체크리스트만 차단
           }
+          
+          // 🔧 제거: UL, OL, LI 체크 제거
+          // 이제 bulletList.js와 numberedList.js가 직접 처리
         }
         node = node.parentNode;
       }

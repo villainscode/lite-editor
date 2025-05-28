@@ -207,8 +207,3 @@ const editor = LiteEditor.init('#editor', {
 const contentArea = document.querySelector('#lite-editor-content');
 insertLine(contentArea);
 ```
-
-### 🔗 관련 문서
-- [LiteEditor 플러그인 개발 가이드](../development/plugin-guide.md)
-- [Range API 사용법](../development/range-api.md)
-- [에러 처리 가이드](../development/error-handling.md)
