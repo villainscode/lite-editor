@@ -5,7 +5,6 @@
 (function() {
   let tabKeyCleanup = null;
   let checklistItemCounter = 0;
-  const NBSP_CHAR = '\u00A0';
 
   // ✅ 단일 체크리스트 아이템 생성 (이벤트 처리 통합)
   function createSingleChecklistItem(text) {
@@ -236,13 +235,21 @@
     action: toggleCheckList
   });
 
-  // ✅ 플러그인 등록
+  // ✅ 플러그인 등록 (히스토리 기록 추가)
   PluginUtil.registerPlugin('checkList', {
     title: 'Check List',
     icon: 'checklist',
     action: function(contentArea, button, event) {
       if (event) { event.preventDefault(); event.stopPropagation(); }
       contentArea.focus();
+      
+      // 🔥 히스토리에 적용 전 상태 기록
+      if (window.LiteEditorHistory) {
+        const editorId = contentArea.getAttribute('data-editor') || 'main-editor';
+        const beforeState = contentArea.innerHTML;
+        
+        window.LiteEditorHistory.recordState(editorId, beforeState, 'CheckList Action');
+      }
       
       if (window.liteEditorSelection) {
         window.liteEditorSelection.save();

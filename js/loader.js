@@ -4,17 +4,16 @@
  */
 
 (function() {
-    // 1. 먼저 버전 정보 로드
     const versionScript = document.createElement('script');
     versionScript.src = 'js/data/version.js';
     
     versionScript.onload = function() {
         const VERSION = window.LiteEditorVersion?.version || 'v1.0.05';
         
-        // 2. CSS 파일들 로드
+        // CSS 파일들 로드
         loadCSS(VERSION);
         
-        // 3. JS 파일들 로드
+        // JS 파일들 로드
         loadJS(VERSION);
     };
     
