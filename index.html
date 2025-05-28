@@ -492,33 +492,31 @@
     &lt;script&gt;
     // 모든 스크립트 로드 완료 후 에디터 초기화
     document.addEventListener('lite-editor-loaded', function() {
-        const editor = LiteEditor.init('#editor', {
-            // separatedMode: false (기본값이므로 생략 가능)
-            plugins: [
-                'fontFamily', 'heading', 'fontColor', 'emphasis',
-                'bold', 'italic', 'underline', 'strike',
-                'link', 'imageUpload', 'table', 'media',
-                'line','blockquote', 'code', 'codeBlock',
-                'unorderedList', 'orderedList', 'checkList',
-                'align', 'formatIndent',
-                'historyInit', 'undo', 'redo', 'reset'
-            ],
-            dividers: [4, 8, 12, 16, 19, 22],
-            dimensions: {
-                editor: {
-                    width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
-                    height: '650px',
-                    maxWidth: '100%'
-                },
-                toolbar: {
-                    height: '42px'
-                },
-                content: {
-                    height: '608px',
-                    minHeight: '608px'
-                }
+        // separatedMode: false (기본값이므로 생략 가능)
+        plugins: [
+            'fontFamily', 'heading', 'fontColor', 'emphasis',
+            'bold', 'italic', 'underline', 'strike',
+            'link', 'imageUpload', 'table', 'media',
+            'line','blockquote', 'code', 'codeBlock',
+            'unorderedList', 'orderedList', 'checkList',
+            'align', 'formatIndent',
+            'historyInit', 'undo', 'redo', 'reset'
+        ],
+        dividers: [4, 8, 12, 16, 19, 22],
+        dimensions: {
+            editor: {
+                width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
+                height: '650px',
+                maxWidth: '100%'
+            },
+            toolbar: {
+                height: '42px'
+            },
+            content: {
+                height: '608px',
+                minHeight: '608px'
             }
-        });
+        }
     });
     &lt;/script&gt;
 &lt;/body&gt;
@@ -564,12 +562,24 @@
         window.DEBUG_MODE = true;
         console.log('[DEBUG] 디버그 모드 활성화됨 - index.html에서 설정');
 
-        // 버전 정보 표시
+        // 버전 정보 표시 및 클릭 추적 초기화
         document.addEventListener('lite-editor-loaded', function() {
             // 버전 정보 표시 (스크립트 로드 완료 후)
             const versionDisplay = document.getElementById('version-display');
             if (window.LiteEditorVersion && versionDisplay) {
                 versionDisplay.textContent = window.LiteEditorVersion.version;
+            }
+            
+            // �� 수정: errorHandler 로드 확인 후 실행
+            if (window.errorHandler) {
+                const contentArea = document.querySelector('#lite-editor-content');
+                if (contentArea) {
+                    // 1. 자동 클릭 추적 활성화
+                    errorHandler.enableClickTracking(contentArea);
+                    
+                    // 2. 수동 호출 테스트 (선택사항)
+                    // const trackInfo = errorHandler.debugTrackingTagBlock(contentArea);
+                }
             }
             
             // ✅ 분리 모드: 업데이트된 HTML 구조 사용
