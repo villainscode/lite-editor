@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>테이블 전체 리사이즈 가능</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      table-layout: auto;
+      width: 800px; /* 초기 px 기반 너비 */
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      position: relative;
+    }
+    .resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 5px;
+      height: 100%;
+      cursor: col-resize;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>테이블 및 컬럼 리사이즈</h2>
+  <table id="resizable">
+    <thead>
+      <tr>
+        <th>번호</th>
+        <th>이름</th>
+        <th>닉네임</th>
+        <th>성</th>
+        <th>사용자명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>마크</td>
+        <td>듀드 마이스터</td>
+        <td>오토</td>
+        <td>@mdo</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>제이콥</td>
+        <td>바니 폰 매터혼</td>
+        <td>손튼</td>
+        <td>@fat</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td colspan="2">래리 더 버드</td>
+        <td>왓</td>
+        <td>@twitter</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    (function() {
+      const table = document.getElementById('resizable');
+      const headers = table.querySelectorAll('th');
+
+      headers.forEach(function(th) {
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        th.appendChild(resizer);
+        resizer.addEventListener('mousedown', initResize);
+      });
+
+      let startX, startWidth, startTableWidth, currentTh;
+
+      function initResize(e) {
+        currentTh = e.target.parentElement;
+        startX = e.clientX;
+        startWidth = currentTh.offsetWidth;
+        startTableWidth = table.offsetWidth;
+
+        document.addEventListener('mousemove', resizeColumn);
+        document.addEventListener('mouseup', stopResize);
+      }
+
+      function resizeColumn(e) {
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
+
+        if (newWidth > 30) {
+          currentTh.style.width = newWidth + 'px';
+
+          // 테이블 전체 너비도 같이 조절
+          table.style.width = (startTableWidth + deltaX) + 'px';
+        }
+      }
+
+      function stopResize() {
+        document.removeEventListener('mousemove', resizeColumn);
+        document.removeEventListener('mouseup', stopResize);
+      }
+    })();
+  </script>
+</body>
+</html>

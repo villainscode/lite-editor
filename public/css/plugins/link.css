@@ -1,0 +1,186 @@
+/* 모달 기본 스타일 */
+.modal-overlay {
+    position: absolute;
+    background-color: transparent;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    position: relative;
+    width: 280px;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    font-size: smaller;
+}
+
+/* 입력 요소 스타일 */
+.input-container {
+    margin-bottom: 10px;
+}
+
+.input-container label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.input-container input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    outline: none;
+}
+
+.modal-content input:focus {
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px rgba(156, 163, 175, 0.5);
+}
+
+/* 버튼 컨테이너 */
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+/* 버튼 스타일 */
+.button-container button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.button-container button[data-action="close"] {
+    margin-right: 8px;
+}
+
+.button-container .material-icons {
+    font-size: 18px;
+    color: #5f6368;
+}
+
+/* 유효성 검증 메시지 */
+.validation-message {
+    color: #e53935;
+    font-size: 11px;
+    margin-top: 4px;
+    display: none;
+}
+
+/* 선택된 텍스트 블록 스타일 */
+[data-temp-link] {
+    background-color: #a6c9f0;
+    padding: 2px 0;  /* 좌우 패딩 제거 */
+    display: inline-block;
+    line-height: 1.3;
+    margin: 0;  /* 모든 마진 제거 */
+}
+
+/* ----------------------------------------
+ * 링크 드롭다운 스타일 (미디어와 동일한 UI)
+ * ---------------------------------------- */
+
+/* 링크 드롭다운 기본 스타일 */
+.lite-editor-dropdown-menu.link-dropdown {
+    width: 300px;
+    height: 90px;
+    padding: 0;
+    margin: 0;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    text-align: left;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 4px;
+    background-color: transparent;
+    position: absolute;
+    z-index: 99999;
+}
+
+/* 링크 헤더 스타일 */
+.lite-editor-link-header {
+    padding: 4px 8px;
+    margin: 0;
+    height: 32px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.lite-editor-link-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    line-height: 1.2;
+}
+
+/* 링크 입력 그룹 스타일 */
+.lite-editor-link-input-group {
+    display: flex;
+    padding: 14px 8px 8px 8px;
+    margin: 0;
+    align-items: center;
+    background-color: white;
+    flex-grow: 1;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 링크 입력 필드 스타일 */
+.lite-editor-link-input {
+    flex: 1;
+    height: 28px;
+    padding: 3px 6px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+/* 미디어 플러그인과 동일한 포커스 효과 */
+.lite-editor-link-input:focus {
+    outline: none;
+}
+
+/* 링크 버튼 스타일 */
+.lite-editor-link-button {
+    margin-left: 6px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 3px;
+    background-color: #4285f4;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    height: 28px;
+    min-width: 32px;
+    box-sizing: border-box;
+}
+

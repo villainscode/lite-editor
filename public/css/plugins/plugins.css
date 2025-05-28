@@ -1,0 +1,516 @@
+/* ------------------------------------
+ * 공통 UI 컴포넌트 스타일
+ * ------------------------------------ */
+
+/* Material Icons 스타일 */
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px !important;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+  text-rendering: optimizeLegibility;
+}
+
+/* 버튼 스타일 */
+.lite-editor-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  margin: 0 2px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+  position: relative;
+  padding: 0;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.lite-editor-button .material-icons {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+/* 리사이즈 핸들 예외 처리 */
+.video-resize-handle.material-icons,
+.image-resize-handle.material-icons {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.lite-editor-button:hover {
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
+}
+.material-symbols-outlined {
+  font-size: 20px;
+  color: var(--selection-border);
+  cursor: pointer;
+}
+
+/* 클릭 시 일시적인 효과만 적용 */
+.lite-editor-button:active {
+  transform: scale(0.95);
+  background-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: #1a73e8;
+}
+
+.lite-editor-button:active .material-icons {
+  color: #1a73e8;
+}
+
+/* active 클래스는 토글이 필요한 버튼들만 사용 */
+.lite-editor-button.active {
+  color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+/* 활성화된 버튼에 표시기 추가 */
+.lite-editor-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 2px;
+  background-color: #1a73e8;
+  border-radius: 1px;
+}
+
+/* 하이라이트된 텍스트 스타일 */
+.lite-editor-content mark,
+.lite-editor-content [style*="background-color"] {
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 2px;
+  display: inline-block;
+}
+
+/* ------------------------------------
+ * 드롭다운 메뉴 스타일
+ * ------------------------------------ */
+
+/* 드롭다운 공통 스타일 */
+.lite-editor-dropdown-menu {
+  position: fixed;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 99999;
+  display: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s, visibility 0.2s;
+  padding: 8px 0;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: normal;
+}
+
+.lite-editor-dropdown-menu.show {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.lite-editor-dropdown-header {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 1rem;
+  margin-top: 0;
+  color: #495057;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #ddd;
+  white-space: normal;
+}
+
+.lite-editor-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  clear: both;
+  font-weight: 400;
+  color: #212529;
+  text-align: left;
+  white-space: nowrap;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.lite-editor-dropdown-item:hover {
+  background-color: #e9e9e9;
+  color: #16181b;
+}
+
+/* 드롭다운 구분선 */
+.lite-editor-dropdown-divider {
+  margin: 8px 0;
+  height: 1px;
+  background-color: #e0e0e0;
+  border: none;
+}
+
+/* ------------------------------------
+ * 정렬 플러그인 스타일
+ * ------------------------------------ */
+
+/* 정렬 드롭다운 스타일 */
+.lite-editor-align-dropdown {
+  min-width: 48px !important;
+}
+
+.lite-editor-align-dropdown .lite-editor-dropdown-item {
+  padding: 8px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lite-editor-align-dropdown .lite-editor-dropdown-item:hover {
+  background-color: #e9e9e9;
+  color: #16181b;
+}
+
+/* 텍스트 정렬 팝업 스타일 */
+.lite-editor-align-popup {
+  position: fixed;
+  display: none;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  z-index: 99999;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.lite-editor-align-popup.show {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.lite-editor-align-button {
+  background: transparent;
+  border: none;
+  width: 30px;
+  height: 30px;
+  margin: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  color: #5f6368;
+}
+
+.lite-editor-align-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ------------------------------------
+ * 폰트 플러그인 스타일
+ * ------------------------------------ */
+
+/* 폰트 드롭다운 스타일 */
+.lite-editor-font-button {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px 0 8px;
+  margin: 0 2px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+  font-size: 13px;
+  width: 125px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.lite-editor-font-button i,
+.lite-editor-font-button .material-icons {
+  font-size: 18px !important;
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 22px;
+  width: 22px;
+  position: absolute;
+  left: 8px;
+}
+
+.lite-editor-font-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+  padding-left: 28px;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.lite-editor-font-button:hover {
+  color: #1a73e8 !important;  /* Google Blue */
+  background-color: rgba(26, 115, 232, 0.1) !important;  /* 연한 파란색 배경 */
+}
+
+
+/* 폰트 패밀리 드롭다운 구분선 */
+.lite-editor-font-divider {
+  border: 0;
+  border-top: 1px solid #ddd;
+  margin: 5px 10px;
+  height: 0;
+}
+
+.lite-editor-font-family-item {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+/* 폰트 드롭다운 그룹 헤더 */
+.lite-editor-dropdown-group-header {
+  font-size: 13px;
+  padding: 6px 16px;
+  color: #5f6368;
+  font-weight: 500;
+  background-color: #f5f5f5;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* ------------------------------------
+ * 제목 플러그인 스타일
+ * ------------------------------------ */
+
+/* 헤딩 드롭다운 아이템 스타일 */
+.lite-editor-heading-h1, 
+.lite-editor-heading-h2, 
+.lite-editor-heading-h3, 
+.lite-editor-heading-p {
+  padding: 12px 16px;
+  line-height: 1.2;
+  display: block;
+}
+
+.lite-editor-heading-h1 {
+  margin-bottom: 4px;
+}
+
+.lite-editor-heading-h2 {
+  margin-bottom: 3px;
+}
+
+.lite-editor-heading-h3 {
+  margin-bottom: 2px;
+}
+
+/* 제목 선택 스타일 */
+.lite-editor-heading-dropdown {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 4px;
+}
+
+.lite-editor-heading-option {
+  color: black;
+  padding: 10px 16px;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.lite-editor-heading-option:hover {
+  background-color: #f1f1f1;
+}
+
+/* ------------------------------------
+ * 색상 플러그인 스타일
+ * ------------------------------------ */
+
+/* 색상 선택기 스타일 */
+.lite-editor-color-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lite-editor-color-cell {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+
+.lite-editor-color-cell:hover {
+  transform: scale(1.2);
+  z-index: 1;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+/* None 옵션 스타일 */
+.lite-editor-color-none {
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  grid-column: span 7;
+  height: 24px;
+  border: 1px dashed #ccc;
+  margin-top: 4px;
+}
+
+/* ------------------------------------
+ * 하이라이트 플러그인 스타일
+ * ------------------------------------ */
+
+/* 하이라이트 퍼블리시가 선택했을 때 표시할 배경색 */
+.lite-editor-highlight-container.active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 하이라이트 도구 스타일 */
+.lite-editor-highlight-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.lite-editor-highlight-container:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* MARK 태그 기본 스타일 */
+mark {
+  background-color: #ffff00;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* ------------------------------------
+ * 테이블 플러그인 스타일
+ * ------------------------------------ */
+
+/* 테이블 버튼 스타일 */
+.lite-editor-table-button {
+  position: relative;
+}
+
+/* ------------------------------------
+ * 분할 화면 플러그인 스타일
+ * ------------------------------------ */
+
+/* 분할 화면 스타일 */
+.lite-editor-split-button {
+  position: relative;
+}
+
+.lite-editor-container.split-mode {
+  display: flex !important;
+  flex-direction: row;
+}
+
+.lite-editor-split-second {
+  border-left: 1px solid #ddd;
+}
+
+/* ------------------------------------
+ * 라인 플러그인 스타일
+ * ------------------------------------ */
+
+/* 라인 추가 */
+.lite-editor-line-button {
+  position: relative;
+}
+
+.lite-editor-container.line-mode {
+  display: flex !important;
+  flex-direction: row;
+}
+
+.lite-editor-line-second {
+  border-left: 1px solid #ddd;
+}
+
+/* 폰트 버튼 클릭 효과 */
+.lite-editor-font-button:active {
+  transform: scale(0.95);
+  background-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.lite-editor-font-button.active {
+  color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}

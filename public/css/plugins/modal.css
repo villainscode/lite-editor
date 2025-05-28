@@ -1,0 +1,125 @@
+/**
+ * Lite Editor Modal System Styles
+ * Tailwind 스타일 기반 모달 시스템 
+ */
+
+/* 모달 오버레이 */
+.lite-editor-modal-overlay {
+    position: fixed;
+    inset: 0; /* top, right, bottom, left */
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.lite-editor-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 모달 컨테이너 */
+.lite-editor-modal {
+    background-color: white;
+    border-radius: 0.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    width: 100%;
+    max-width: 400px; /* 더 작은 최대 너비 */
+    max-height: 400px; /* 더 작은 최대 높이 */
+    overflow-y: auto;
+    transform: translateY(-10px);
+    transition: transform 0.2s ease;
+}
+
+.lite-editor-modal-overlay.show .lite-editor-modal {
+    transform: translateY(0);
+}
+
+/* 모달 헤더 */
+.lite-editor-modal-header {
+    padding: 0.15rem 0.3rem; /* 더 작은 패딩 */
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.lite-editor-modal-header h3 {
+    margin: 4px;
+    padding: 4px;
+    font-weight: 600;
+    color: #111827;
+    font-size: 10px; /* 작은 폰트 크기 */
+}
+
+/* 모달 내용 */
+.lite-editor-modal-body {
+    padding: 10px;
+    color: #4b5563;
+    font-size: 14px; /* 더 작은 폰트 크기 */
+}
+
+.lite-editor-modal-body p {
+    margin: 10px;
+}
+
+/* 모달 푸터 */
+.lite-editor-modal-footer {
+    padding: 12px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.3rem;
+}
+
+/* 모달 버튼 */
+.lite-editor-modal-button {
+    padding: 4px 8px;
+    background: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.lite-editor-modal-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.lite-editor-modal-button-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.lite-editor-modal-button-primary:hover {
+    background-color: #2563eb;
+}
+
+.lite-editor-modal-button-secondary {
+    background-color: white;
+    color: #4b5563;
+    border-color: #d1d5db;
+}
+
+.lite-editor-modal-button-secondary:hover {
+    background-color: #f3f4f6;
+}
+
+.video-wrapper .video-resize-handle {
+  position: absolute !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 10px !important;
+  height: 10px !important;
+  background-image: linear-gradient(135deg, transparent 50%, #4285f4 50%, #4285f4 100%) !important;
+  cursor: nwse-resize !important;
+  z-index: 10 !important;
+  font-size: inherit !important; /* material-icons 폰트 크기 상속 방지 */
+} 
