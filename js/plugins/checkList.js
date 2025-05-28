@@ -236,13 +236,23 @@
     action: toggleCheckList
   });
 
-  // ✅ 플러그인 등록
+  // ✅ 플러그인 등록 (히스토리 기록 추가)
   PluginUtil.registerPlugin('checkList', {
     title: 'Check List',
     icon: 'checklist',
     action: function(contentArea, button, event) {
       if (event) { event.preventDefault(); event.stopPropagation(); }
       contentArea.focus();
+      
+      // 🔥 히스토리에 적용 전 상태 기록
+      console.log('[CheckList] 히스토리 기록 시작');
+      if (window.LiteEditorHistory) {
+        const editorId = contentArea.getAttribute('data-editor') || 'main-editor';
+        const beforeState = contentArea.innerHTML;
+        
+        window.LiteEditorHistory.recordState(editorId, beforeState, 'CheckList Action');
+        console.log('[CheckList] 히스토리 기록 완료');
+      }
       
       if (window.liteEditorSelection) {
         window.liteEditorSelection.save();
