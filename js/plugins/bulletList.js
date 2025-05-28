@@ -78,7 +78,7 @@
   }
   
   /**
-   * 새로운 불릿 리스트 생성 (직접 DOM 조작)
+   * 새로운 불릿 리스트 생성 (원본 구조 저장)
    */
   function createBulletList(contentArea, range) {
     if (!range) {
@@ -149,6 +149,16 @@
     // 선택 영역 복원
     selectCreatedList(ul);
     
+    // 🔧 추가: 원본 구조 저장
+    const originalStructure = {
+        type: 'single-p-with-br',
+        content: tempDiv.innerHTML,
+        timestamp: Date.now()
+    };
+    
+    // UL에 원본 구조 정보 저장
+    ul.setAttribute('data-original-structure', JSON.stringify(originalStructure));
+    
     return ul;
   }
   
@@ -172,11 +182,48 @@
   }
   
   /**
-   * 불릿 리스트 제거 (토글)
+   * 불릿 리스트 제거 (원본 구조 복원)
    */
   function unwrapBulletList(ul, range) {
     if (!ul || ul.nodeName !== 'UL') return;
     
+    // 🔧 개선: 원본 구조 정보 확인
+    const originalStructureData = ul.getAttribute('data-original-structure');
+    
+    if (originalStructureData) {
+        try {
+            const originalStructure = JSON.parse(originalStructureData);
+            
+            if (originalStructure.type === 'single-p-with-br') {
+                // 🔧 핵심: 원본 P+BR 구조로 복원
+                const p = document.createElement('p');
+                
+                // LI 내용들을 BR로 연결하여 복원
+                const items = Array.from(ul.children).filter(child => child.nodeName === 'LI');
+                const restoredContent = items.map(item => item.innerHTML).join('<br>');
+                p.innerHTML = restoredContent;
+                
+                // UL을 P로 교체
+                ul.parentNode.replaceChild(p, ul);
+                
+                // 선택 영역 복원
+                setTimeout(() => {
+                    const range = document.createRange();
+                    range.selectNodeContents(p);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    contentArea.focus();
+                }, 10);
+                
+                return; // 원본 구조 복원 완료
+            }
+        } catch (error) {
+            console.warn('원본 구조 복원 실패, 기본 방식 사용:', error);
+        }
+    }
+    
+    // 🔧 폴백: 기존 방식 (각 LI를 P로 변환)
     // 선택 영역 정보 저장 (복원을 위한 준비)
     const contentArea = ul.closest('[contenteditable="true"]');
     

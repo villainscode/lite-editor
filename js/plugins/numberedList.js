@@ -78,7 +78,7 @@
   }
   
   /**
-   * 새로운 숫자 리스트 생성 (직접 DOM 조작)
+   * 새로운 숫자 리스트 생성 (원본 구조 저장)
    */
   function createNumberedList(contentArea, range) {
     if (!range) {
@@ -101,14 +101,27 @@
     // 선택 영역의 콘텐츠 추출
     const fragment = range.extractContents();
     
+    // 원본 구조 저장
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment.cloneNode(true));
+    
+    const originalStructure = {
+      type: 'single-p-with-br',
+      content: tempDiv.innerHTML,
+      timestamp: Date.now()
+    };
+
     // 새 OL 요소 생성
     const ol = document.createElement('ol');
-    ol.className = 'number-depth-1'; // 기본 깊이 클래스
-    ol.setAttribute('data-lite-editor-number', 'true'); // 고유 식별자 추가
-    ol.setAttribute('data-selection-marker', 'true'); // 선택 영역 복원을 위한 마커
+    ol.className = 'number-depth-1';
+    ol.setAttribute('data-lite-editor-number', 'true');
+    ol.setAttribute('data-selection-marker', 'true');
     
+    // 원본 구조 정보 저장
+    ol.setAttribute('data-original-structure', JSON.stringify(originalStructure));
+
     // 선택 영역의 텍스트 줄을 LI로 변환
-    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = ''; // 초기화
     tempDiv.appendChild(fragment);
     
     // 줄바꿈으로 분리하여 각 줄을 LI로 변환
@@ -128,9 +141,8 @@
     const nonEmptyLines = lines.filter(line => line.trim());
     
     if (nonEmptyLines.length === 0) {
-      // 선택된 텍스트가 없는 경우 빈 리스트 아이템 생성
       const li = document.createElement('li');
-      li.innerHTML = '&nbsp;'; // 빈 리스트 아이템에 공백 추가
+      li.innerHTML = '&nbsp;';
       ol.appendChild(li);
     } else {
       nonEmptyLines.forEach(line => {
@@ -172,19 +184,54 @@
   }
   
   /**
-   * 숫자 리스트 제거 (토글)
+   * 숫자 리스트 제거 (원본 구조 복원)
    */
   function unwrapNumberedList(ol, range) {
     if (!ol || ol.nodeName !== 'OL') return;
     
-    // 선택 영역 정보 저장 (복원을 위한 준비)
     const contentArea = ol.closest('[contenteditable="true"]');
     
-    // 리스트 아이템들 수집
+    // 원본 구조 정보 확인
+    const originalStructureData = ol.getAttribute('data-original-structure');
+    
+    if (originalStructureData) {
+      try {
+        const originalStructure = JSON.parse(originalStructureData);
+        
+        if (originalStructure.type === 'single-p-with-br') {
+          // 원본 P+BR 구조로 복원
+          const p = document.createElement('p');
+          
+          // LI 내용들을 BR로 연결하여 복원
+          const items = Array.from(ol.children).filter(child => child.nodeName === 'LI');
+          const restoredContent = items.map(item => item.innerHTML).join('<br>');
+          p.innerHTML = restoredContent;
+          
+          // OL을 P로 교체
+          ol.parentNode.replaceChild(p, ol);
+          
+          // 선택 영역 복원
+          setTimeout(() => {
+            const range = document.createRange();
+            range.selectNodeContents(p);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            contentArea.focus();
+          }, 10);
+          
+          return; // 원본 구조 복원 완료
+        }
+      } catch (error) {
+        console.warn('NumberedList: 원본 구조 복원 실패, 기본 방식 사용:', error);
+      }
+    }
+    
+    // 폴백: 기존 방식 (각 LI를 P로 변환)
     const items = Array.from(ol.children).filter(child => child.nodeName === 'LI');
     if (items.length === 0) return;
     
-    // 변환할 위치에 임시 마커 생성 (위치 참조용)
+    // 변환할 위치에 임시 마커 생성
     const marker = document.createElement('span');
     marker.setAttribute('data-unwrap-marker', 'true');
     ol.parentNode.insertBefore(marker, ol);
@@ -193,17 +240,14 @@
     const fragment = document.createDocumentFragment();
     
     items.forEach(item => {
-      // LI 콘텐츠를 일반 텍스트로 변환
       const p = document.createElement('p');
       
       // 중첩 OL이 있는 경우 처리
       const nestedOl = item.querySelector('ol');
       if (nestedOl) {
-        // 중첩 OL 제거 전 내용 저장
         const itemContent = item.innerHTML.replace(nestedOl.outerHTML, '');
         p.innerHTML = itemContent;
       } else {
-        // 내용 복사 (innerHTML 사용)
         p.innerHTML = item.innerHTML;
       }
       
@@ -214,16 +258,14 @@
     ol.parentNode.insertBefore(fragment, ol);
     ol.parentNode.removeChild(ol);
     
-    // 선택 영역 복원 (마커 기반) - 약간 지연시켜 DOM 업데이트 완료 보장
+    // 선택 영역 복원
     setTimeout(() => {
       const marker = contentArea.querySelector('[data-unwrap-marker="true"]');
       if (!marker) return;
       
-      // 변환된 모든 단락 수집
       const paragraphs = [];
       let nextSibling = marker.nextSibling;
       
-      // 정확히 items 길이만큼의 단락만 찾음
       while (nextSibling && paragraphs.length < items.length) {
         if (nextSibling.nodeName === 'P') {
           paragraphs.push(nextSibling);
@@ -231,11 +273,9 @@
         nextSibling = nextSibling.nextSibling;
       }
       
-      // 마커 제거
       marker.parentNode.removeChild(marker);
       
       if (paragraphs.length > 0) {
-        // 모든 변환된 단락을 선택 (첫 번째부터 마지막까지)
         const range = document.createRange();
         range.setStartBefore(paragraphs[0]);
         range.setEndAfter(paragraphs[paragraphs.length - 1]);
@@ -244,7 +284,6 @@
         selection.removeAllRanges();
         selection.addRange(range);
         
-        // 에디터에 포커스
         contentArea.focus();
       }
     }, 10);
