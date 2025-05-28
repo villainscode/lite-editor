@@ -34,6 +34,12 @@
   // ✅ 개선안: WeakMap 기반 cleanup 관리
   const resizeCleanupMap = new WeakMap();
 
+  // ✅ 개선안: 드롭다운 cleanup 관리
+  const dropdownCleanupMap = new WeakMap();
+
+  // ✅ 개선안: 타이머 관리 (전역 변수 대신 WeakMap)
+  const resizeTimeoutMap = new WeakMap();
+
   /**
    * ✅ 동영상 URL 유효성 검사 (통합 보안 시스템 활용)
    * @param {string} url - 검사할 URL
@@ -346,6 +352,126 @@
     // 새로운 통합 함수로 리다이렉트
     insertVideo(url, contentArea);
   }
+
+  // ✅ 개선안: 드롭다운 DOM 재사용 및 cleanup 관리
+  let cachedDropdownElements = null;
+
+  function createDropdownElements() {
+    if (cachedDropdownElements) {
+      return cachedDropdownElements;
+    }
+
+    // 드롭다운 메뉴 생성
+    const dropdownMenu = util.dom.createElement('div', {
+      className: 'lite-editor-dropdown-menu media-dropdown',
+      id: 'media-dropdown-' + Math.random().toString(36).substr(2, 9)
+    }, {
+      width: DROPDOWN_WIDTH + 'px',
+      height: DROPDOWN_HEIGHT + 'px',
+      padding: '0',
+      margin: '0',
+      boxShadow: '0 1px 5px rgba(0,0,0,0.1)',
+      textAlign: 'left',
+      display: 'none',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      borderRadius: '4px',
+      backgroundColor: 'transparent',
+      position: 'absolute',
+      zIndex: '99999'
+    });
+    
+    // 헤더 생성
+    const header = util.dom.createElement('div', {
+      className: 'lite-editor-media-header'
+    }, {
+      padding: '4px 8px',
+      margin: '0',
+      height: '32px',
+      borderTopLeftRadius: '4px',
+      borderTopRightRadius: '4px',
+      borderBottom: '1px solid #e0e0e0',
+      backgroundColor: '#f8f9fa',
+      width: '100%',
+      boxSizing: 'border-box'
+    });
+    
+    const title = util.dom.createElement('span', {
+      className: 'lite-editor-media-title',
+      textContent: 'Enter video URL (YouTube, Vimeo, etc.)'
+    }, {
+      fontSize: '13px',
+      fontWeight: '500',
+      color: '#333',
+      lineHeight: '1.2'
+    });
+    
+    header.appendChild(title);
+    dropdownMenu.appendChild(header);
+    
+    // 입력 그룹 생성
+    const inputGroup = util.dom.createElement('div', {
+      className: 'lite-editor-media-input-group'
+    }, {
+      display: 'flex',
+      padding: '14px 8px 8px 8px',
+      margin: '0',
+      alignItems: 'center',
+      backgroundColor: 'white',
+      flexGrow: '1',
+      width: '100%',
+      boxSizing: 'border-box'
+    });
+    
+    const urlInput = util.dom.createElement('input', {
+      type: 'text', 
+      className: 'lite-editor-media-input',
+      placeholder: 'https://www.youtube.com/watch?v=... or other video URL'
+    }, {
+      flex: '1',
+      height: '28px',
+      padding: '3px 6px',
+      fontSize: '12px',
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      outline: 'none',
+      boxSizing: 'border-box'
+    });
+    
+    // OK 버튼
+    const submitButton = util.dom.createElement('button', {
+      type: 'submit',
+      className: 'lite-editor-media-insert',
+      title: 'Insert',
+      textContent: 'OK'
+    }, {
+      marginLeft: '6px',
+      padding: '4px 8px',
+      border: 'none',
+      borderRadius: '3px',
+      backgroundColor: '#4285f4',
+      color: 'white',
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: '500',
+      height: '28px',
+      minWidth: '32px',
+      boxSizing: 'border-box'
+    });
+    
+    inputGroup.appendChild(urlInput);
+    inputGroup.appendChild(submitButton);
+    dropdownMenu.appendChild(inputGroup);
+
+    // ✅ 캐시에 저장
+    cachedDropdownElements = {
+      dropdownMenu,
+      urlInput,
+      submitButton
+    };
+
+    return cachedDropdownElements;
+  }
   
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
@@ -368,112 +494,15 @@
       });
       mediaButton.appendChild(icon);
       
-      // 3. 드롭다운 메뉴 생성
-      const dropdownMenu = util.dom.createElement('div', {
-        className: 'lite-editor-dropdown-menu media-dropdown',
-        id: 'media-dropdown-' + Math.random().toString(36).substr(2, 9)
-      }, {
-        width: DROPDOWN_WIDTH + 'px',
-        height: DROPDOWN_HEIGHT + 'px',
-        padding: '0',
-        margin: '0',
-        boxShadow: '0 1px 5px rgba(0,0,0,0.1)',
-        textAlign: 'left',
-        display: 'none',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        borderRadius: '4px',
-        backgroundColor: 'transparent',
-        position: 'absolute',
-        zIndex: '99999'
-      });
+      // ✅ 개선: 드롭다운 요소 재사용
+      const { dropdownMenu, urlInput, submitButton } = createDropdownElements();
       
-      // 4. 헤더 생성
-      const header = util.dom.createElement('div', {
-        className: 'lite-editor-media-header'
-      }, {
-        padding: '4px 8px',
-        margin: '0',
-        height: '32px',
-        borderTopLeftRadius: '4px',
-        borderTopRightRadius: '4px',
-        borderBottom: '1px solid #e0e0e0',
-        backgroundColor: '#f8f9fa',
-        width: '100%',
-        boxSizing: 'border-box'
-      });
+      // ✅ 드롭다운을 document.body에 추가 (한 번만)
+      if (!dropdownMenu.parentNode) {
+        document.body.appendChild(dropdownMenu);
+      }
       
-      const title = util.dom.createElement('span', {
-        className: 'lite-editor-media-title',
-        textContent: 'Enter video URL (YouTube, Vimeo, etc.)'  // ✅ 다중 플랫폼 지원 표시
-      }, {
-        fontSize: '13px',
-        fontWeight: '500',
-        color: '#333',
-        lineHeight: '1.2'
-      });
-      
-      header.appendChild(title);
-      dropdownMenu.appendChild(header);
-      
-      // 5. 입력 그룹 생성
-      const inputGroup = util.dom.createElement('div', {
-        className: 'lite-editor-media-input-group'
-      }, {
-        display: 'flex',
-        padding: '14px 8px 8px 8px',
-        margin: '0',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        flexGrow: '1',
-        width: '100%',
-        boxSizing: 'border-box'
-      });
-      
-      const urlInput = util.dom.createElement('input', {
-        type: 'text', 
-        className: 'lite-editor-media-input',
-        placeholder: 'https://www.youtube.com/watch?v=... or other video URL'  // ✅ 다중 플랫폼 지원 표시
-      }, {
-        flex: '1',
-        height: '28px',
-        padding: '3px 6px',
-        fontSize: '12px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        outline: 'none',
-        boxSizing: 'border-box'
-      });
-      
-      // OK 버튼
-      const submitButton = util.dom.createElement('button', {
-        type: 'submit',
-        className: 'lite-editor-media-insert',
-        title: 'Insert',
-        textContent: 'OK'
-      }, {
-        marginLeft: '6px',
-        padding: '4px 8px',
-        border: 'none',
-        borderRadius: '3px',
-        backgroundColor: '#4285f4',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '12px',
-        fontWeight: '500',
-        height: '28px',
-        minWidth: '32px',
-        boxSizing: 'border-box'
-      });
-      
-      inputGroup.appendChild(urlInput);
-      inputGroup.appendChild(submitButton);
-      dropdownMenu.appendChild(inputGroup);
-      
-      // 6. 드롭다운을 document.body에 추가
-      document.body.appendChild(dropdownMenu);
-      
-      // 7. ✅ 처리 함수 정의 (통합 보안 시스템 활용)
+      // ✅ 처리 함수 정의 (통합 보안 시스템 활용)
       const processVideoUrl = (url) => {
         url = url.trim();
         
@@ -499,18 +528,32 @@
         insertVideo(url, contentArea);
       };
       
-      // 8. 이벤트 설정
-      submitButton.addEventListener('click', () => processVideoUrl(urlInput.value));
-      
-      urlInput.addEventListener('keydown', (e) => {
+      // ✅ 이벤트 설정 (기존 이벤트 제거 후 재등록)
+      const clickHandler = () => processVideoUrl(urlInput.value);
+      const keydownHandler = (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
           processVideoUrl(urlInput.value);
         }
-      });
+      };
+
+      // 기존 이벤트 리스너 제거
+      submitButton.removeEventListener('click', clickHandler);
+      urlInput.removeEventListener('keydown', keydownHandler);
+      
+      // 새 이벤트 리스너 등록
+      submitButton.addEventListener('click', clickHandler);
+      urlInput.addEventListener('keydown', keydownHandler);
+      
+      // ✅ cleanup 함수 등록
+      const dropdownCleanup = () => {
+        submitButton.removeEventListener('click', clickHandler);
+        urlInput.removeEventListener('keydown', keydownHandler);
+      };
+      dropdownCleanupMap.set(mediaButton, dropdownCleanup);
       
       // 9. 버튼 클릭 이벤트
-      mediaButton.addEventListener('click', (e) => {
+      const buttonClickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
         
@@ -574,86 +617,176 @@
         
         // 스크롤 위치 복원
         util.scroll.restorePosition(scrollPosition);
-      });
+      };
+
+      mediaButton.addEventListener('click', buttonClickHandler);
       
       return mediaButton;
     }
   });
 
-  // ✅ 개선된 media.js 리사이즈 핸들
+  // ✅ 개선된 리사이즈 핸들 (타이머 메모리 관리 개선)
   function setupVideoResizeHandle(wrapper, resizeHandle) {
     let isResizing = false;
     let startX, startY, startWidth, startHeight;
+    let rafId = null;
 
-    function handleResize(e) {
-        if (!isResizing) return;
-        
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-        
-        const newWidth = startWidth + deltaX;
-        const newHeight = startHeight + deltaY;
-        
-        if (newWidth > 100 && newHeight > 60) {
-            wrapper.style.width = newWidth + 'px';
-            wrapper.style.height = newHeight + 'px';
-        }
-    }
+    // ✅ 핵심 개선: handleResize 함수만 최적화
+    const handleResize = (e) => {
+      if (!isResizing) return;
+      
+      // ✅ 성능 개선: 직접 스타일 적용
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      const newWidth = Math.max(100, startWidth + deltaX);
+      const newHeight = Math.max(60, startHeight + deltaY);
+      
+      // ✅ 핵심 변경: 복잡한 cssText 정규식 → 직접 프로퍼티 설정
+      wrapper.style.width = newWidth + 'px';
+      wrapper.style.height = newHeight + 'px';
+    };
 
-    function stopResize() {
-        if (!isResizing) return;
-        
-        wrapper.removeAttribute('data-resizing');
-        isResizing = false;
-        document.removeEventListener('mousemove', handleResize);
-        document.removeEventListener('mouseup', stopResize);
-        
-        // ✅ 리사이즈 완료 후에만 에디터 이벤트 발생
+    // ✅ stopResize 함수 (타이머 메모리 관리 개선)
+    const stopResize = () => {
+      if (!isResizing) return;
+      
+      // ✅ 상태 초기화
+      isResizing = false;
+      wrapper.removeAttribute('data-resizing');
+      
+      // ✅ RAF 정리 코드 유지
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      
+      // ✅ 이벤트 리스너 제거
+      document.removeEventListener('mousemove', handleResize, { passive: true });
+      document.removeEventListener('mouseup', stopResize);
+      
+      // ✅ 개선: WeakMap 기반 타이머 관리
+      const existingTimeout = resizeTimeoutMap.get(wrapper);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      const timeoutId = setTimeout(() => {
         const contentArea = document.querySelector('.lite-editor-content');
-        if (contentArea && util.editor && util.editor.dispatchEditorEvent) {
-            util.editor.dispatchEditorEvent(contentArea);
+        if (contentArea && util.editor?.dispatchEditorEvent) {
+          util.editor.dispatchEditorEvent(contentArea);
         }
-    }
+        resizeTimeoutMap.delete(wrapper);
+      }, 100);
+      
+      resizeTimeoutMap.set(wrapper, timeoutId);
+    };
 
-    resizeHandle.addEventListener('mousedown', (e) => {
-        // ✅ 리사이즈 상태 표시
-        wrapper.setAttribute('data-resizing', 'true');
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        
-        const rect = wrapper.getBoundingClientRect();
-        startWidth = rect.width;
-        startHeight = rect.height;
-        
-        document.addEventListener('mousemove', handleResize);
-        document.addEventListener('mouseup', stopResize);
-    });
+    // ✅ startResize 함수 (기존 로직 100% 유지)
+    const startResize = (e) => {
+      if (isResizing) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      isResizing = true;
+      wrapper.setAttribute('data-resizing', 'true');
+      
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      const rect = wrapper.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+      
+      document.addEventListener('mousemove', handleResize, { passive: true });
+      document.addEventListener('mouseup', stopResize);
+    };
 
-    // cleanup 함수를 WeakMap에 저장
+    // ✅ mousedown 이벤트 등록
+    resizeHandle.addEventListener('mousedown', startResize);
+
+    // ✅ cleanup 함수 정의 (타이머 정리 추가)
     const cleanup = () => {
-        document.removeEventListener('mousemove', handleResize);
-        document.removeEventListener('mouseup', stopResize);
+      // RAF 정리
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      
+      // ✅ 타이머 정리
+      const existingTimeout = resizeTimeoutMap.get(wrapper);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        resizeTimeoutMap.delete(wrapper);
+      }
+      
+      // 이벤트 리스너 제거
+      resizeHandle.removeEventListener('mousedown', startResize);
+      document.removeEventListener('mousemove', handleResize, { passive: true });
+      document.removeEventListener('mouseup', stopResize);
+      
+      // 상태 초기화
+      isResizing = false;
+      wrapper.removeAttribute('data-resizing');
     };
     
+    // ✅ WeakMap에 cleanup 함수 저장
     resizeCleanupMap.set(wrapper, cleanup);
+
+    // ✅ 래퍼가 DOM에서 제거될 때 자동 정리
+    if ('MutationObserver' in window) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.removedNodes.forEach((node) => {
+            if (node === wrapper || (node.contains && node.contains(wrapper))) {
+              cleanup();
+              observer.disconnect();
+              resizeCleanupMap.delete(wrapper);
+            }
+          });
+        });
+      });
+      
+      observer.observe(document.body, { childList: true, subtree: true });
+      videoObservers.set(wrapper, observer);
+    }
   }
 
-  // ✅ 개선안: 플러그인 레벨 cleanup
+  // ✅ 전역 cleanup 함수 개선 (타이머 정리 추가)
   function cleanup() {
+    // ✅ 모든 리사이즈 타이머 정리
+    resizeTimeoutMap.forEach((timeoutId, wrapper) => {
+      clearTimeout(timeoutId);
+    });
+    resizeTimeoutMap.clear();
+
+    // ✅ 드롭다운 이벤트 리스너 정리
+    dropdownCleanupMap.forEach((cleanup, button) => {
+      cleanup();
+    });
+    dropdownCleanupMap.clear();
+    
     // 모든 Observer 정리
     videoObservers.forEach((observer, wrapper) => {
       observer.disconnect();
     });
+    videoObservers.clear();
     
-    // 모든 리사이즈 이벤트 정리
+    // 모든 리사이즈 핸들 정리
     resizeCleanupMap.forEach((cleanup, wrapper) => {
       cleanup();
     });
+    resizeCleanupMap.clear();
+    
+    // ✅ 캐시된 드롭다운 정리
+    if (cachedDropdownElements) {
+      const { dropdownMenu } = cachedDropdownElements;
+      if (dropdownMenu.parentNode) {
+        dropdownMenu.parentNode.removeChild(dropdownMenu);
+      }
+      cachedDropdownElements = null;
+    }
     
     // 전역 변수 초기화
     savedRange = null;
