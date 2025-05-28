@@ -3,14 +3,8 @@
  * 체크리스트 기능 구현 플러그인
  */
 (function() {
-  // 들여쓰기 너비 값 (기본값: 6px)
-  let indentSize = 6;
-  
-  // 들여쓰기 레벨에 따른 마진 클래스 생성 함수
-  function getMarginClass(level) {
-    const marginSize = level * indentSize;
-    return `ml-${marginSize}`;
-  }
+  const cleanupFunctions = [];
+  let tabKeyCleanup = null;
   
   // label 간격 스타일 문자열 생성 함수
   function getLabelGapStyle() {
@@ -76,7 +70,7 @@
     const itemId = `checklist-item-${Date.now()}-${checklistItemCounter++}`;
     
     const container = PluginUtil.dom.createElement('div', {
-      className: `flex items-center gap-2 my-1 checklist-item ${getMarginClass(0)}`
+      className: 'flex items-center gap-2 my-1 checklist-item'
     });
     
     const checkbox = PluginUtil.dom.createElement('input', {
@@ -160,7 +154,9 @@
         }
       }, 0);
     } catch (e) {
-      errorHandler.logError('CheckListPlugin', errorHandler.codes.COMMON.FOCUS, e);
+      if (window.errorHandler) {
+        errorHandler.logError('CheckListPlugin', errorHandler.codes.COMMON.FOCUS, e);
+      }
     }
   }
 
@@ -208,84 +204,33 @@
     }
   }
 
-  /**
-   * Tab 키 처리 - 들여쓰기/내어쓰기
-   */
-  function handleTabKey(item, isShift) {
+  // ✅ Tab 들여쓰기 (bulletList.js, numberedList.js와 동일한 방식)
+  function handleTabIndent(item, isShift) {
     if (!item) return;
     
-    // 현재 커서 위치와 텍스트 노드 저장
-    const selection = window.getSelection();
-    let cursorPosition = 0;
-    let textNode = null;
+    const currentIndent = parseInt(item.getAttribute('data-indent-level') || '0');
+    const newIndent = isShift ? Math.max(0, currentIndent - 1) : currentIndent + 1;
     
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const node = range.startContainer;
-      
-      if (node.nodeType === Node.TEXT_NODE) {
-        textNode = node;
-        cursorPosition = range.startOffset;
-      }
+    // 들여쓰기 적용
+    if (newIndent === 0) {
+      item.removeAttribute('data-indent-level');
+      item.style.removeProperty('margin-left');
+    } else {
+      item.setAttribute('data-indent-level', newIndent);
+      item.style.marginLeft = `${newIndent * 20}px`;
     }
     
-    // 현재 들여쓰기 레벨 찾기
-    let currentLevel = 0;
-    
-    // ml-* 클래스에서 현재 들여쓰기 레벨 추출
-    const mlClass = Array.from(item.classList).find(cls => cls.startsWith('ml-'));
-    if (mlClass) {
-      const marginSize = parseInt(mlClass.replace('ml-', ''), 10);
-      currentLevel = marginSize / indentSize;
-    }
-    
-    // 들여쓰기/내어쓰기 적용
-    let didChange = false;
-    
-    if (isShift && currentLevel > 0) {
-      // 내어쓰기
-      const newLevel = currentLevel - 1;
-      const oldClass = getMarginClass(currentLevel);
-      const newClass = getMarginClass(newLevel);
-      item.classList.replace(oldClass, newClass);
-      didChange = true;
-    } else if (!isShift) {
-      // 들여쓰기 - 설정된 indentSize 값을 사용
-      const newLevel = currentLevel + 1;
-      const oldClass = getMarginClass(currentLevel);
-      const newClass = getMarginClass(newLevel);
-      item.classList.replace(oldClass, newClass);
-      didChange = true;
-    }
-    
-    // 변경이 있었고 텍스트 노드가 있는 경우에만 커서 복원
-    if (didChange) {
-      if (textNode) {
-        // 직접 텍스트 노드에 커서 위치 설정
-        setTimeout(() => {
-          try {
-            const range = document.createRange();
-            range.setStart(textNode, cursorPosition);
-            range.collapse(true);
-            
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } catch (e) {
-            // 실패하면 maintainFocus 사용
-            maintainFocus(item, cursorPosition);
-          }
-        }, 0);
-      } else {
-        // 텍스트 노드가 없으면 maintainFocus 사용
-        maintainFocus(item, cursorPosition);
-      }
-    }
+    // 포커스 유지
+    setTimeout(() => {
+      const contentArea = item.closest('[contenteditable="true"]');
+      if (contentArea) contentArea.focus();
+    }, 0);
   }
 
   /**
    * 키보드 이벤트 핸들러 (전역)
    */
-  const handleChecklistKeys = PluginUtil.events.throttle(function(event) {
+  const handleChecklistKeys = function(event) {
     // ✅ 리사이즈 중일 때는 키보드 이벤트 무시
     if (document.querySelector('.video-resize-handle:active') || 
         document.querySelector('.image-resize-handle:active') ||
@@ -307,59 +252,22 @@
     // 기본 동작 방지
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
     
     // 키에 따라 처리
     if (event.key === 'Enter') {
       handleEnterKey(activeItem);
     } else if (event.key === 'Tab') {
-      handleTabKey(activeItem, event.shiftKey);
+      handleTabIndent(activeItem, event.shiftKey);
     }
-  }, 100); // 100ms 쓰로틀링 적용
+  };
 
-  /**
-   * 들여쓰기 너비 설정 함수
-   * @param {number} size - 픽셀 단위의 들여쓰기 너비
-   */
-  function setIndentSize(size) {
-    if (typeof size === 'number' && size > 0) {
-      indentSize = size;
-      
-      // 기존 체크리스트 아이템의 들여쓰기 업데이트
-      updateExistingIndents();
-    }
-  }
-  
   /**
    * 체크박스 이벤트 처리를 적용
    */
   function initCheckboxHandlers() {
     // 기존 체크리스트 아이템에 이벤트 처리 적용
     applyCheckboxEventHandlers();
-  }
-  
-  /**
-   * 체크박스와 label 사이의 간격 설정 함수
-   * @param {number} gap - 픽셀 단위의 간격
-   */
-  function setLabelGap(gap) {
-    if (typeof gap === 'number' && gap >= 0) {
-      labelGap = gap;
-      
-      // 기존 체크리스트 아이템의 label 간격 업데이트
-      updateExistingLabelGaps();
-    }
-  }
-  
-  /**
-   * 기존 체크리스트 아이템의 label 간격 업데이트
-   */
-  function updateExistingLabelGaps() {
-    const checklistItems = document.querySelectorAll('.checklist-item label');
-    
-    checklistItems.forEach(label => {
-      // 새 간격 스타일 적용
-      label.style.marginLeft = `${labelGap}px`;
-    });
   }
   
   /**
@@ -408,26 +316,6 @@
           label.style.textDecoration = 'none';
           label.style.color = '';
         }
-      }
-    });
-  }
-  
-  /**
-   * 기존 체크리스트 아이템의 들여쓰기 업데이트
-   */
-  function updateExistingIndents() {
-    const checklistItems = document.querySelectorAll('.checklist-item');
-    
-    checklistItems.forEach(item => {
-      // 현재 들여쓰기 레벨 찾기
-      const mlClass = Array.from(item.classList).find(cls => cls.startsWith('ml-'));
-      if (mlClass) {
-        const marginSize = parseInt(mlClass.replace('ml-', ''), 10);
-        const currentLevel = Math.round(marginSize / (indentSize || 4)); // 이전 indentSize로 나누기
-        
-        // 새 들여쓰기 클래스 적용
-        item.classList.remove(mlClass);
-        item.classList.add(getMarginClass(currentLevel));
       }
     });
   }
@@ -542,11 +430,20 @@
       setTimeout(initCheckboxHandlers, 0);
     },
     // 설정 함수 노출
-    setIndentSize: setIndentSize,
-    setLabelGap: setLabelGap,
     initCheckboxHandlers: initCheckboxHandlers
   });
   
-  // 전역 키보드 이벤트 리스너 등록 (캡처링 단계에서 처리)
-  document.addEventListener('keydown', handleChecklistKeys, false);
+  // ✅ 이벤트 리스너 등록 (다른 플러그인과 동일한 방식)
+  document.addEventListener('keydown', handleChecklistKeys, true);
+  tabKeyCleanup = () => document.removeEventListener('keydown', handleChecklistKeys, true);
+  
+  // 정리 함수
+  if (PluginUtil.registerCleanup) {
+    PluginUtil.registerCleanup('checkList', function() {
+      cleanupFunctions.forEach(cleanup => cleanup());
+      cleanupFunctions.length = 0;
+      
+      if (tabKeyCleanup) tabKeyCleanup();
+    });
+  }
 })();
