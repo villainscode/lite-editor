@@ -5,7 +5,6 @@
 (function() {
   let tabKeyCleanup = null;
   let checklistItemCounter = 0;
-  const NBSP_CHAR = '\u00A0';
 
   // ✅ 단일 체크리스트 아이템 생성 (이벤트 처리 통합)
   function createSingleChecklistItem(text) {
@@ -245,13 +244,11 @@
       contentArea.focus();
       
       // 🔥 히스토리에 적용 전 상태 기록
-      console.log('[CheckList] 히스토리 기록 시작');
       if (window.LiteEditorHistory) {
         const editorId = contentArea.getAttribute('data-editor') || 'main-editor';
         const beforeState = contentArea.innerHTML;
         
         window.LiteEditorHistory.recordState(editorId, beforeState, 'CheckList Action');
-        console.log('[CheckList] 히스토리 기록 완료');
       }
       
       if (window.liteEditorSelection) {

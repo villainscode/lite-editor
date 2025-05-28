@@ -3,12 +3,12 @@
  * - 불릿 리스트 서식과 깊이별 스타일 적용
  * - BR → P 구조 복원 지원
  * - Tab 키 들여쓰기 + 스타일 순환
- * - js-undo-redo 기반 히스토리 통합
+ * - 히스토리 통합
  */
 (function() {
   const cleanupFunctions = [];
   let tabKeyCleanup = null;
-  const BULLET_STYLES = ['disc', 'circle', 'square']; // ✅ 전역 상수로 정의
+  const BULLET_STYLES = ['disc', 'circle', 'square'];
   
   // ✅ 플러그인 등록 (히스토리 통합)
   PluginUtil.registerPlugin('unorderedList', {
@@ -18,15 +18,13 @@
       if (event) event.preventDefault();
       contentArea.focus();
       
-      // ✅ 1. 무조건 현재 상태를 히스토리에 기록
+      // ✅ 히스토리에 적용 전 상태 기록
       if (window.LiteEditorHistory) {
         window.LiteEditorHistory.forceRecord(contentArea, 'Before Bullet List Action');
-        console.log('[BulletList] 액션 전 강제 기록 완료');
       }
       
       const selection = PluginUtil.selection.getSafeSelection();
       if (!selection?.rangeCount) {
-        console.log('[BulletList] 선택 영역이 없어 중단');
         return;
       }
       
@@ -35,28 +33,25 @@
       
       try {
         if (existingList) {
-          console.log('[BulletList] 기존 리스트 제거 실행');
           unwrapBulletList(existingList.ul, range);
         } else {
-          console.log('[BulletList] 새 불릿 리스트 생성 실행');
           createBulletList(contentArea, range);
         }
         
-        // ✅ 2. 작업 완료 후에도 기록 (선택사항)
+        // ✅ 작업 완료 후 상태 기록
         setTimeout(() => {
           if (window.LiteEditorHistory) {
             window.LiteEditorHistory.recordState(contentArea, 'After Bullet List Action');
-            console.log('[BulletList] 액션 후 기록 완료');
           }
         }, 100);
         
       } catch (error) {
-        console.error('[BulletList] 액션 실행 중 오류:', error);
+        errorHandler.logError('PLUGINS', 'P601', error);
       }
     }
   });
   
-  // ✅ 기존 리스트 찾기 (로깅 추가)
+  // ✅ 기존 리스트 찾기
   function findExistingList(range) {
     const container = range.commonAncestorContainer;
     const element = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
@@ -66,7 +61,6 @@
     if (listItem) {
       const ul = listItem.closest('ul[data-lite-editor-bullet]');
       if (ul) {
-        console.log('[BulletList] 기존 리스트 발견 (LI 기반)');
         return { listItem, ul };
       }
     }
@@ -74,18 +68,14 @@
     const ul = element.closest('ul[data-lite-editor-bullet]') || 
                element.querySelector('ul[data-lite-editor-bullet]');
     if (ul) {
-      console.log('[BulletList] 기존 리스트 발견 (UL 기반)');
       return { ul };
     }
     
-    console.log('[BulletList] 기존 리스트 없음');
     return null;
   }
   
-  // ✅ 리스트 생성 (로깅 및 히스토리 통합)
+  // ✅ 리스트 생성
   function createBulletList(contentArea, range) {
-    console.log('[BulletList] 불릿 리스트 생성 시작');
-    
     // 콜랩스된 범위 처리
     if (range.collapsed) {
       const node = range.startContainer;
@@ -93,7 +83,6 @@
       const block = element.closest('p, div, h1, h2, h3, h4, h5, h6');
       if (block) {
         range.selectNodeContents(block);
-        console.log('[BulletList] 블록 요소 전체 선택으로 확장');
       }
     }
     
@@ -113,7 +102,6 @@
       timestamp: Date.now()
     };
     ul.setAttribute('data-original-structure', JSON.stringify(originalStructure));
-    console.log('[BulletList] 원본 구조 저장:', originalStructure);
     
     // 텍스트를 LI로 변환
     let content = tempDiv.innerHTML
@@ -125,30 +113,25 @@
     
     if (lines.length === 0) lines.push('&nbsp;');
     
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       const li = PluginUtil.dom.createElement('li', { 
         innerHTML: line.trim() || '&nbsp;' 
       });
       ul.appendChild(li);
-      console.log(`[BulletList] LI 생성 ${index + 1}: ${line.trim().substring(0, 30)}...`);
     });
     
     range.insertNode(ul);
     applyBasicStyle(ul);
     restoreSelection(ul);
     
-    console.log('[BulletList] 불릿 리스트 생성 완료');
     return ul;
   }
   
-  // ✅ 리스트 제거 (로깅 및 히스토리 통합)
+  // ✅ 리스트 제거
   function unwrapBulletList(ul, range) {
     if (!ul || ul.nodeName !== 'UL') {
-      console.log('[BulletList] 유효하지 않은 UL 요소');
       return;
     }
-    
-    console.log('[BulletList] 불릿 리스트 제거 시작');
     
     // 원본 BR → P 구조 복원
     const originalStructureData = ul.getAttribute('data-original-structure');
@@ -156,7 +139,6 @@
     if (originalStructureData) {
       try {
         const originalStructure = JSON.parse(originalStructureData);
-        console.log('[BulletList] 원본 구조 복원 시도:', originalStructure);
         
         if (originalStructure.type === 'single-p-with-br') {
           const p = PluginUtil.dom.createElement('p');
@@ -167,34 +149,30 @@
           ul.parentNode.replaceChild(p, ul);
           restoreSelection(p);
           
-          console.log('[BulletList] 원본 BR 구조로 복원 완료');
           return;
         }
       } catch (error) {
-        console.warn('[BulletList] 원본 구조 복원 실패:', error);
+        errorHandler.logWarning('BulletList', '원본 구조 복원 실패', error);
       }
     }
     
     // 폴백: LI를 P로 변환
-    console.log('[BulletList] 폴백 모드: LI를 P로 변환');
     const items = Array.from(ul.children).filter(child => child.nodeName === 'LI');
     const fragment = document.createDocumentFragment();
     
-    items.forEach((item, index) => {
+    items.forEach((item) => {
       const p = PluginUtil.dom.createElement('p');
       const nestedUl = item.querySelector('ul');
       p.innerHTML = nestedUl ? 
         item.innerHTML.replace(nestedUl.outerHTML, '') : 
         item.innerHTML;
       fragment.appendChild(p);
-      console.log(`[BulletList] P 태그 생성 ${index + 1}`);
     });
     
     ul.parentNode.replaceChild(fragment, ul);
-    console.log('[BulletList] 불릿 리스트 제거 완료');
   }
   
-  // ✅ Tab 들여쓰기 (히스토리 통합)
+  // ✅ Tab 들여쓰기
   function handleTabIndent(li, isShift) {
     // ✅ Tab 들여쓰기 전 상태 기록
     const contentArea = li.closest('[contenteditable="true"]');
@@ -207,8 +185,6 @@
     
     const currentIndent = parseInt(li.getAttribute('data-indent-level') || '0');
     const newIndent = isShift ? Math.max(0, currentIndent - 1) : currentIndent + 1;
-    
-    console.log(`[BulletList] 들여쓰기 변경: ${currentIndent} → ${newIndent}`);
     
     // 들여쓰기 적용
     if (newIndent === 0) {
@@ -245,7 +221,7 @@
     }, 100);
   }
 
-  // Tab 키 핸들러 (기존과 동일)
+  // Tab 키 핸들러
   const handleTabKey = function(event) {
     if (event.key !== 'Tab') return;
     
@@ -262,7 +238,7 @@
     handleTabIndent(li, event.shiftKey);
   };
 
-  // 활성 LI 찾기 (기존과 동일)
+  // 활성 LI 찾기
   function findActiveLi() {
     const selection = PluginUtil.selection.getSafeSelection();
     if (!selection?.rangeCount) return null;
@@ -276,13 +252,13 @@
     return li?.closest('ul[data-lite-editor-bullet]') ? li : null;
   }
 
-  // 기본 스타일 적용 (기존과 동일)
+  // 기본 스타일 적용
   function applyBasicStyle(ul) {
     ul.style.setProperty('list-style-type', 'disc', 'important');
     ul.style.setProperty('padding-left', '1.5em', 'important');
   }
 
-  // 선택 영역 복원 (기존과 동일)
+  // 선택 영역 복원
   function restoreSelection(element) {
     const timerId = setTimeout(() => {
       try {
@@ -299,7 +275,7 @@
     cleanupFunctions.push(() => clearTimeout(timerId));
   }
 
-  // CSS 스타일 초기화 (기존과 동일)
+  // CSS 스타일 초기화
   function initStyles() {
     if (document.getElementById('lite-editor-bullet-list-styles')) return;
     
@@ -343,6 +319,4 @@
       document.getElementById('lite-editor-bullet-list-styles')?.remove();
     });
   }
-  
-  console.log('[BulletList] 플러그인 초기화 완료 (히스토리 통합)');
 })();

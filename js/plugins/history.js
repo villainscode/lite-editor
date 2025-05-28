@@ -7,13 +7,11 @@
 (function() {
   'use strict';
   
-  console.log('[History] 개선된 히스토리 시스템 초기화');
-  
   /**
    * 개선된 히스토리 관리 클래스 (단순화)
    */
   class EnhancedHistoryManager {
-    constructor(maxSize = 100) { // ✅ 100개로 확대
+    constructor(maxSize = 100) {
       this.undoStack = [];
       this.redoStack = [];
       this.maxSize = maxSize;
@@ -27,17 +25,13 @@
      */
     recordState(html, selection = null, actionName = 'Edit') {
       if (!this.isRecording || this.isApplyingState) {
-        console.log(`[History] 기록 스킵: ${actionName}`);
         return;
       }
       
-      // ✅ 개선 1: 더 관대한 중복 검사
       if (this.isDuplicateState(html, actionName)) {
-        console.log(`[History] 유사 상태 스킵: ${actionName}`);
         return;
       }
       
-      // ✅ 개선 2: 즉시 기록 (지연 없음)
       this.doRecord(html, selection, actionName);
       return true;
     }
@@ -47,11 +41,9 @@
      */
     forceRecord(html, selection = null, actionName = 'Force Record') {
       if (!this.isRecording || this.isApplyingState) {
-        console.log(`[History] 강제 기록 스킵: ${actionName}`);
         return;
       }
       
-      console.log(`[History] 강제 기록 실행: ${actionName}`);
       this.doRecord(html, selection, actionName);
       return true;
     }
@@ -78,8 +70,6 @@
       this.redoStack = [];
       
       this.lastRecordedState = html;
-      
-      console.log(`[History] 기록 완료: ${actionName} (Undo: ${this.undoStack.length}, Redo: ${this.redoStack.length})`);
     }
     
     /**
@@ -104,15 +94,14 @@
     }
     
     /**
-     * ✅ 단순화된 Undo 실행 (초기 상태 보호 제거)
+     * 단순화된 Undo 실행 (초기 상태 보호 제거)
      */
     undo(currentHtml, currentSelection = null) {
       if (this.undoStack.length === 0) {
-        console.log('[History] Undo 스택이 비어있음');
         return null;
       }
       
-      // ✅ 현재 상태를 redo에 저장 (항상)
+      // 현재 상태를 redo에 저장 (항상)
       this.redoStack.push({
         html: currentHtml,
         selection: currentSelection,
@@ -120,11 +109,10 @@
         timestamp: Date.now()
       });
       
-      // ✅ 이전 상태 가져오기 (보호 없음)
+      // 이전 상태 가져오기 (보호 없음)
       const previousState = this.undoStack.pop();
       this.lastRecordedState = previousState.html;
       
-      console.log(`[History] Undo 실행: ${previousState.actionName} (Undo: ${this.undoStack.length}, Redo: ${this.redoStack.length})`);
       return previousState;
     }
     
@@ -133,11 +121,10 @@
      */
     redo(currentHtml, currentSelection = null) {
       if (this.redoStack.length === 0) {
-        console.log('[History] Redo 스택이 비어있음');
         return null;
       }
       
-      // ✅ 개선 4: 현재 상태와 비교해서 다를 때만 undo에 저장
+      // 현재 상태와 비교해서 다를 때만 undo에 저장
       const nextState = this.redoStack[this.redoStack.length - 1];
       if (currentHtml !== nextState.html) {
         this.undoStack.push({
@@ -152,7 +139,6 @@
       const state = this.redoStack.pop();
       this.lastRecordedState = state.html;
       
-      console.log(`[History] Redo 실행: ${state.actionName} (Undo: ${this.undoStack.length}, Redo: ${this.redoStack.length})`);
       return state;
     }
     
@@ -175,7 +161,6 @@
      */
     setRecording(enabled) {
       this.isRecording = enabled;
-      console.log(`[History] 기록 ${enabled ? '활성화' : '비활성화'}`);
     }
     
     /**
@@ -212,13 +197,12 @@
     constructor(contentArea) {
       this.contentArea = contentArea;
       this.editorId = this.getEditorId();
-      this.historyManager = new EnhancedHistoryManager(100); // ✅ 100개로 확대
+      this.historyManager = new EnhancedHistoryManager(100);
       
       // 디바운싱 관련
       this.inputTimer = null;
       this.inputDelay = 800;
       
-      console.log(`[History] 에디터 ${this.editorId} 단순화된 히스토리 관리자 생성`);
       this.initializeState();
     }
     
@@ -235,13 +219,12 @@
       const initialHtml = this.contentArea.innerHTML;
       const initialSelection = this.saveSelection();
       
-      // ✅ 초기 상태도 일반 기록으로 처리
+      // 초기 상태도 일반 기록으로 처리
       this.historyManager.forceRecord(initialHtml, initialSelection, 'Initial State');
-      console.log(`[History] 초기 상태 설정: ${initialHtml.length} 문자`);
     }
     
     /**
-     * ✅ 개선된 플러그인 액션 전 기록
+     * 개선된 플러그인 액션 전 기록
      */
     recordBeforeAction(actionName) {
       const currentHtml = this.contentArea.innerHTML;
@@ -253,10 +236,6 @@
         currentSelection, 
         `Before ${actionName}`
       );
-      
-      if (recorded) {
-        console.log(`[History] 액션 전 기록 성공: ${actionName}`);
-      }
       
       return recorded;
     }
@@ -282,7 +261,7 @@
     }
     
     /**
-     * ✅ 개선된 디바운스 입력 기록
+     * 개선된 디바운스 입력 기록
      */
     recordInputChange() {
       if (this.historyManager.isApplyingState) return;
@@ -330,18 +309,16 @@
     }
     
     /**
-     * ✅ 개선된 상태 적용
+     * 개선된 상태 적용
      */
     applyState(state) {
       this.historyManager.setApplyingState(true);
       this.historyManager.setRecording(false);
       
-      console.log(`[History] 상태 적용: ${state.actionName}`);
-      
       // HTML 복원
       this.contentArea.innerHTML = state.html;
       
-      // ✅ 개선된 타이밍 - 더 빠른 복구
+      // 개선된 타이밍 - 더 빠른 복구
       setTimeout(() => {
         this.restoreSelection(state.selection);
         
@@ -349,8 +326,8 @@
         setTimeout(() => {
           this.historyManager.setApplyingState(false);
           this.historyManager.setRecording(true);
-        }, 50); // 100ms → 50ms
-      }, 30); // 50ms → 30ms
+        }, 50);
+      }, 30);
     }
     
     /**
@@ -372,7 +349,6 @@
           collapsed: range.collapsed
         };
       } catch (error) {
-        console.warn('[History] 선택 영역 저장 실패:', error);
         return null;
       }
     }
@@ -389,7 +365,6 @@
       try {
         this.focusAtEnd();
       } catch (error) {
-        console.warn('[History] 선택 영역 복원 실패:', error);
         this.focusAtEnd();
       }
     }
@@ -456,7 +431,7 @@
     }
     
     /**
-     * ✅ 개선된 이벤트 리스너 설정
+     * 개선된 이벤트 리스너 설정
      */
     setupEventListeners() {
       // 입력 이벤트 (디바운싱)
@@ -464,7 +439,7 @@
         this.recordInputChange();
       });
       
-      // ✅ 특수 키 이벤트 - 더 적극적으로 기록
+      // 특수 키 이벤트 - 더 적극적으로 기록
       this.contentArea.addEventListener('keydown', (e) => {
         if (this.historyManager.isApplyingState) return;
         
@@ -483,12 +458,12 @@
         }
       });
       
-      // ✅ 붙여넣기 - 개선된 타이밍
+      // 붙여넣기 - 개선된 타이밍
       this.contentArea.addEventListener('paste', () => {
         this.forceRecordState('Before Paste');
         setTimeout(() => {
           this.forceRecordState('After Paste');
-        }, 50); // 100ms → 50ms
+        }, 50);
       });
     }
     
@@ -517,7 +492,6 @@
      */
     cleanup() {
       clearTimeout(this.inputTimer);
-      console.log(`[History] 에디터 ${this.editorId} 정리 완료`);
     }
   }
   
@@ -532,7 +506,6 @@
     const editorId = container?.id;
     
     if (!editorId) {
-      console.warn('[History] 에디터 ID를 찾을 수 없습니다.');
       return null;
     }
     
@@ -567,7 +540,6 @@
         historyManager.updateButtonStates();
       }, 100);
       
-      console.log(`[History] 에디터 ${editorId} 개선된 히스토리 시스템 활성화`);
       return null;
     }
   });
@@ -606,9 +578,8 @@
    * 직접 키보드 이벤트 처리 - core.js의 단축키 시스템 우회
    */
   function setupDirectKeyboardHandling() {
-    // ✅ 키보드 핸들러가 이미 등록되었는지 확인
+    // 키보드 핸들러가 이미 등록되었는지 확인
     if (window.LiteEditorHistoryKeyboardHandlerRegistered) {
-      console.log('⌨️ [Direct Keyboard] 이미 등록된 핸들러 발견, 스킵');
       return;
     }
     
@@ -619,133 +590,163 @@
       
       const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
       
-      // ✅ Mac: Cmd+Z (Undo)
+      // Mac: Cmd+Z (Undo)
       if (isMac && event.metaKey && event.key === 'z' && !event.ctrlKey && !event.shiftKey && !event.altKey) {
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation(); // ✅ 추가: 즉시 전파 중단
-        
-        console.log('🍎 [Direct Keyboard] Cmd+Z 직접 처리');
+        event.stopImmediatePropagation();
         
         const historyManager = getHistoryManager(contentArea);
         if (historyManager) {
           const status = historyManager.getStatus();
-          console.log(`🍎 [Direct Keyboard] Cmd+Z 실행 전 상태:`, status);
           
-          // ✅ 실행 가능한지 먼저 확인
           if (status.canUndo) {
-            const result = historyManager.undo();
-            
-            const newStatus = historyManager.getStatus();
-            console.log(`🍎 [Direct Keyboard] Cmd+Z Undo 실행 결과: ${result ? '성공' : '실패'}`);
-            console.log(`🍎 [Direct Keyboard] Cmd+Z 실행 후 상태:`, newStatus);
-          } else {
-            console.log('🍎 [Direct Keyboard] Cmd+Z - Undo 불가능 (스택 비어있음)');
+            historyManager.undo();
           }
         }
         return false;
       }
       
-      // ✅ Mac: Shift+Cmd+Z (Redo)
+      // Mac: Shift+Cmd+Z (Redo)
       if (isMac && event.metaKey && event.shiftKey && event.key === 'z' && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation(); // ✅ 추가: 즉시 전파 중단
-        
-        console.log('🍎 [Direct Keyboard] Shift+Cmd+Z 직접 처리');
+        event.stopImmediatePropagation();
         
         const historyManager = getHistoryManager(contentArea);
         if (historyManager) {
           const status = historyManager.getStatus();
-          console.log(`🍎 [Direct Keyboard] Shift+Cmd+Z 실행 전 상태:`, status);
           
-          // ✅ 실행 가능한지 먼저 확인
           if (status.canRedo) {
-            const result = historyManager.redo();
-            
-            const newStatus = historyManager.getStatus();
-            console.log(`🍎 [Direct Keyboard] Shift+Cmd+Z Redo 실행 결과: ${result ? '성공' : '실패'}`);
-            console.log(`🍎 [Direct Keyboard] Shift+Cmd+Z 실행 후 상태:`, newStatus);
-          } else {
-            console.log('🍎 [Direct Keyboard] Shift+Cmd+Z - Redo 불가능 (스택 비어있음)');
+            historyManager.redo();
           }
         }
         return false;
       }
       
-      // Windows/Linux 처리도 동일하게 개선...
+      // Windows/Linux: Ctrl+Z (Undo)
+      if (!isMac && event.ctrlKey && event.key === 'z' && !event.metaKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        const historyManager = getHistoryManager(contentArea);
+        if (historyManager) {
+          const status = historyManager.getStatus();
+          
+          if (status.canUndo) {
+            historyManager.undo();
+          }
+        }
+        return false;
+      }
       
-    }, true); // ✅ 캡처 단계에서 처리
+      // Windows/Linux: Ctrl+Shift+Z (Redo)
+      if (!isMac && event.ctrlKey && event.shiftKey && event.key === 'z' && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        const historyManager = getHistoryManager(contentArea);
+        if (historyManager) {
+          const status = historyManager.getStatus();
+          
+          if (status.canRedo) {
+            historyManager.redo();
+          }
+        }
+        return false;
+      }
+      
+    }, true);
     
-    // ✅ 중복 등록 방지 플래그 설정
+    // 중복 등록 방지 플래그 설정
     window.LiteEditorHistoryKeyboardHandlerRegistered = true;
-    console.log('⌨️ [Direct Keyboard] 직접 키보드 핸들러 등록 완료');
   }
   
   // 직접 키보드 처리 시작
   setupDirectKeyboardHandling();
   
-  // ==================== 디버깅 도구 (안전성 개선) ====================
+  // ==================== 전역 API 노출 ====================
   
   /**
-   * 등록된 단축키 확인 (디버그용)
+   * 전역 히스토리 API
    */
-  function debugShortcuts() {
-    console.log('🔍 [History Debug] 등록된 단축키 목록:');
+  window.LiteEditorHistory = {
+    /**
+     * 에디터의 히스토리 관리자 가져오기
+     */
+    getManager: function(contentArea) {
+      return getHistoryManager(contentArea);
+    },
     
-    // ✅ 안전한 테스트 함수 - 초기 상태 보호
-    window.testHistoryShortcut = function(action, modifiers = {}) {
-      const { ctrl = false, meta = false, shift = false, alt = false } = modifiers;
-      console.log(`🧪 [History Test] 단축키 테스트: ${action} (ctrl:${ctrl}, meta:${meta}, shift:${shift}, alt:${alt})`);
-      
-      const activeEditor = document.querySelector('[contenteditable="true"]:focus') || 
-                          document.querySelector('[contenteditable="true"]');
-      if (activeEditor) {
-        const historyManager = getHistoryManager(activeEditor);
-        if (historyManager) {
-          const status = historyManager.getStatus();
-          console.log(`🧪 [History Test] 현재 상태:`, status);
-          
-          if (action === 'undo' && status.canUndo) {
-            const result = historyManager.undo();
-            console.log(`🧪 [History Test] Undo 결과: ${result}`);
-          } else if (action === 'redo' && status.canRedo) {
-            const result = historyManager.redo();
-            console.log(`🧪 [History Test] Redo 결과: ${result}`);
-          } else {
-            console.log(`🧪 [History Test] ${action} 불가능 - 스택 상태 확인 필요`);
-          }
-        } else {
-          console.warn('🧪 [History Test] 히스토리 관리자를 찾을 수 없음');
-        }
+    /**
+     * 상태 기록
+     */
+    recordState: function(contentAreaOrId, actionName = 'Manual Record') {
+      let contentArea;
+      if (typeof contentAreaOrId === 'string') {
+        const editorId = contentAreaOrId;
+        const manager = editorHistories.get(editorId);
+        if (!manager) return false;
+        contentArea = manager.contentArea;
       } else {
-        console.warn('🧪 [History Test] 활성 에디터를 찾을 수 없음');
+        contentArea = contentAreaOrId;
       }
-    };
+      
+      const manager = getHistoryManager(contentArea);
+      return manager ? manager.recordState(actionName) : false;
+    },
     
-    // ✅ 히스토리 상태 복구 함수 추가
-    window.resetHistoryForTest = function() {
-      const activeEditor = document.querySelector('[contenteditable="true"]:focus') || 
-                          document.querySelector('[contenteditable="true"]');
-      if (activeEditor) {
-        const historyManager = getHistoryManager(activeEditor);
-        if (historyManager) {
-          // 강제로 현재 상태를 기록
-          historyManager.forceRecordState('Test Reset State');
-          console.log('🧪 [History Test] 테스트용 상태 기록 완료');
-        }
+    /**
+     * 강제 상태 기록
+     */
+    forceRecord: function(contentAreaOrId, actionName = 'Force Record') {
+      let contentArea;
+      if (typeof contentAreaOrId === 'string') {
+        const editorId = contentAreaOrId;
+        const manager = editorHistories.get(editorId);
+        if (!manager) return false;
+        contentArea = manager.contentArea;
+      } else {
+        contentArea = contentAreaOrId;
       }
-    };
+      
+      const manager = getHistoryManager(contentArea);
+      return manager ? manager.forceRecordState(actionName) : false;
+    },
     
-    console.log('🧪 [History Test] 안전한 테스트 함수 등록됨:');
-    console.log('   - testHistoryShortcut(action, modifiers) - 안전성 검사 포함');
-    console.log('   - resetHistoryForTest() - 테스트용 상태 기록');
-    console.log('🧪 [History Test] 사용 예시:');
-    console.log('   - resetHistoryForTest() // 먼저 테스트 상태 만들기');
-    console.log('   - testHistoryShortcut("undo", {meta: true})');
-  }
-  
-  // 디버깅 함수 실행
-  setTimeout(debugShortcuts, 2000);
+    /**
+     * 액션 전 기록
+     */
+    recordBeforeAction: function(contentAreaOrId, actionName) {
+      let contentArea;
+      if (typeof contentAreaOrId === 'string') {
+        const editorId = contentAreaOrId;
+        const manager = editorHistories.get(editorId);
+        if (!manager) return false;
+        contentArea = manager.contentArea;
+      } else {
+        contentArea = contentAreaOrId;
+      }
+      
+      const manager = getHistoryManager(contentArea);
+      return manager ? manager.recordBeforeAction(actionName) : false;
+    },
+    
+    /**
+     * 상태 정보 조회
+     */
+    getStatus: function(contentAreaOrId) {
+      let manager;
+      if (typeof contentAreaOrId === 'string') {
+        manager = editorHistories.get(contentAreaOrId);
+      } else {
+        manager = getHistoryManager(contentAreaOrId);
+      }
+      
+      return manager ? manager.getStatus() : null;
+    }
+  };
 
 })();
