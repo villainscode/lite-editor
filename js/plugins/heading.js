@@ -238,6 +238,63 @@
         }
       });
 
+      // 드롭다운 옵션들이 모두 생성된 후에 키보드 이벤트 추가
+      const headingOptions = dropdownMenu.querySelectorAll('.lite-editor-heading-option');
+
+      // 각 옵션에 tabindex 추가
+      headingOptions.forEach((option, index) => {
+        option.setAttribute('tabindex', '0');
+        
+        // Enter/Space 키로 선택 가능하게
+        option.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            option.click();
+          }
+        });
+      });
+
+      // 드롭다운 메뉴 키보드 네비게이션
+      dropdownMenu.addEventListener('keydown', (e) => {
+        const currentIndex = Array.from(headingOptions).findIndex(option => option === document.activeElement);
+        
+        switch(e.key) {
+          case 'Tab':
+            if (e.shiftKey) {
+              if (currentIndex <= 0) {
+                e.preventDefault();
+                closeDropdown();
+                headingButton.focus();
+              }
+            } else {
+              if (currentIndex >= headingOptions.length - 1) {
+                e.preventDefault();
+                closeDropdown();
+                // 다음 툴바 버튼으로 포커스 이동은 브라우저가 자동 처리
+              }
+            }
+            break;
+            
+          case 'Escape':
+            e.preventDefault();
+            closeDropdown();
+            headingButton.focus();
+            break;
+            
+          case 'ArrowDown':
+            e.preventDefault();
+            const nextOption = headingOptions[currentIndex + 1] || headingOptions[0];
+            nextOption.focus();
+            break;
+            
+          case 'ArrowUp':
+            e.preventDefault();
+            const prevOption = headingOptions[currentIndex - 1] || headingOptions[headingOptions.length - 1];
+            prevOption.focus();
+            break;
+        }
+      });
+
       function closeDropdown() {
         dropdownMenu.classList.remove('show');
         dropdownMenu.style.display = 'none';

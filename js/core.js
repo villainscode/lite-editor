@@ -500,6 +500,11 @@ const LiteEditor = (function() {
       if (currentPlugin && currentPlugin.customRender && typeof currentPlugin.customRender === 'function') {
         const customElement = currentPlugin.customRender(toolbar, contentArea);
         if (customElement) {
+          // ✅ tabindex 추가 (탭 이동 가능하게)
+          if (!customElement.hasAttribute('tabindex')) {
+            customElement.setAttribute('tabindex', '0');
+          }
+          
           // 커스텀 요소의 디스플레이 스타일 확인
           if (customElement.tagName === 'BUTTON' && 
               !customElement.querySelector('.material-icons') && 

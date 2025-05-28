@@ -123,8 +123,18 @@
       
       const fontElement = currentElement.closest('span[style*="font-family"], font');
       
-      if (fontElement) {
-        // 🔴 중요: 폰트 영역 내부 - 활성 상태 설정
+      // 🔧 핵심 수정: 사용자가 명시적으로 설정한 폰트만 "폰트 영역"으로 인식
+      const isUserSetFont = fontElement && currentFontValue && (
+        // font 태그는 항상 사용자 설정으로 간주
+        fontElement.tagName === 'FONT' ||
+        // span 태그는 currentFontValue와 일치할 때만 사용자 설정으로 간주
+        (fontElement.tagName === 'SPAN' && 
+         fontElement.style.fontFamily && 
+         currentFontValue.includes(getFirstFontName(fontElement.style.fontFamily)))
+      );
+      
+      if (isUserSetFont) {
+        // 사용자가 설정한 폰트 영역 - 활성 상태 설정
         fontContainer.classList.add('active');
         fontContainer.style.backgroundColor = '#e9e9e9';
         fontContainer.style.color = '#1a73e8';
@@ -186,14 +196,14 @@
           }
         }
       } else {
-        // 🔴 중요: 폰트 영역 외부 - 기본 상태로 완전 복원
+        // 🔧 핵심 수정: 시스템 폰트 또는 비폰트 영역 - 기본 상태 유지
         fontContainer.classList.remove('active');
         fontContainer.style.backgroundColor = '';
         fontContainer.style.color = '';
         icon.style.color = '';
         fontText.textContent = 'Font Family';
         
-        // 🔧 1단계 최적화: 캐싱된 요소 사용
+        // 드롭다운 선택 해제
         const dropdownMenu = document.getElementById('font-family-dropdown');
         if (dropdownMenu && dropdownMenu._cachedFontItems) {
           dropdownMenu._cachedFontItems.forEach(item => {
@@ -201,11 +211,23 @@
           });
         }
         
-        // 전역 상태 초기화
-        currentFontValue = null;
+        // 전역 상태 초기화 (단, 사용자가 설정한 currentFontValue는 유지)
         currentSelectedFontItem = null;
       }
     }
+  }
+
+  // ✅ 시스템 폰트 감지 함수 추가 (Line 14 근처에 추가)
+  function isSystemFont(fontFamily) {
+    // 브라우저 기본 폰트들을 체크
+    const systemFonts = ['times', 'arial', 'helvetica', 'courier', 'sans-serif', 'serif', 'monospace'];
+    return systemFonts.some(sysFont => fontFamily.toLowerCase().includes(sysFont));
+  }
+
+  // ✅ 현재 요소의 실제 계산된 폰트 확인 함수 추가
+  function getCurrentComputedFont(element) {
+    const computedStyle = window.getComputedStyle(element);
+    return computedStyle.fontFamily;
   }
 
   // 글꼴 플러그인 등록
@@ -375,7 +397,78 @@
           });
           
           dropdownMenu.appendChild(fontItem);
+
+          // 폰트 항목에 키보드 접근성 추가
+          fontItem.setAttribute('tabindex', '0');
+
+          // Enter/Space 키로 폰트 선택
+          fontItem.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fontItem.click();
+            }
+          });
         });
+        
+        // 폰트 목록 생성 완료 후 드롭다운 키보드 네비게이션 추가
+        setTimeout(() => {
+          const fontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
+          
+          // 드롭다운 메뉴 키보드 네비게이션
+          dropdownMenu.addEventListener('keydown', (e) => {
+            const currentIndex = Array.from(fontItems).findIndex(item => item === document.activeElement);
+            
+            switch(e.key) {
+              case 'Tab':
+                if (e.shiftKey) {
+                  // Shift+Tab: 첫 번째 항목에서 fontContainer로 돌아감
+                  if (currentIndex <= 0) {
+                    e.preventDefault();
+                    dropdownMenu.classList.remove('show');
+                    dropdownMenu.style.display = 'none';
+                    fontContainer.classList.remove('active');
+                    isDropdownOpen = false;
+                    util.activeModalManager.unregister(dropdownMenu);
+                    fontContainer.focus();
+                  }
+                } else {
+                  // Tab: 마지막 항목에서 드롭다운 닫고 다음 툴바 버튼으로
+                  if (currentIndex >= fontItems.length - 1) {
+                    e.preventDefault();
+                    dropdownMenu.classList.remove('show');
+                    dropdownMenu.style.display = 'none';
+                    fontContainer.classList.remove('active');
+                    isDropdownOpen = false;
+                    util.activeModalManager.unregister(dropdownMenu);
+                    // 브라우저가 자동으로 다음 탭 가능한 요소(heading)로 이동
+                  }
+                }
+                break;
+                
+              case 'Escape':
+                e.preventDefault();
+                dropdownMenu.classList.remove('show');
+                dropdownMenu.style.display = 'none';
+                fontContainer.classList.remove('active');
+                isDropdownOpen = false;
+                util.activeModalManager.unregister(dropdownMenu);
+                fontContainer.focus();
+                break;
+                
+              case 'ArrowDown':
+                e.preventDefault();
+                const nextItem = fontItems[currentIndex + 1] || fontItems[0];
+                nextItem.focus();
+                break;
+                
+              case 'ArrowUp':
+                e.preventDefault();
+                const prevItem = fontItems[currentIndex - 1] || fontItems[fontItems.length - 1];
+                prevItem.focus();
+                break;
+            }
+          });
+        }, 0);
       });
       
       // 6. 드롭다운을 document.body에 직접 추가 (정렬 플러그인과 동일)
@@ -433,6 +526,14 @@
           const buttonRect = fontContainer.getBoundingClientRect();
           dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
           dropdownMenu.style.left = (buttonRect.left - 3) + 'px';
+          
+          // ✅ 첫 번째 폰트 항목에 포커스
+          setTimeout(() => {
+            const firstFontItem = dropdownMenu.querySelector('div[style*="font-family"]');
+            if (firstFontItem) {
+              firstFontItem.focus();
+            }
+          }, 0);
           
           // ✅ 수정: 드롭다운을 열 때 activeModalManager에 등록
           util.activeModalManager.register(dropdownMenu);
@@ -502,6 +603,14 @@
         contentArea.setAttribute('data-font-events-setup', 'true');
       }
       
+      // 키보드 접근성: Enter/Space 키로 드롭다운 열기
+      fontContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fontContainer.click(); // 기존 클릭 이벤트 트리거
+        }
+      });
+      
       return fontContainer;
     }
   });
@@ -531,22 +640,42 @@
           
           if (isInFontArea) {
             if (e.shiftKey) {
-              // 🔴 중요: Shift+Enter - 텍스트 분할하지 않고 현재 위치에서만 줄바꿈
+              // ✅ 수정된 Shift+Enter 처리 - 시스템 폰트 감지
               e.preventDefault();
               
-              let fontFamily = currentFontValue;
+              // ✅ 현재 위치의 실제 계산된 폰트 확인
+              const currentComputedFont = getCurrentComputedFont(currentElement);
               
-              if (!fontFamily) {
-                // 🔧 3단계 최적화: 폰트 파싱 최적화
-                const styleAttr = fontElement.getAttribute('style');
-                fontFamily = parseFontFamily(styleAttr) || 'inherit';
-              }
+              // ✅ 시스템 폰트인지 확인
+              const isCurrentSystemFont = isSystemFont(currentComputedFont);
               
-              // 새 줄과 빈 span 생성 (텍스트 분할 없음)
+              // 새 줄과 span 생성
               const br = document.createElement('br');
               const newSpan = document.createElement('span');
-              newSpan.style.fontFamily = fontFamily;
-              newSpan.innerHTML = '&#8203;'; // 제로폭 공백만 추가
+              
+              // ✅ 핵심 수정: 시스템 폰트가 아닌 경우만 폰트 상속
+              if (!isCurrentSystemFont) {
+                // 명시적으로 설정된 폰트인 경우만 상속
+                let fontFamily = currentFontValue;
+                
+                if (!fontFamily) {
+                  // font 태그의 face 속성 확인
+                  if (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) {
+                    fontFamily = fontElement.getAttribute('face');
+                  } else {
+                    // span 태그의 style 속성에서 폰트 추출
+                    const styleAttr = fontElement.getAttribute('style');
+                    fontFamily = parseFontFamily(styleAttr) || currentComputedFont;
+                  }
+                }
+                
+                // 시스템 폰트가 아닌 경우만 폰트 적용
+                if (!isSystemFont(fontFamily)) {
+                  newSpan.style.fontFamily = fontFamily;
+                }
+              }
+              
+              newSpan.innerHTML = '&#8203;'; // 제로폭 공백
               
               // 현재 위치에 br과 새 span 삽입
               range.insertNode(br);
@@ -561,52 +690,66 @@
               selection.addRange(newRange);
               
             } else {
-              // 🔴 중요: Enter 키 처리 - 폰트 요소 바로 다음에 새 문단 생성
+              // ✅ 수정된 Enter 키 처리 - div 구조 고려
               e.preventDefault();
               
-              // 현재 폰트 요소 찾기 (font 태그 또는 span 태그)
               const currentFontElement = fontElement.tagName === 'FONT' ? fontElement : fontElement.closest('font');
               
               if (currentFontElement) {
-                // 폰트 요소 다음의 모든 콘텐츠 수집
-                const parentP = currentFontElement.parentElement;
-                const remainingNodes = [];
+                // ✅ 올바른 부모 컨테이너 찾기 (P 또는 DIV)
+                const parentContainer = currentFontElement.closest('p, div');
+                const contentAreaContainer = contentArea;
                 
-                // 폰트 요소 다음의 모든 형제 노드들 수집
-                let nextSibling = currentFontElement.nextSibling;
-                while (nextSibling) {
-                  remainingNodes.push(nextSibling);
-                  nextSibling = nextSibling.nextSibling;
+                if (parentContainer && contentAreaContainer.contains(parentContainer)) {
+                  // ✅ font 요소 다음의 모든 형제 노드들 수집
+                  const remainingNodes = [];
+                  let nextSibling = currentFontElement.nextSibling;
+                  while (nextSibling) {
+                    remainingNodes.push(nextSibling);
+                    nextSibling = nextSibling.nextSibling;
+                  }
+                  
+                  // ✅ 새 문단 생성
+                  const newP = document.createElement('p');
+                  
+                  if (remainingNodes.length > 0) {
+                    // 남은 노드들을 새 문단으로 이동
+                    remainingNodes.forEach(node => {
+                      newP.appendChild(node);
+                    });
+                  } else {
+                    newP.innerHTML = '<br>';
+                  }
+                  
+                  // ✅ 핵심 수정: 부모 컨테이너 다음에 새 문단 삽입
+                  if (parentContainer.parentNode) {
+                    parentContainer.parentNode.insertBefore(newP, parentContainer.nextSibling);
+                  } else {
+                    // 부모가 없으면 contentArea에 직접 추가
+                    contentAreaContainer.appendChild(newP);
+                  }
+                  
+                  // ✅ 커서를 새 문단으로 이동
+                  const newRange = document.createRange();
+                  newRange.setStart(newP.firstChild || newP, 0);
+                  newRange.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(newRange);
                 }
-                
-                // 새 문단 생성
-                const newP = document.createElement('p');
-                
-                // 수집된 노드들을 새 문단으로 이동
-                if (remainingNodes.length > 0) {
-                  remainingNodes.forEach(node => {
-                    newP.appendChild(node); // 실제로 이동 (복사가 아님)
-                  });
-                } else {
-                  newP.innerHTML = '<br>';
-                }
-                
-                // 현재 문단 다음에 새 문단 삽입
-                parentP.parentNode.insertBefore(newP, parentP.nextSibling);
-                
-                // 커서를 새 문단 시작으로 이동
-                const newRange = document.createRange();
-                newRange.setStart(newP.firstChild || newP, 0);
-                newRange.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
               } else {
-                // 폴백: 기본 빈 문단 생성
+                // ✅ 폴백: 기본 새 문단 생성
                 const newP = document.createElement('p');
                 newP.innerHTML = '<br>';
                 
-                const currentP = range.startContainer.closest('p') || range.startContainer.parentElement.closest('p');
-                currentP.parentNode.insertBefore(newP, currentP.nextSibling);
+                // 현재 컨테이너 찾기 (P 또는 DIV)
+                const currentContainer = range.startContainer.closest('p, div') || 
+                                        range.startContainer.parentElement.closest('p, div');
+                
+                if (currentContainer && currentContainer.parentNode) {
+                  currentContainer.parentNode.insertBefore(newP, currentContainer.nextSibling);
+                } else {
+                  contentArea.appendChild(newP);
+                }
                 
                 const newRange = document.createRange();
                 newRange.setStart(newP, 0);
@@ -615,7 +758,6 @@
                 selection.addRange(newRange);
               }
               
-              // UI 상태 업데이트
               setTimeout(() => {
                 updateFontButtonState(fontContainer, fontText, icon);
               }, 10);

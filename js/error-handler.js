@@ -454,6 +454,99 @@
                 const textMessage = message.replace(/<BR>/gi, '\n').replace(/<[^>]*>/g, '');
                 alert(textMessage);
             }
+        },
+
+        /**
+         * 클릭 위치의 태그 블록 추적 디버깅 함수
+         * @param {HTMLElement} contentArea - 에디터 영역
+         * @returns {Object} 클릭 위치 정보
+         */
+        debugTrackingTagBlock: function(contentArea) {
+            if (!window.DEBUG_MODE) return null;
+            
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) {
+                this.colorLog('DEBUG_TRACK', '❌ 선택 영역 없음', {}, '#f44336');
+                return null;
+            }
+            
+            const range = selection.getRangeAt(0);
+            
+            // 현재 클릭 위치 분석
+            let currentIndex = -1;
+            let currentElement = null;
+            
+            if (range.startContainer === contentArea) {
+                // DIV 레벨 클릭
+                currentIndex = range.startOffset;
+                currentElement = contentArea.children[currentIndex] || contentArea.lastElementChild;
+            } else {
+                // 요소 내부 클릭 - 부모 요소 찾기
+                let parent = range.startContainer;
+                if (parent.nodeType === Node.TEXT_NODE) {
+                    parent = parent.parentNode;
+                }
+                
+                // contentArea의 직접 자식 찾기
+                while (parent && parent.parentNode !== contentArea) {
+                    parent = parent.parentNode;
+                }
+                
+                if (parent) {
+                    currentElement = parent;
+                    currentIndex = Array.from(contentArea.children).indexOf(parent);
+                }
+            }
+            
+            // 위아래 태그 정보 수집
+            const trackingInfo = {
+                clickPosition: {
+                    index: currentIndex,
+                    element: currentElement,
+                    tagName: currentElement?.tagName,
+                    textContent: currentElement?.textContent?.substring(0, 30) + '...'
+                },
+                previousTag: {
+                    element: currentElement?.previousElementSibling,
+                    tagName: currentElement?.previousElementSibling?.tagName,
+                    textContent: currentElement?.previousElementSibling?.textContent?.substring(0, 30) + '...'
+                },
+                nextTag: {
+                    element: currentElement?.nextElementSibling,
+                    tagName: currentElement?.nextElementSibling?.tagName,
+                    textContent: currentElement?.nextElementSibling?.textContent?.substring(0, 30) + '...'
+                },
+                totalChildren: contentArea.children.length
+            };
+            
+            // 디버깅 정보 출력
+            this.colorLog('DEBUG_TRACK', '📍 클릭 위치 추적', {
+                인덱스: trackingInfo.clickPosition.index,
+                현재태그: trackingInfo.clickPosition.tagName,
+                윗라인: trackingInfo.previousTag.tagName || 'null',
+                아랫라인: trackingInfo.nextTag.tagName || 'null',
+                전체자식수: trackingInfo.totalChildren
+            }, '#e91e63');
+            
+            return trackingInfo;
+        },
+
+        /**
+         * 자동 클릭 추적 활성화 (contentArea에 이벤트 리스너 추가)
+         * @param {HTMLElement} contentArea - 에디터 영역
+         */
+        enableClickTracking: function(contentArea) {
+            if (!contentArea || contentArea.hasAttribute('data-debug-tracker')) return;
+            
+            contentArea.addEventListener('click', () => {
+                this.debugTrackingTagBlock(contentArea);
+            });
+            
+            contentArea.setAttribute('data-debug-tracker', 'true');
+            
+            this.colorLog('DEBUG_TRACK', '🎯 클릭 추적 활성화', {
+                target: contentArea.id || contentArea.className
+            }, '#4caf50');
         }
     };
 

@@ -131,7 +131,7 @@ import './js/plugins/plugin-util.js';
 
 // 유틸리티 및 기본 기능
 import './js/plugins/history.js';
-import './js/plugins/format-utils.js';
+import './js/plugins/format-util.js';
 import './js/plugins/reset.js';
 
 // 텍스트 서식 관련 플러그인

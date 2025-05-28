@@ -138,7 +138,7 @@
 <body class="demo-page">
     <div class="demo-container">
         <div class="demo-header">
-            <h1>LiteEditor 플러그인 데모</h1>
+            <h1>LiteEditor 플러그인 데모 <span id="version-display" style="font-size: 0.6em; color: #666; font-weight: normal;"></span></h1>
         </div>
 
         <div class="demo-section">
@@ -152,6 +152,33 @@
                         <p>첫 번째 항목<br>두 번째 항목<br>세 번째 항목<br>네 번째 항목</p>
                         <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
                         <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
+                        <p></p>
+                        1. fontFamily : 폰트 설정 (한글, 영문, 코딩용)<br>
+                        2. heading : 제목 스타일 지정 (H1 ~ H3, p)<br>
+                        3. fontColor : 글자 색상<br>
+                        4. backgroundColor : 글자 배경색<br>
+                        5. bold : 텍스트 굵게<br>
+                        6. italic : 텍스트 기울임<br>
+                        7. underline : 텍스트 밑줄<br>
+                        8. strike : 취소선 <br>
+                        9. link : 하이퍼링크 삽입/편집<br>
+                        10. image : 이미지 업로드/삽입<br>
+                        11. table : 표 삽입/편집<br>
+                        12. video : 동영상 삽입<br>
+                        13. line : 구분선 삽입<br>
+                        14. blockquote : 블록 강조<br> 
+                        15. code : 배경색 박스 <br>
+                        16. codeBlock : 코드 블록 삽입<br>
+                        17. bulletList : 불릿 목록<br>
+                        18. numberedList : 번호 목록<br>
+                        19. checkList : 체크리스트<br>
+                        20. align-left : 왼쪽 정렬<br>
+                        21. align-center : 가운데 정렬<br>
+                        22. align-right : 오른쪽 정렬<br>
+                        23. align-justify : 양쪽 정렬<br>
+                        24. indent : 들여쓰기 <br>
+                        25. outdent : 내어쓰기 <br>
+                        26. reset : 포맷 제거 <br>
 
                         
                         <h3>텍스트 서식</h3>
@@ -465,33 +492,31 @@
     &lt;script&gt;
     // 모든 스크립트 로드 완료 후 에디터 초기화
     document.addEventListener('lite-editor-loaded', function() {
-        const editor = LiteEditor.init('#editor', {
-            // separatedMode: false (기본값이므로 생략 가능)
-            plugins: [
-                'fontFamily', 'heading', 'fontColor', 'emphasis',
-                'bold', 'italic', 'underline', 'strike',
-                'link', 'imageUpload', 'table', 'media',
-                'line','blockquote', 'code', 'codeBlock',
-                'unorderedList', 'orderedList', 'checkList',
-                'align', 'formatIndent',
-                'historyInit', 'undo', 'redo', 'reset'
-            ],
-            dividers: [4, 8, 12, 16, 19, 22],
-            dimensions: {
-                editor: {
-                    width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
-                    height: '650px',
-                    maxWidth: '100%'
-                },
-                toolbar: {
-                    height: '42px'
-                },
-                content: {
-                    height: '608px',
-                    minHeight: '608px'
-                }
+        // separatedMode: false (기본값이므로 생략 가능)
+        plugins: [
+            'fontFamily', 'heading', 'fontColor', 'emphasis',
+            'bold', 'italic', 'underline', 'strike',
+            'link', 'imageUpload', 'table', 'media',
+            'line','blockquote', 'code', 'codeBlock',
+            'unorderedList', 'orderedList', 'checkList',
+            'align', 'formatIndent',
+            'historyInit', 'undo', 'redo', 'reset'
+        ],
+        dividers: [4, 8, 12, 16, 19, 22],
+        dimensions: {
+            editor: {
+                width: '920px',    // ✅ 에디터 전체 너비 (최대 아이콘시 920px 이상 권장, 버전별 메뉴얼을 확인하세요.)
+                height: '650px',
+                maxWidth: '100%'
+            },
+            toolbar: {
+                height: '42px'
+            },
+            content: {
+                height: '608px',
+                minHeight: '608px'
             }
-        });
+        }
     });
     &lt;/script&gt;
 &lt;/body&gt;
@@ -533,13 +558,30 @@
     <script src="js/loader.js"></script>
     
     <script>
-        // 디버그 모드를 명시적으로 활성화
+        // 디버그 모드를 명시적으로 활성화 (loader.js 로드 전에 설정)
         window.DEBUG_MODE = true;
+        console.log('[DEBUG] 디버그 모드 활성화됨 - index.html에서 설정');
 
-        // 직접 콘솔에 로그 출력
-        console.log('[DEBUG] 디버그 모드 활성화됨');
-        // 모든 스크립트 로드 완료 후 에디터 초기화
+        // 버전 정보 표시 및 클릭 추적 초기화
         document.addEventListener('lite-editor-loaded', function() {
+            // 버전 정보 표시 (스크립트 로드 완료 후)
+            const versionDisplay = document.getElementById('version-display');
+            if (window.LiteEditorVersion && versionDisplay) {
+                versionDisplay.textContent = window.LiteEditorVersion.version;
+            }
+            
+            // �� 수정: errorHandler 로드 확인 후 실행
+            if (window.errorHandler) {
+                const contentArea = document.querySelector('#lite-editor-content');
+                if (contentArea) {
+                    // 1. 자동 클릭 추적 활성화
+                    errorHandler.enableClickTracking(contentArea);
+                    
+                    // 2. 수동 호출 테스트 (선택사항)
+                    // const trackInfo = errorHandler.debugTrackingTagBlock(contentArea);
+                }
+            }
+            
             // ✅ 분리 모드: 업데이트된 HTML 구조 사용
             const editor = LiteEditor.init('#lite-editor-content', {
                 separatedMode: true,
@@ -569,9 +611,6 @@
                     }
                 }
             });
-            
-            // 디버그 정보 표시
-            errorHandler.logDebug('Core', 'LiteEditor 초기화 완료 - 분리 모드');
         });
     </script>
 </body>
