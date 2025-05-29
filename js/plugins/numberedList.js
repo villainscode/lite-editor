@@ -198,7 +198,7 @@
     errorHandler.logDebug('NumberedList', '리스트 해제 완료');
   }
   
-  // ✅ Tab 들여쓰기 처리 (카운터 값 계산 추가)
+  // ✅ Tab 들여쓰기 처리 (순환 로직 수정)
   function handleTabIndent(li, isShift) {
     // 히스토리 기록
     const contentArea = li.closest('[contenteditable="true"]');
@@ -221,14 +221,14 @@
     if (newIndent === 0) {
       li.removeAttribute('data-indent-level');
       li.removeAttribute('data-number-style');
-      li.removeAttribute('data-counter-value'); // ✅ 카운터 값 제거
+      li.removeAttribute('data-counter-value');
       li.style.removeProperty('margin-left');
     } else {
       li.setAttribute('data-indent-level', newIndent);
       li.style.marginLeft = `${newIndent * 20}px`;
       
-      // ✅ 무한 순환 스타일 적용
-      const styleIndex = (newIndent - 1) % 3;
+      // ✅ 올바른 순환 스타일 적용
+      const styleIndex = newIndent % 3;  // ✅ -1 제거
       const selectedStyle = NUMBER_STYLES[styleIndex];
       li.setAttribute('data-number-style', selectedStyle);
       
@@ -349,7 +349,7 @@
   function applyBasicStyle(ol) {
     ol.style.setProperty('list-style-type', 'none', 'important');
     ol.style.setProperty('padding-left', '0', 'important');  // ✅ 패딩 제거
-    ol.style.setProperty('margin-left', '1.2em', 'important'); // ✅ 마진으로 대체
+    ol.style.setProperty('margin-left', '1.5em', 'important'); // ✅ 마진으로 대체
   }
   
   // ✅ CSS Counter 스타일 적용 (간소화)
@@ -453,7 +453,7 @@
       [contenteditable="true"] ol[data-lite-editor-number] { 
         list-style: none !important;
         padding-left: 0 !important;
-        margin-left: 1.2em !important;
+        margin-left: 1.5em !important;
         counter-reset: main-counter;
       }
       
