@@ -198,7 +198,7 @@
     errorHandler.logDebug('NumberedList', '리스트 해제 완료');
   }
   
-  // ✅ Tab 들여쓰기 처리 (bulletList.js 방식 참고)
+  // ✅ Tab 들여쓰기 처리 (카운터 값 계산 추가)
   function handleTabIndent(li, isShift) {
     // 히스토리 기록
     const contentArea = li.closest('[contenteditable="true"]');
@@ -221,21 +221,27 @@
     if (newIndent === 0) {
       li.removeAttribute('data-indent-level');
       li.removeAttribute('data-number-style');
+      li.removeAttribute('data-counter-value'); // ✅ 카운터 값 제거
       li.style.removeProperty('margin-left');
     } else {
       li.setAttribute('data-indent-level', newIndent);
       li.style.marginLeft = `${newIndent * 20}px`;
       
-      // 스타일 순환 적용
+      // ✅ 무한 순환 스타일 적용
       const styleIndex = (newIndent - 1) % 3;
       const selectedStyle = NUMBER_STYLES[styleIndex];
       li.setAttribute('data-number-style', selectedStyle);
+      
+      // ✅ 카운터 값 계산 및 설정
+      updateCounterValues(li);
     }
     
     // CSS Counter 갱신
     const ol = li.closest('ol[data-lite-editor-number]');
     if (ol) {
       applyCounterStyles(ol);
+      // ✅ 전체 리스트의 카운터 값 업데이트
+      updateAllCounterValues(ol);
     }
     
     // 히스토리 기록
@@ -248,6 +254,81 @@
       }
       contentArea.focus();
     }, 100);
+  }
+  
+  // ✅ 카운터 값 업데이트 함수
+  function updateCounterValues(targetLi) {
+    const ol = targetLi.closest('ol[data-lite-editor-number]');
+    if (!ol) return;
+    
+    updateAllCounterValues(ol);
+  }
+  
+  // ✅ 전체 리스트 카운터 값 업데이트
+  function updateAllCounterValues(ol) {
+    const items = Array.from(ol.children).filter(child => child.nodeName === 'LI');
+    
+    // 각 depth별 카운터 관리
+    const depthCounters = {};
+    
+    items.forEach(li => {
+      const indentLevel = parseInt(li.getAttribute('data-indent-level') || '0');
+      const numberStyle = li.getAttribute('data-number-style');
+      
+      if (indentLevel === 0) {
+        // 0depth는 CSS Counter 사용 (변경 없음)
+        return;
+      }
+      
+      // depth별 카운터 초기화
+      if (!depthCounters[indentLevel]) {
+        depthCounters[indentLevel] = 0;
+      }
+      
+      // 현재 depth 카운터 증가
+      depthCounters[indentLevel]++;
+      
+      // 하위 depth 카운터 리셋
+      Object.keys(depthCounters).forEach(depth => {
+        if (parseInt(depth) > indentLevel) {
+          depthCounters[depth] = 0;
+        }
+      });
+      
+      // ✅ 카운터 값을 스타일에 맞게 변환
+      const counterValue = formatCounterValue(depthCounters[indentLevel], numberStyle);
+      li.setAttribute('data-counter-value', counterValue);
+    });
+  }
+  
+  // ✅ 카운터 값 포맷팅
+  function formatCounterValue(number, style) {
+    switch (style) {
+      case 'decimal':
+        return number.toString();
+      case 'lower-alpha':
+        return String.fromCharCode(96 + number); // a, b, c...
+      case 'lower-roman':
+        return toRoman(number).toLowerCase();
+      default:
+        return number.toString();
+    }
+  }
+  
+  // ✅ 로마 숫자 변환
+  function toRoman(num) {
+    const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+    const numerals = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+    let result = '';
+    
+    for (let i = 0; i < values.length; i++) {
+      while (num >= values[i]) {
+        result += numerals[i];
+        num -= values[i];
+      }
+    }
+    
+    return result;
   }
   
   // ✅ 활성 LI 찾기 (bulletList.js 동일)
@@ -264,10 +345,11 @@
     return li?.closest('ol[data-lite-editor-number]') ? li : null;
   }
   
-  // ✅ 기본 스타일 적용 (bulletList.js 방식)
+  // ✅ 기본 스타일 적용 (공간 최적화)
   function applyBasicStyle(ol) {
     ol.style.setProperty('list-style-type', 'none', 'important');
-    ol.style.setProperty('padding-left', '1.5em', 'important');
+    ol.style.setProperty('padding-left', '0', 'important');  // ✅ 패딩 제거
+    ol.style.setProperty('margin-left', '1.2em', 'important'); // ✅ 마진으로 대체
   }
   
   // ✅ CSS Counter 스타일 적용 (간소화)
@@ -358,7 +440,7 @@
     }
   };
   
-  // ✅ CSS 스타일 초기화 (margin-left 제거)
+  // ✅ CSS 스타일 초기화 (무한 순환 지원)
   function initStyles() {
     if (document.getElementById('lite-editor-numbered-list-styles')) return;
     
@@ -367,65 +449,59 @@
     });
     
     style.textContent = `
-      /* CSS Counter 기반 번호 시스템 */
+      /* CSS Counter 기반 번호 시스템 (무한 순환 지원) */
       [contenteditable="true"] ol[data-lite-editor-number] { 
         list-style: none !important;
-        padding-left: 1.5em !important;
+        padding-left: 0 !important;
+        margin-left: 1.2em !important;
         counter-reset: main-counter;
       }
       
       /* 0depth 기본 카운터 */
       [contenteditable="true"] ol[data-lite-editor-number] li:not([data-indent-level]) {
         counter-increment: main-counter;
+        position: relative;
       }
       [contenteditable="true"] ol[data-lite-editor-number] li:not([data-indent-level])::before {
         content: counter(main-counter) ". ";
+        position: absolute;
+        left: -1.2em;
         font-weight: normal;
-        margin-right: 0.5em;
       }
       
-      /* 1depth - lower-alpha (margin-left 제거) */
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="1"] {
-        counter-reset: sub-counter-1;
-        counter-increment: sub-counter-1;
+      /* ✅ 동적 스타일링: data-number-style 속성 기반 */
+      
+      /* decimal 스타일 (1, 2, 3...) */
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="decimal"] {
+        position: relative;
       }
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="1"]::before {
-        content: counter(sub-counter-1, lower-alpha) ". ";
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="decimal"]::before {
+        content: attr(data-counter-value) ". ";
+        position: absolute;
+        left: -1.2em;
         font-weight: normal;
-        margin-right: 0.5em;
       }
       
-      /* 2depth - lower-roman (margin-left 제거) */
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="2"] {
-        counter-reset: sub-counter-2;
-        counter-increment: sub-counter-2;
+      /* lower-alpha 스타일 (a, b, c...) */
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="lower-alpha"] {
+        position: relative;
       }
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="2"]::before {
-        content: counter(sub-counter-2, lower-roman) ". ";
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="lower-alpha"]::before {
+        content: attr(data-counter-value) ". ";
+        position: absolute;
+        left: -1.2em;
         font-weight: normal;
-        margin-right: 0.5em;
       }
       
-      /* 3depth 이상 순환 (margin-left 제거) */
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="3"] {
-        counter-reset: sub-counter-3;
-        counter-increment: sub-counter-3;
+      /* lower-roman 스타일 (i, ii, iii...) */
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="lower-roman"] {
+        position: relative;
       }
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="3"]::before {
-        content: counter(sub-counter-3) ". ";
+      [contenteditable="true"] ol[data-lite-editor-number] li[data-number-style="lower-roman"]::before {
+        content: attr(data-counter-value) ". ";
+        position: absolute;
+        left: -1.2em;
         font-weight: normal;
-        margin-right: 0.5em;
-      }
-      
-      /* 4depth 이상도 지원 (순환) */
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="4"] {
-        counter-reset: sub-counter-4;
-        counter-increment: sub-counter-4;
-      }
-      [contenteditable="true"] ol[data-lite-editor-number] li[data-indent-level="4"]::before {
-        content: counter(sub-counter-4, lower-alpha) ". ";
-        font-weight: normal;
-        margin-right: 0.5em;
       }
     `;
     
