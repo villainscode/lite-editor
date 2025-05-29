@@ -338,8 +338,16 @@ const LiteEditorSecurity = (function() {
     }
     
     try {
+      let urlToCheck = url;
+      
+      // 🔧 상대 경로 처리 (업로드된 이미지의 경우)
+      if (url.startsWith('/')) {
+        // 상대 경로인 경우 현재 도메인 기준으로 절대 URL 생성
+        urlToCheck = new URL(url, window.location.origin).href;
+      }
+      
       // 기본 URL 형식 검사
-      const urlObj = new URL(url);
+      const urlObj = new URL(urlToCheck);
       const path = urlObj.pathname;
       
       // 허용된 이미지 확장자 검사
