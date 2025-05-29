@@ -6,7 +6,7 @@
 
 window.LiteEditorVersion = {
   // 현재 버전 (nodejs 이미지 업로드 완료)
-  version: 'v1.0.1',
+  version: 'v1.0.11',
   
   // 개발자 정보
   developer: 'Code Villain',

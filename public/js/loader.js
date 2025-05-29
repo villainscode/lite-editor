@@ -80,6 +80,7 @@
             // 삽입 관련 플러그인
             'js/plugins/link.js',
             'js/plugins/imageUpload.js',
+            'js/plugins/imageLayout.js',
             'js/plugins/table.js',
             'js/plugins/media.js',
             'js/plugins/line.js',

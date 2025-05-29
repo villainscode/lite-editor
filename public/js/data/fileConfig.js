@@ -5,7 +5,7 @@
 
 const FILE_CONFIG = {
   // 최대 파일 크기 (메가바이트)
-  maxSizeMB: 10,
+  maxSizeMB: 100,
   
   // 허용된 파일 확장자
   allowedTypes: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
