@@ -32,10 +32,10 @@
       const existingList = findExistingList(range);
       
       try {
-        if (existingList) {
-          unwrapBulletList(existingList.ul, range);
-        } else {
-          createBulletList(contentArea, range);
+      if (existingList) {
+        unwrapBulletList(existingList.ul, range);
+      } else {
+        createBulletList(contentArea, range);
         }
         
         // ✅ 작업 완료 후 상태 기록

@@ -32,10 +32,10 @@
       const existingList = findExistingList(range);
       
       try {
-        if (existingList) {
-          unwrapNumberedList(existingList.ol, range);
-        } else {
-          createNumberedList(contentArea, range);
+      if (existingList) {
+        unwrapNumberedList(existingList.ol, range);
+      } else {
+        createNumberedList(contentArea, range);
         }
         
         // ✅ 작업 완료 후 상태 기록
@@ -324,10 +324,10 @@
       const existingList = findExistingList(range);
       
       try {
-        if (existingList) {
-          unwrapNumberedList(existingList.ol, range);
-        } else {
-          createNumberedList(contentArea, range);
+      if (existingList) {
+        unwrapNumberedList(existingList.ol, range);
+      } else {
+        createNumberedList(contentArea, range);
         }
         
         // ✅ 단축키 액션 후 히스토리 기록

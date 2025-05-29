@@ -244,8 +244,8 @@
                         } catch (parseError) {
                             if (progressBar) completeProgressBar(progressBar, false);
                             reject(new Error('서버 응답 파싱 실패'));
-                        }
-                    } else {
+                }
+            } else {
                         if (progressBar) completeProgressBar(progressBar, false);
                         reject(new Error(`업로드 실패 (HTTP ${xhr.status})`));
                     }
