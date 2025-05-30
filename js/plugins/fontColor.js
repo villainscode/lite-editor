@@ -418,7 +418,12 @@
         const isVisible = dropdownMenu.classList.contains('show');
         
         if (!isVisible) {
-          // 🔧 다른 모달을 닫되, 포커스는 유지
+          // 🔧 activeModalManager.closeAll() 추가
+          if (util.activeModalManager) {
+            util.activeModalManager.closeAll();
+          }
+          
+          // 기존 코드는 그대로 유지 (호환성)
           const otherModals = document.querySelectorAll('.lite-editor-dropdown-menu.show');
           otherModals.forEach(modal => {
             if (modal !== dropdownMenu) {

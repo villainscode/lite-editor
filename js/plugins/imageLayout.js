@@ -73,9 +73,6 @@
     function closeModal(modal) {
         if (!modal) return;
         
-        // 커스텀 이벤트 발송 (정리 작업용)
-        modal.dispatchEvent(new CustomEvent('modalClosed'));
-        
         modal.classList.remove('show');
         modal.style.opacity = '0';
         modal.style.visibility = 'hidden';
@@ -177,8 +174,15 @@
             const url = urlInput.value.trim();
             const file = fileInput.files[0];
             
-            if (url || file) {
-                await processImageInsertion(url, file, modal);
+            if (file) {
+                // ✅ 파일 업로드 시 준비중 알림
+                closeModal(modal);
+                LiteEditorModal.alert('업로드 기능 준비중입니다.\n\nURL 링크를 통한 이미지 삽입을 이용해 주세요.');
+                return;
+            }
+            
+            if (url) {
+                await processImageInsertion(url, null, modal);
             } else {
                 alert('URL 또는 파일을 선택해주세요.');
             }
@@ -336,6 +340,11 @@
         modal.style.removeProperty('visibility');
         modal.classList.add('show');
         
+        if (util.activeModalManager) {
+            modal.closeCallback = () => closeModal(modal);
+            util.activeModalManager.register(modal);
+        }
+        
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 closeModal(modal);
@@ -343,10 +352,6 @@
             }
         };
         document.addEventListener('keydown', escHandler);
-        
-        modal.addEventListener('modalClosed', () => {
-            document.removeEventListener('keydown', escHandler);
-        });
         
         const urlInput = modal.querySelector('#image-url-input');
         if (urlInput) urlInput.focus();
