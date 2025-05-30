@@ -6,6 +6,7 @@ yarn-debug.log
 package-lock.json
 
 public/images/
+
 # Build outputs
 dist/
 build/

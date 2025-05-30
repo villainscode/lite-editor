@@ -477,7 +477,7 @@ const LiteEditor = (function() {
         else if (pluginName === 'numberList') { defaultIcon = 'format_list_numbered'; defaultTitle = 'Number List'; }
         else if (pluginName === 'checkList') { defaultIcon = 'checklist'; defaultTitle = 'Check List'; }
         else if (pluginName === 'link') { defaultIcon = 'link'; defaultTitle = 'Link'; }
-        else if (pluginName === 'image') { defaultIcon = 'image'; defaultTitle = 'Image'; }
+        else if (pluginName === 'imageUpload') { defaultIcon = 'photo_camera'; defaultTitle = 'Image Upload'; }
         else if (pluginName === 'table') { defaultIcon = 'table_chart'; defaultTitle = 'Table'; }
         else if (pluginName === 'reset') { defaultIcon = 'format_clear'; defaultTitle = 'Clear Format'; }
         
@@ -486,9 +486,11 @@ const LiteEditor = (function() {
           icon: defaultIcon,
           title: defaultTitle,
           action: function(contentArea) {
-            contentArea.focus();  // 먼저 포커스 설정
-            saveSelection();
-            applyAlignment('Left', contentArea);
+            contentArea.focus();  // 포커스 설정
+            // 안전한 선택 영역 저장 - 전역 객체 사용
+            if (window.liteEditorSelection?.save) {
+              window.liteEditorSelection.save();
+            }            
           }
         };
         
