@@ -313,13 +313,8 @@
           return;
         }
         
-        // 🔧 포커스 강제 복원 (fontColor.js와 동일)
+        // 🔧 포커스 강제 복원
         if (document.activeElement !== contentArea) {
-          errorHandler.colorLog('EMPHASIS', '🔧 포커스 강제 복원', {
-            from: document.activeElement?.tagName,
-            to: 'DIV'
-          }, '#ff5722');
-          
           try {
             contentArea.focus({ preventScroll: true });
           } catch (e) {
@@ -327,61 +322,51 @@
           }
         }
         
-        // 🔧 디버깅: 포커스 복원 후 상태
-        errorHandler.colorLog('EMPHASIS', '포커스 복원 후', {
-          activeElement: document.activeElement?.tagName,
-          contentAreaFocused: document.activeElement === contentArea,
-          hasFocus: document.hasFocus()
-        }, '#4caf50');
-        
         const isVisible = dropdownMenu.classList.contains('show');
         
-        if (!isVisible) {
-          // 🔧 다른 모달을 닫되, 포커스는 유지
-          const otherModals = document.querySelectorAll('.lite-editor-dropdown-menu.show');
-          otherModals.forEach(modal => {
-            if (modal !== dropdownMenu) {
-              modal.classList.remove('show');
-              modal.style.display = 'none';
-            }
-          });
+        // ✅ 다른 모달 닫기를 조건부로 처리
+        if (!isVisible && util.activeModalManager) {
+          util.activeModalManager.closeAll();
         }
         
         if (isVisible) {
+          // 닫기
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
           highlightContainer.classList.remove('active');
           isDropdownOpen = false;
           util.activeModalManager.unregister(dropdownMenu);
         } else {
-          dropdownMenu.classList.add('show');
-          dropdownMenu.style.display = 'block';
-          highlightContainer.classList.add('active');
-          isDropdownOpen = true;
-          
-          util.layer.setLayerPosition(dropdownMenu, highlightContainer);
-          
-          dropdownMenu.closeCallback = () => {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            highlightContainer.classList.remove('active');
-            isDropdownOpen = false;
-          };
-          
-          util.activeModalManager.register(dropdownMenu);
-          
-          util.setupOutsideClickHandler(dropdownMenu, () => {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            highlightContainer.classList.remove('active');
-            isDropdownOpen = false;
-            util.activeModalManager.unregister(dropdownMenu);
+          // ✅ 열기 로직을 setTimeout으로 지연 처리
+          setTimeout(() => {
+            dropdownMenu.classList.add('show');
+            dropdownMenu.style.display = 'block';
+            highlightContainer.classList.add('active');
+            isDropdownOpen = true;
             
-            // 🔧 드롭다운 닫힐 때도 포커스 유지
-            if (document.activeElement !== contentArea) {
-              contentArea.focus({ preventScroll: true });
-            }
-          }, [highlightContainer]);
+            util.layer.setLayerPosition(dropdownMenu, highlightContainer);
+            
+            dropdownMenu.closeCallback = () => {
+              dropdownMenu.classList.remove('show');
+              dropdownMenu.style.display = 'none';
+              highlightContainer.classList.remove('active');
+              isDropdownOpen = false;
+            };
+            
+            util.activeModalManager.register(dropdownMenu);
+            
+            util.setupOutsideClickHandler(dropdownMenu, () => {
+              dropdownMenu.classList.remove('show');
+              dropdownMenu.style.display = 'none';
+              highlightContainer.classList.remove('active');
+              isDropdownOpen = false;
+              util.activeModalManager.unregister(dropdownMenu);
+              
+              if (document.activeElement !== contentArea) {
+                contentArea.focus({ preventScroll: true });
+              }
+            }, [highlightContainer]);
+          }, 10); // ✅ 10ms 지연으로 타이밍 이슈 해결
         }
         
         // 🔧 디버깅: click 이벤트 완료 후 상태
