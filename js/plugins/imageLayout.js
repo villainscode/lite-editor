@@ -73,6 +73,9 @@
     function closeModal(modal) {
         if (!modal) return;
         
+        // 커스텀 이벤트 발송 (정리 작업용)
+        modal.dispatchEvent(new CustomEvent('modalClosed'));
+        
         modal.classList.remove('show');
         modal.style.opacity = '0';
         modal.style.visibility = 'hidden';
@@ -81,7 +84,11 @@
             util.activeModalManager.unregister(modal);
         }
         
-        setTimeout(() => modal.remove(), 300);
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
     }
 
     function createModal() {
@@ -93,9 +100,14 @@
         const modalContainer = util.dom ? util.dom.createElement('div') : document.createElement('div');
         modalContainer.innerHTML = template;
         const modal = modalContainer.firstElementChild;
+        
+        // ✅ 식별자 추가
+        modal.classList.add('image-upload-modal');
+        
         document.body.appendChild(modal);
 
         setupModalEvents(modal);
+        setupModalCloseEvents(modal);
         return modal;
     }
 
@@ -106,20 +118,33 @@
 
         if (!insertButton) return;
 
-        urlInput.addEventListener('click', (e) => e.stopPropagation());
+        // ✅ URL 입력 포커스 보호
+        urlInput.addEventListener('focus', (e) => {
+            e.stopPropagation(); // 포커스 이벤트 보호
+        });
+
+        urlInput.addEventListener('click', (e) => {
+            e.stopPropagation(); // 클릭 이벤트 보호
+        });
+
+        // ✅ URL 입력 키 이벤트
         urlInput.addEventListener('keydown', (e) => {
-            if (e.key !== 'Escape') e.stopPropagation();
+            e.stopPropagation(); // 키 이벤트 보호
+            
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const url = urlInput.value.trim();
                 if (url) processImageInsertion(url, null, modal);
             }
+            // ESC는 모달 닫기를 위해 전파 허용
+            if (e.key === 'Escape') {
+                closeModal(modal);
+            }
         });
 
-        // 파일 선택 이벤트 (버블링 차단)
+        // ✅ 파일 입력 보호
         fileInput.addEventListener('change', (e) => {
             e.stopPropagation();
-            e.stopImmediatePropagation();
             
             const file = e.target.files[0];
             const textSpan = fileInput.parentElement.querySelector('span:not(.material-icons)');
@@ -137,15 +162,15 @@
                 fileInput.parentElement.style.backgroundColor = '#f8f9fa';
             }
         });
-        
-        // 파일 입력 영역 클릭도 버블링 차단
-        fileInput.parentElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+
+        // ✅ 파일 선택 영역 보호
+        const fileLabel = fileInput.parentElement;
+        fileLabel.addEventListener('click', (e) => {
+            e.stopPropagation(); // 파일 선택 영역 클릭 보호
         });
 
-        // Insert 버튼 이벤트
-        insertButton.onclick = async function(e) {
+        // ✅ Insert 버튼
+        insertButton.addEventListener('click', async function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -157,7 +182,107 @@
             } else {
                 alert('URL 또는 파일을 선택해주세요.');
             }
+        });
+
+        // ✅ 모달 컨텐츠 전체 보호
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.addEventListener('click', (e) => {
+                e.stopPropagation(); // 모달 내부 모든 클릭 보호
+            });
+        }
+    }
+
+    function setupModalCloseEvents(modal) {
+        // 1. 모달 배경 클릭으로만 닫기 (가장 안전한 방법)
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal(modal);
+            }
+        });
+
+        // 2. 개선된 외부 클릭 감지 (bubble phase 사용, 더 정교한 조건)
+        const outsideClickHandler = (e) => {
+            if (!modal.parentNode || !modal.classList.contains('show')) {
+                document.removeEventListener('click', outsideClickHandler);
+                return;
+            }
+
+            // ✅ 모달 내부 요소들 보호
+            if (modal.contains(e.target)) {
+                return; // 모달 내부 클릭은 무시
+            }
+
+            // ✅ input, button, select 등 폼 요소들 보호
+            const isFormElement = e.target.matches('input, textarea, select, button, [contenteditable]');
+            if (isFormElement) {
+                return; // 폼 요소 클릭은 무시
+            }
+
+            closeModal(modal);
+            document.removeEventListener('click', outsideClickHandler);
         };
+
+        // ✅ bubble phase로 변경 (capture phase 제거)
+        setTimeout(() => {
+            document.addEventListener('click', outsideClickHandler);
+        }, 100); // 100ms 지연으로 모달 생성 직후 닫히는 것 방지
+
+        // 3. ✅ 툴바 버튼만 정확히 감지 (모달 외부에서만)
+        const toolbarClickHandler = (e) => {
+            // 모달 내부 클릭은 완전히 무시
+            if (modal.contains(e.target)) {
+                return;
+            }
+
+            // 툴바 버튼 클릭만 감지
+            const toolbar = e.target.closest('.lite-editor-toolbar');
+            const clickedButton = e.target.closest('.lite-editor-button');
+            const imageUploadButton = e.target.closest('.lite-editor-image-upload-button');
+            
+            // 툴바 내의 다른 플러그인 버튼이 클릭된 경우만
+            if (toolbar && clickedButton && !imageUploadButton) {
+                closeModal(modal);
+                document.removeEventListener('click', toolbarClickHandler);
+            }
+        };
+
+        // 툴바 클릭 감지도 지연 등록
+        setTimeout(() => {
+            document.addEventListener('click', toolbarClickHandler);
+        }, 100);
+
+        // 4. ✅ 다른 모달 생성 감지만 유지 (MutationObserver)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const isOtherModal = node.classList?.contains('modal-overlay') && node !== modal;
+                        const hasOtherModal = node.querySelector?.('.modal-overlay:not(.image-upload-modal)');
+                        
+                        if (isOtherModal || hasOtherModal) {
+                            closeModal(modal);
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // 모달 닫힐 때 모든 이벤트 정리
+        modal.addEventListener('modalClosed', () => {
+            document.removeEventListener('click', outsideClickHandler);
+            document.removeEventListener('click', toolbarClickHandler);
+            observer.disconnect();
+        });
+
+        // 5. activeModalManager 연동
+        if (util.activeModalManager) {
+            util.activeModalManager.register(modal, () => {
+                closeModal(modal);
+            });
+        }
     }
 
     // 이미지 삽입 프로세스
@@ -211,7 +336,6 @@
         modal.style.removeProperty('visibility');
         modal.classList.add('show');
         
-        // ESC 키로만 닫기
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 closeModal(modal);
@@ -219,6 +343,10 @@
             }
         };
         document.addEventListener('keydown', escHandler);
+        
+        modal.addEventListener('modalClosed', () => {
+            document.removeEventListener('keydown', escHandler);
+        });
         
         const urlInput = modal.querySelector('#image-url-input');
         if (urlInput) urlInput.focus();
@@ -229,8 +357,17 @@
     function setupGlobalEvents() {
         if (isEventHandlerRegistered) return;
         
+        // ESC 키로 모든 모달 닫기
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                const modal = document.querySelector('.modal-overlay.show');
+                if (modal) closeModal(modal);
+            }
+        });
+        
+        // ✅ 다른 플러그인이 활성화될 때 imageUpload 모달 닫기
+        document.addEventListener('pluginActivated', (e) => {
+            if (e.detail?.pluginId !== PLUGIN_ID) {
                 const modal = document.querySelector('.modal-overlay.show');
                 if (modal) closeModal(modal);
             }
@@ -602,9 +739,8 @@
                     return;
                 }
                 
-                if (util.activeModalManager) {
-                    util.activeModalManager.closeAll();
-                }
+                // ✅ 다른 모든 모달/레이어 강제 닫기
+                closeAllOtherModals();
                 
                 showModal();
             });
@@ -613,4 +749,39 @@
             setupGlobalEvents();
         }
     });
+
+    // ✅ 다른 모든 모달/레이어 닫기 함수 추가
+    function closeAllOtherModals() {
+        // activeModalManager 사용
+        if (util.activeModalManager) {
+            util.activeModalManager.closeAll();
+        }
+        
+        // 직접 모달들 찾아서 닫기
+        const allModals = document.querySelectorAll('.modal-overlay, .layer-popup, [class*="modal"], [class*="popup"]');
+        allModals.forEach(modal => {
+            if (modal.style.display !== 'none' && modal.style.visibility !== 'hidden') {
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+                modal.classList.remove('show', 'active', 'open');
+            }
+        });
+        
+        // 특정 플러그인 레이어들 닫기
+        const layerSelectors = [
+            '.table-size-selector',
+            '.link-modal',
+            '.color-picker',
+            '.font-selector'
+        ];
+        
+        layerSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+                el.classList.remove('show', 'active', 'open');
+            });
+        });
+    }
 })();
