@@ -366,6 +366,32 @@
     });
   }
 
+  // ✅ 다른 리스트 타입 감지 함수 (체크리스트용)
+  function detectOtherListTypes() {
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
+    
+    // 불릿 리스트 감지
+    const bulletList = element.closest('ul[data-lite-editor-bullet]') || 
+                       element.querySelector('ul[data-lite-editor-bullet]');
+    if (bulletList) {
+      return { type: '불릿 리스트', element: bulletList };
+    }
+    
+    // 넘버 리스트 감지  
+    const numberedList = element.closest('ol[data-lite-editor-number]') ||
+                        element.querySelector('ol[data-lite-editor-number]');
+    if (numberedList) {
+      return { type: '넘버 리스트', element: numberedList };
+    }
+    
+    return null;
+  }
+
   // ✅ 단축키 등록
   LiteEditor.registerShortcut('checkList', {
     key: 'k',
@@ -389,6 +415,19 @@
         event.stopPropagation(); 
       }
       contentArea.focus();
+      
+      // ✅ 다른 리스트 타입 체크 (새로 추가)
+      const otherListType = detectOtherListTypes();
+      if (otherListType) {
+        LiteEditorModal.alert(
+          '이미 ' + otherListType.type + '가 적용되었습니다.<br>리스트 적용을 해제한 뒤 체크리스트를 적용해주세요.',
+          {
+            titleText: '리스트 중복 적용 불가',
+            confirmText: '확인'
+          }
+        );
+        return;
+      }
       
       // 🔥 히스토리에 적용 전 상태 기록
       if (window.LiteEditorHistory) {
