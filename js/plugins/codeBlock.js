@@ -259,7 +259,7 @@
     
     // 레이어 생성
     activeLayer = document.createElement('div');
-    activeLayer.className = 'lite-editor-code-block-layer';
+    activeLayer.className = 'lite-editor-code-block-layer lite-editor-dropdown-menu show';
     activeLayer.innerHTML = `
       <div class="lite-editor-code-block-form">
         <textarea placeholder="Please insert your code here" class="lite-editor-code-input"></textarea>
