@@ -43,6 +43,7 @@
         const scripts = [
             // 데이터 파일
             'js/data/videoList.js',
+            'js/data/codeLanguages.js',
             'js/error-handler.js',
             'js/core.js',
             'js/security-manager.js',

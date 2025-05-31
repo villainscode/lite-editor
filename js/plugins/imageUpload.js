@@ -286,6 +286,4 @@
         fileConfig
     };
 
-    console.log('[ImageUploadModule] 파일 업로드 모듈 로드됨');
-
 })();

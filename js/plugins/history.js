@@ -458,12 +458,16 @@
         }
       });
       
-      // 붙여넣기 - 개선된 타이밍
+      // 붙여넣기 - 개선된 단일 기록 방식
       this.contentArea.addEventListener('paste', () => {
         this.forceRecordState('Before Paste');
+        
+        // ✅ input 이벤트 대신 즉시 기록 (디바운싱 없이)
         setTimeout(() => {
-          this.forceRecordState('After Paste');
-        }, 50);
+          // 디바운싱 타이머 무시하고 즉시 기록
+          clearTimeout(this.inputTimer);
+          this.recordState('Paste Complete');
+        }, 100); // 짧은 딜레이로 붙여넣기 완료 후 기록
       });
     }
     

@@ -86,15 +86,24 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // ✅ 레이어 체크 및 포커스 확인
         if (!util.utils.canExecutePlugin(contentArea)) {
             return;
         }
         
-        // ✅ 포커스 설정 (이미 체크 완료된 상태)
         contentArea.focus();
         
         document.execCommand('formatBlock', false, 'blockquote');
+        
+        // ✅ 커서를 텍스트 마지막으로 이동 (code와 일관성)
+        setTimeout(() => {
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.collapse(false); // false = 끝으로 이동
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }, 0);
       });
 
       return button;
@@ -107,6 +116,17 @@
     alt: true,
     action: function(contentArea) {
       document.execCommand('formatBlock', false, 'blockquote');
+      
+      // ✅ 커서를 텍스트 마지막으로 이동
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }, 0);
     }
   });
 })();

@@ -15,28 +15,25 @@
   const CDN_STYLE = 'https://unpkg.com/@speed-highlight/core/dist/themes/default.css';
   const CDN_DETECT = '/js/plugins/customDetect.js';  // 루트에서부터의 경로
   
-  // 지원 언어 목록
-  const LANGUAGES = [
-    { value: "auto", label: "Auto Detect" },
-    { value: "bash", label: "Bash" },
-    { value: "c", label: "C" },
-    { value: "css", label: "CSS" },
-    { value: "docker", label: "Docker" },
-    { value: "go", label: "Go" },
-    { value: "html", label: "HTML" },
-    { value: "http", label: "HTTP" },
-    { value: "java", label: "Java" },
-    { value: "js", label: "JavaScript" },
-    { value: "json", label: "JSON" },
-    { value: "md", label: "Markdown" },
-    { value: "plain", label: "Plain Text" },
-    { value: "py", label: "Python" },
-    { value: "rs", label: "Rust" },
-    { value: "sql", label: "SQL" },
-    { value: "ts", label: "TypeScript" },
-    { value: "xml", label: "XML" },
-    { value: "yaml", label: "YAML" }
-  ];
+  // ✅ 언어 목록을 외부 데이터 파일에서 가져오기
+  function getLanguageList() {
+    // LiteEditorCodeData가 로드되었는지 확인
+    if (typeof window.LiteEditorCodeData !== 'undefined' && window.LiteEditorCodeData.CODE_LANGUAGES) {
+      return window.LiteEditorCodeData.CODE_LANGUAGES;
+    }
+    
+    // 폴백: 기본 언어 목록 (데이터 파일 로드 실패 시)
+    console.warn('CodeBlock: LiteEditorCodeData를 찾을 수 없습니다. 기본 언어 목록을 사용합니다.');
+    return [
+      { value: "auto", label: "Auto Detect" },
+      { value: "js", label: "JavaScript" },
+      { value: "html", label: "HTML" },
+      { value: "css", label: "CSS" },
+      { value: "java", label: "Java" },
+      { value: "py", label: "Python" },
+      { value: "plain", label: "Plain Text" }
+    ];
+  }
   
   // PluginUtil 참조 및 검증
   const util = window.PluginUtil || {};
@@ -86,13 +83,6 @@
   }
   
   /**
-   * 현재 선택 영역을 저장
-   */
-  function saveSelection() {
-    savedRange = util.selection.saveSelection();
-  }
-  
-  /**
    * 저장된 선택 영역을 복원
    */
   function restoreSelection() {
@@ -112,6 +102,23 @@
    */
   function closeCodeBlockLayer() {
     if (!activeLayer) return;
+    
+    // ✅ 저장된 드롭다운 참조를 이용한 정확한 정리 (하단에 있는 메뉴 레이어 정리)
+    if (activeLayer._dropdownReference && activeLayer._dropdownReference.menu) {
+      const dropdownMenu = activeLayer._dropdownReference.menu;
+      if (dropdownMenu.parentNode) {
+        dropdownMenu.parentNode.removeChild(dropdownMenu);
+      }
+    }
+    
+    // ✅ 추가 안전장치: 열려있는 드롭다운 메뉴들 정리 
+    const openDropdownMenus = document.querySelectorAll('.lite-editor-code-dropdown-menu:not(.hidden)');
+    openDropdownMenus.forEach(menu => {
+      menu.classList.add('hidden');
+      if (menu.parentNode) {
+        menu.parentNode.removeChild(menu);
+      }
+    });
     
     // 버튼 상태 업데이트
     if (codeBlockButton) {
@@ -166,6 +173,13 @@
     dropdownMenu.setAttribute('aria-orientation', 'vertical');
     dropdownMenu.tabIndex = -1;
     
+    // ✅ 코드 블록 레이어 위에 표시되도록 z-index 설정
+    dropdownMenu.style.position = 'absolute';
+    dropdownMenu.style.zIndex = '99999'; // 코드 블록 레이어(9999)보다 높게
+    
+    // ✅ 외부 데이터에서 언어 목록 가져오기
+    const LANGUAGES = getLanguageList();
+    
     // 메뉴 아이템 생성
     LANGUAGES.forEach(lang => {
       const item = document.createElement('div');
@@ -210,16 +224,27 @@
       const isHidden = dropdownMenu.classList.contains('hidden');
       
       if (isHidden) {
+        // ✅ 메뉴를 body에 추가하고 위치 계산
+        document.body.appendChild(dropdownMenu);
+        
+        const buttonRect = button.getBoundingClientRect();
+        dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+        dropdownMenu.style.left = (buttonRect.left + window.scrollX) + 'px';
+        
         dropdownMenu.classList.remove('hidden');
         button.setAttribute('aria-expanded', 'true');
       } else {
         dropdownMenu.classList.add('hidden');
+        // ✅ 메뉴를 body에서 제거
+        if (dropdownMenu.parentNode) {
+          dropdownMenu.parentNode.removeChild(dropdownMenu);
+        }
         button.setAttribute('aria-expanded', 'false');
       }
     });
     
+    // ✅ 컨테이너에는 버튼만 추가 (메뉴는 제외)
     dropdownContainer.appendChild(button);
-    dropdownContainer.appendChild(dropdownMenu);
     
     return {
       container: dropdownContainer,
@@ -233,33 +258,27 @@
   }
   
   /**
-   * HTML 특수 문자 이스케이프 처리
-   */
-  function escapeHtml(unsafe) {
-    return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;")
-         .replace(/`/g, "&#96;");
-  }
-  
-  /**
    * 코드 블록 레이어 표시
    */
   function showCodeBlockLayer(buttonElement, contentArea, SpeedHighlight) {
-    // 선택 영역 저장
-    saveSelection();
-    
-    // 다른 활성화된 모달 모두 닫기
+    // ✅ closeAll 이후에 선택 영역 저장
+    // 다른 활성화된 모달 모두 닫기 (현재 레이어 제외)
     if (util.activeModalManager) {
-      util.activeModalManager.closeAll();
+      util.activeModalManager.closeAll(activeLayer);
     }
+    
+    // ✅ closeAll 완료 후 선택 영역 저장
+    setTimeout(() => {
+      if (document.activeElement === contentArea) {
+        savedRange = util.selection.saveSelection();
+      } else {
+        savedRange = null;
+      }
+    }, 60); // closeAll의 선택 영역 복원(50ms) 이후
     
     // 레이어 생성
     activeLayer = document.createElement('div');
-    activeLayer.className = 'lite-editor-code-block-layer';
+    activeLayer.className = 'lite-editor-code-block-layer lite-editor-dropdown-menu show';
     activeLayer.innerHTML = `
       <div class="lite-editor-code-block-form">
         <textarea placeholder="Please insert your code here" class="lite-editor-code-input"></textarea>
@@ -288,6 +307,9 @@
     const languageDropdown = createLanguageDropdown();
     actionsDiv.insertBefore(languageDropdown.container, actionsDiv.firstChild);
     
+    // ✅ 드롭다운 참조를 레이어에 저장 (정리용)
+    activeLayer._dropdownReference = languageDropdown;
+    
     // 레이어 위치 설정
     const buttonRect = buttonElement.getBoundingClientRect();
     activeLayer.style.top = (buttonRect.bottom + window.scrollY) + 'px';
@@ -306,10 +328,7 @@
     
     // 코드 삽입 처리 함수
     const processCode = (code, language) => {
-      console.log('🔧 processCode 호출됨:', { code: code?.substring(0, 50) + '...', language, codeLength: code?.length });
-      
       if (!code.trim()) {
-        console.log('⚠️ 코드가 비어있음 - 알림 표시');
         errorHandler.showUserAlert('P405');
         return;
       }
@@ -320,7 +339,6 @@
         contentArea.focus();
       }
       
-      console.log('🚀 insertCodeBlock 호출 예정');
       setTimeout(() => {
         insertCodeBlock(code, language, contentArea, SpeedHighlight);
       }, 0);
@@ -330,11 +348,6 @@
     insertButton.addEventListener('click', () => {
       const selectedLanguage = languageDropdown.getValue();
       const codeValue = codeInput.value;
-      console.log('🖱️ 삽입 버튼 클릭됨:', { 
-        language: selectedLanguage, 
-        codeLength: codeValue?.length,
-        codePreview: codeValue?.substring(0, 30) + '...'
-      });
       processCode(codeValue, selectedLanguage);
     });
     
@@ -342,41 +355,50 @@
     activeLayer.addEventListener('click', e => e.stopPropagation());
     
     // 외부 클릭 시 닫기 설정
-    util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
-    
-    // 텍스트 영역에 포커스
-    setTimeout(() => {
-      try {
-        codeInput.focus({ preventScroll: true });
-      } catch (e) {
+    requestAnimationFrame(() => {
+      // ✅ closeAll의 선택 영역 복원(50ms) 이후에 포커스
+      setTimeout(() => {
         codeInput.focus();
-      }
-    }, 0);
+        
+        // 추가 안전장치
+        setTimeout(() => {
+          if (document.activeElement !== codeInput) {
+            codeInput.focus();
+          }
+        }, 20);
+      }, 80); // closeAll의 50ms + 여유시간
+      
+      // 외부 클릭 핸들러도 더 늦게
+      setTimeout(() => {
+        util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
+      }, 100);
+    });
   }
   
   /**
    * 코드 블록 삽입
    */
   function insertCodeBlock(code, language, contentArea, SpeedHighlight) {
-    console.log('📝 insertCodeBlock 함수 시작:', { 
-      code: code?.substring(0, 50) + '...', 
-      language, 
-      contentArea: !!contentArea, 
-      SpeedHighlight: !!SpeedHighlight 
-    });
-    
     if (!code.trim()) {
-      console.log('⚠️ insertCodeBlock: 코드가 비어있음');
       return;
     }
     
     try {
+      // 저장된 선택 영역 복원
+      restoreSelection();
+      
+      // 현재 선택 영역 확인
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        selection.getRangeAt(0);
+      }
+      
       // 언어 결정
       let finalLanguage = language;
       if (!language) {
         finalLanguage = 'plain';
       } else if (language === 'auto') {
-        finalLanguage = SpeedHighlight.detectLanguage(code) || 'plain';
+        finalLanguage = SpeedHighlight?.detectLanguage(code) || 'plain';
       }
       
       try {
@@ -385,11 +407,8 @@
         contentArea.focus();
       }
       
-      // 저장된 선택 영역 복원
-      restoreSelection();
-      
       // HTML 특수 문자 이스케이프 처리
-      const escapedCode = escapeHtml(code);
+      const escapedCode = LiteEditorSecurity.escapeHtml(code);
       
       // 코드 블록 생성
       const codeBlockHTML = `
@@ -433,12 +452,19 @@
         }
       }, 10);
       
-      // 방금 삽입된 코드 블록 찾고 하이라이팅 적용
-      const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
-      const newBlock = codeBlocks[codeBlocks.length - 1];
-      
-      if (newBlock) {
-        SpeedHighlight.highlightElement(newBlock, finalLanguage);
+
+      if (SpeedHighlight) {
+        setTimeout(() => {
+          const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
+          const newBlock = codeBlocks[codeBlocks.length - 1];
+          
+          if (newBlock) {
+            SpeedHighlight.highlightElement(newBlock, finalLanguage);
+          } else {
+          }
+        }, 50); // DOM 렌더링 완료 대기
+      } else {
+        console.log('❌ [CODEBLOCK DEBUG] SpeedHighlight가 없음');
       }
       
       // 에디터 변경 이벤트 발생
@@ -449,10 +475,6 @@
       }
     } catch (error) {
       errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.INSERT, error);
-      // 디버깅: errorHandler 확인
-      console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
-      console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
-      console.log('P404 메시지:', errorHandler?.messages?.P404);
       errorHandler.showUserAlert('P404');
     } finally {
       // 레이어 닫기 및 선택 영역 초기화
@@ -463,6 +485,56 @@
       util.scroll.restorePosition();
     }
   }
+  
+  // ==================== 코드 블록 내 Enter 키 처리 ====================
+  
+  /**
+   * 코드 블록 내에서 새 라인 생성
+   */
+  function createNewLineInCodeBlock(selection, range) {
+    // 현재 커서 위치에 새 라인 생성
+    const newLine = document.createTextNode('\n');
+    
+    // 커서 위치에 새 라인 삽입
+    range.deleteContents();
+    range.insertNode(newLine);
+    
+    // 커서를 새 라인 뒤로 이동
+    range.setStartAfter(newLine);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  /**
+   * 코드 블록 Enter 키 처리 - 단순 새 라인 생성
+   */
+  document.addEventListener('keydown', function(e) {
+    // Enter 키만 처리 (Shift+Enter는 제외)
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // 텍스트 노드인 경우 부모 요소로
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement;
+    }
+    
+    // 코드 블록 내부인지 확인
+    const codeBlock = element.closest('.lite-editor-code-block');
+    if (codeBlock) {
+      // ✅ 브라우저 기본 Enter 동작 차단
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // ✅ 단순한 새 라인 생성
+      createNewLineInCodeBlock(selection, range);
+    }
+  }, true); // capture 단계에서 처리
   
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
@@ -508,13 +580,13 @@
       // 버튼 참조 저장
       codeBlockButton = button;
       
-      // 클릭 이벤트
+      // ✅ 클릭 이벤트 (성능 최적화)
       button.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         
         // 스크롤 위치 저장
-        const scrollPosition = util.scroll.savePosition();
+        util.scroll.savePosition();
         
         // 레이어가 이미 열려있다면 닫기
         if (activeLayer && document.body.contains(activeLayer)) {
@@ -522,18 +594,13 @@
           return;
         }
         
-        // 스크립트 로드
-        const SpeedHighlight = await loadScripts();
+        // ✅ SpeedHighlight 확실히 로드
+        let SpeedHighlight = window.SpeedHighlight;
         if (!SpeedHighlight) {
-          // 디버깅: errorHandler 확인
-          console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
-          console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
-          console.log('P403 메시지:', errorHandler?.messages?.P403);
-          errorHandler.showUserAlert('P403');
-          return;
+          SpeedHighlight = await loadScripts();
         }
         
-        // 코드 블록 레이어 표시
+        // 레이어 표시
         showCodeBlockLayer(button, contentArea, SpeedHighlight);
       });
       
