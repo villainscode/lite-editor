@@ -86,13 +86,6 @@
   }
   
   /**
-   * 현재 선택 영역을 저장
-   */
-  function saveSelection() {
-    savedRange = util.selection.saveSelection();
-  }
-  
-  /**
    * 저장된 선택 영역을 복원
    */
   function restoreSelection() {
@@ -249,13 +242,20 @@
    * 코드 블록 레이어 표시
    */
   function showCodeBlockLayer(buttonElement, contentArea, SpeedHighlight) {
-    // 선택 영역 저장
-    saveSelection();
-    
-    // 다른 활성화된 모달 모두 닫기
+    // ✅ closeAll 이후에 선택 영역 저장
+    // 다른 활성화된 모달 모두 닫기 (현재 레이어 제외)
     if (util.activeModalManager) {
-      util.activeModalManager.closeAll();
+      util.activeModalManager.closeAll(activeLayer);
     }
+    
+    // ✅ closeAll 완료 후 선택 영역 저장
+    setTimeout(() => {
+      if (document.activeElement === contentArea) {
+        savedRange = util.selection.saveSelection();
+      } else {
+        savedRange = null;
+      }
+    }, 60); // closeAll의 선택 영역 복원(50ms) 이후
     
     // 레이어 생성
     activeLayer = document.createElement('div');
@@ -333,10 +333,24 @@
     activeLayer.addEventListener('click', e => e.stopPropagation());
     
     // 외부 클릭 시 닫기 설정
-    util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
-    
-    // ✅ 텍스트 영역에 즉시 포커스 (setTimeout 제거)
-    codeInput.focus();
+    requestAnimationFrame(() => {
+      // ✅ closeAll의 선택 영역 복원(50ms) 이후에 포커스
+      setTimeout(() => {
+        codeInput.focus();
+        
+        // 추가 안전장치
+        setTimeout(() => {
+          if (document.activeElement !== codeInput) {
+            codeInput.focus();
+          }
+        }, 20);
+      }, 80); // closeAll의 50ms + 여유시간
+      
+      // 외부 클릭 핸들러도 더 늦게
+      setTimeout(() => {
+        util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
+      }, 100);
+    });
   }
   
   /**
@@ -348,6 +362,15 @@
     }
     
     try {
+      // 저장된 선택 영역 복원
+      restoreSelection();
+      
+      // 현재 선택 영역 확인
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        selection.getRangeAt(0);
+      }
+      
       // 언어 결정
       let finalLanguage = language;
       if (!language) {
@@ -361,9 +384,6 @@
       } catch (e) {
         contentArea.focus();
       }
-      
-      // 저장된 선택 영역 복원
-      restoreSelection();
       
       // HTML 특수 문자 이스케이프 처리
       const escapedCode = escapeHtml(code);
@@ -410,14 +430,19 @@
         }
       }, 10);
       
-      // 방금 삽입된 코드 블록 찾고 하이라이팅 적용
+
       if (SpeedHighlight) {
-        const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
-        const newBlock = codeBlocks[codeBlocks.length - 1];
-        
-        if (newBlock) {
-          SpeedHighlight.highlightElement(newBlock, finalLanguage);
-        }
+        setTimeout(() => {
+          const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
+          const newBlock = codeBlocks[codeBlocks.length - 1];
+          
+          if (newBlock) {
+            SpeedHighlight.highlightElement(newBlock, finalLanguage);
+          } else {
+          }
+        }, 50); // DOM 렌더링 완료 대기
+      } else {
+        console.log('❌ [CODEBLOCK DEBUG] SpeedHighlight가 없음');
       }
       
       // 에디터 변경 이벤트 발생
@@ -547,15 +572,13 @@
           return;
         }
         
-        // ✅ 스크립트 즉시 확인 (네트워크 요청 없음)
-        const SpeedHighlight = window.SpeedHighlight || null;
-        
-        // 스크립트가 없으면 백그라운드 로드
+        // ✅ SpeedHighlight 확실히 로드
+        let SpeedHighlight = window.SpeedHighlight;
         if (!SpeedHighlight) {
-          loadScripts(); // await 제거로 즉시 진행
+          SpeedHighlight = await loadScripts();
         }
         
-        // ✅ 기존 showCodeBlockLayer 함수 사용
+        // 레이어 표시
         showCodeBlockLayer(button, contentArea, SpeedHighlight);
       });
       
