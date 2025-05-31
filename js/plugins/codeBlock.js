@@ -464,6 +464,56 @@
     }
   }
   
+  // ==================== 코드 블록 내 Enter 키 처리 ====================
+
+  /**
+   * 코드 블록 내에서 새 라인 생성
+   */
+  function createNewLineInCodeBlock(selection, range) {
+    // 현재 커서 위치에 새 라인 생성
+    const newLine = document.createTextNode('\n');
+    
+    // 커서 위치에 새 라인 삽입
+    range.deleteContents();
+    range.insertNode(newLine);
+    
+    // 커서를 새 라인 뒤로 이동
+    range.setStartAfter(newLine);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  /**
+   * 코드 블록 Enter 키 처리 - 단순 새 라인 생성
+   */
+  document.addEventListener('keydown', function(e) {
+    // Enter 키만 처리 (Shift+Enter는 제외)
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // 텍스트 노드인 경우 부모 요소로
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement;
+    }
+    
+    // 코드 블록 내부인지 확인
+    const codeBlock = element.closest('.lite-editor-code-block');
+    if (codeBlock) {
+      // ✅ 브라우저 기본 Enter 동작 차단
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // ✅ 단순한 새 라인 생성
+      createNewLineInCodeBlock(selection, range);
+    }
+  }, true); // capture 단계에서 처리
+
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
     title: 'Code Block',
@@ -514,7 +564,7 @@
         e.stopPropagation();
         
         // 스크롤 위치 저장
-        const scrollPosition = util.scroll.savePosition();
+        util.scroll.savePosition();
         
         // 레이어가 이미 열려있다면 닫기
         if (activeLayer && document.body.contains(activeLayer)) {
