@@ -1285,6 +1285,8 @@ const PluginUtil = (function() {
          * @returns {boolean} 레이어가 있어서 닫았으면 true, 없으면 false
          */
         closeOpenLayersIfAny() {
+            console.log('🔍 [LAYERS DEBUG] closeOpenLayersIfAny 시작');
+            
             // ✅ 모든 종류의 레이어/드롭다운/모달 검사
             const layerSelectors = [
                 '.lite-editor-dropdown-menu.show',           // 일반 드롭다운
@@ -1299,8 +1301,16 @@ const PluginUtil = (function() {
             ];
             
             const hasOpenLayers = document.querySelector(layerSelectors.join(', '));
+            console.log('🔍 [LAYERS DEBUG] 감지된 레이어:', hasOpenLayers);
             
             if (hasOpenLayers) {
+                console.log('🔍 [LAYERS DEBUG] 레이어 정보:', {
+                    className: hasOpenLayers.className,
+                    id: hasOpenLayers.id || 'No ID',
+                    style: hasOpenLayers.style.cssText,
+                    display: hasOpenLayers.style.display
+                });
+                
                 // ✅ 디버깅 로그 추가
                 if (window.errorHandler) {
                     errorHandler.colorLog('UTILS', '🔍 열린 레이어 감지', {
@@ -1311,8 +1321,11 @@ const PluginUtil = (function() {
                 }
                 
                 activeModalManager.closeAll();
+                console.log('✅ [LAYERS DEBUG] 레이어 닫기 완료');
                 return true;
             }
+            
+            console.log('✅ [LAYERS DEBUG] 열린 레이어 없음');
             return false;
         },
 
@@ -1328,27 +1341,33 @@ const PluginUtil = (function() {
         },
 
         /**
-         * 플러그인 실행 전 기본 체크 (레이어 + 포커스)
+         * 플러그인 실행 전 기본 체크 (레이어 + 포커스) - 디버깅 버전
          * @param {HTMLElement} contentArea - 체크할 contentArea  
          * @returns {boolean} 실행 가능하면 true, 중단해야 하면 false
          */
         canExecutePlugin(contentArea) {
-            // 1. 레이어 체크 - 있으면 닫고 중단
-            if (this.closeOpenLayersIfAny()) {
-                return false;
-            }
+            console.log('🔍 [PLUGIN_UTIL DEBUG] canExecutePlugin 시작');
             
-            // 2. 포커스 체크 - 없으면 중단
-            if (!this.isContentAreaFocused(contentArea)) {
-                return false;
-            }
-            
-            // 3. contentArea 유효성 체크
+            // 1. contentArea 유효성 체크
             if (!contentArea || !contentArea.isConnected) {
+                console.log('❌ [PLUGIN_UTIL DEBUG] contentArea 무효 - 실행 중단');
                 return false;
             }
             
-            return true; // 모든 체크 통과
+            // 2. 레이어 체크 - 있으면 닫고 중단
+            const hadOpenLayers = this.closeOpenLayersIfAny();
+            console.log('🔍 [PLUGIN_UTIL DEBUG] closeOpenLayersIfAny 결과:', hadOpenLayers);
+            
+            if (hadOpenLayers) {
+                console.log('❌ [PLUGIN_UTIL DEBUG] 레이어가 있어서 닫음 - 실행 중단');
+                return false;
+            }
+            
+            // 3. 무조건 포커스 설정 (포커스 체크 제거)
+            contentArea.focus();
+            console.log('✅ [PLUGIN_UTIL DEBUG] 강제 포커스 설정 완료');
+            
+            return true; // 포커스 체크 없이 통과
         }
     };
 
