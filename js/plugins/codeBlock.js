@@ -103,6 +103,23 @@
   function closeCodeBlockLayer() {
     if (!activeLayer) return;
     
+    // ✅ 저장된 드롭다운 참조를 이용한 정확한 정리 (하단에 있는 메뉴 레이어 정리)
+    if (activeLayer._dropdownReference && activeLayer._dropdownReference.menu) {
+      const dropdownMenu = activeLayer._dropdownReference.menu;
+      if (dropdownMenu.parentNode) {
+        dropdownMenu.parentNode.removeChild(dropdownMenu);
+      }
+    }
+    
+    // ✅ 추가 안전장치: 열려있는 드롭다운 메뉴들 정리 
+    const openDropdownMenus = document.querySelectorAll('.lite-editor-code-dropdown-menu:not(.hidden)');
+    openDropdownMenus.forEach(menu => {
+      menu.classList.add('hidden');
+      if (menu.parentNode) {
+        menu.parentNode.removeChild(menu);
+      }
+    });
+    
     // 버튼 상태 업데이트
     if (codeBlockButton) {
       codeBlockButton.classList.remove('active');
@@ -289,6 +306,9 @@
     const actionsDiv = activeLayer.querySelector('.lite-editor-code-block-actions');
     const languageDropdown = createLanguageDropdown();
     actionsDiv.insertBefore(languageDropdown.container, actionsDiv.firstChild);
+    
+    // ✅ 드롭다운 참조를 레이어에 저장 (정리용)
+    activeLayer._dropdownReference = languageDropdown;
     
     // 레이어 위치 설정
     const buttonRect = buttonElement.getBoundingClientRect();

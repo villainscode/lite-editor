@@ -25,7 +25,13 @@
       button.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        executeCodeAction(contentArea);
+        
+        if (!util.utils.canExecutePlugin(contentArea)) {
+            return;
+        }
+        
+        contentArea.focus();
+        applyCodeFormat(contentArea);
       });
 
       return button;
@@ -36,117 +42,120 @@
   LiteEditor.registerShortcut('code', {
     key: 'c',
     alt: true,
-    action: executeCodeAction
+    action: function(contentArea) {
+      applyCodeFormat(contentArea);
+    }
   });
 
   /**
-   * 코드 삽입 공통 로직
+   * 코드 서식 적용 - blockquote와 동일한 UX
    */
-  function executeCodeAction(contentArea) {
-    // 레이어 체크 및 포커스 확인
-    const canExecute = util.utils.canExecutePlugin(contentArea);
-    
-    if (!canExecute) {
-        return;
-    }
-    
-    contentArea.focus();
-    
-    // 선택 영역 확인
+  function applyCodeFormat(contentArea) {
     const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
     
-    if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        
-        if (!range.collapsed) {
-            // 선택 영역이 있는 경우: 기존 로직
-            const offsets = util.selection.calculateOffsets(contentArea);
-            
-            let selectedText = range.toString();
-            const trimmedText = selectedText.replace(/[\s\n\r]+$/, '');
-            selectedText = trimmedText;
-            
-            const formattedText = selectedText
-              .split('\n')
-              .map(line => LiteEditorSecurity.escapeHtml(line.trim()))
-              .join('\n');
-            
-            range.deleteContents();
-            
-            const codeElement = document.createElement('code');
-            codeElement.setAttribute('data-selection-marker', 'true');
-            codeElement.style.display = 'block';
-            codeElement.style.width = '100%';
-            codeElement.style.padding = '10px';
-            codeElement.style.borderRadius = '4px';
-            codeElement.style.fontFamily = 'monospace';
-            codeElement.innerHTML = formattedText;
-            
-            range.insertNode(codeElement);
-            
-            util.selection.restoreSelectionByMarker(contentArea, 'code[data-selection-marker="true"]', 10)
-              .then(success => {
-                if (!success) {
-                  util.selection.restoreFromOffsets(contentArea, offsets);
-                  contentArea.focus();
-                }
-              });
-        } else {
-            // 선택 영역이 없는 경우: 기본 코드 블록 삽입
-            insertDefaultCodeBlock(range);
-        }
+    const range = selection.getRangeAt(0);
+    
+    if (!range.collapsed) {
+      // 선택 영역이 있는 경우: 인라인 code 적용
+      applyInlineCode(range);
     } else {
-        // 선택 객체가 없는 경우: 맨 끝에 기본 코드 블록 삽입
-        insertDefaultCodeBlockAtEnd(contentArea);
+      // ✅ execCommand와 동일한 방식으로 블록 찾기
+      applyBlockCodeUsingExecCommand(contentArea);
     }
   }
 
   /**
-   * 기본 코드 요소 생성 (통일된 스타일)
+   * 선택된 영역을 code 태그로 감싸기
    */
-  function createDefaultCodeElement() {
-    const codeElement = document.createElement('code');
-    codeElement.textContent = '\u200B'; // Zero-width space
+  function applyInlineCode(range) {
+    const selectedText = range.toString();
+    range.deleteContents();
     
-    // 멀티라인과 동일한 스타일 적용
+    // ✅ 앞뒤 불필요한 공백만 제거, 중간 구조는 보존
+    const cleanedText = selectedText.trim();
+    
+    const codeElement = createStyledCodeElement(cleanedText);
+    
+    range.insertNode(codeElement);
+    
+    // ✅ 공통 함수 사용
+    focusCodeElementEnd(codeElement);
+  }
+
+  /**
+   * ✅ execCommand('formatBlock')과 동일한 방식으로 블록 code 적용
+   */
+  function applyBlockCodeUsingExecCommand(contentArea) {
+    // 1. 임시로 pre 태그로 변환 (execCommand가 정확한 블록 찾기)
+    document.execCommand('formatBlock', false, 'pre');
+    
+    // 2. 생성된 pre 태그를 code 태그로 변환
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection || !selection.rangeCount) return;
+      
+      const range = selection.getRangeAt(0);
+      let preElement = null;
+      
+      // 현재 선택 영역에서 pre 태그 찾기
+      let current = range.startContainer;
+      if (current.nodeType === Node.TEXT_NODE) {
+        current = current.parentElement;
+      }
+      
+      while (current && current !== contentArea) {
+        if (current.tagName === 'PRE') {
+          preElement = current;
+          break;
+        }
+        current = current.parentElement;
+      }
+      
+      if (preElement) {
+        const codeElement = createStyledCodeElement(preElement.textContent);
+        
+        // pre를 code로 교체
+        preElement.parentNode.replaceChild(codeElement, preElement);
+        
+        // ✅ 공통 함수 사용
+        focusCodeElementEnd(codeElement);
+      }
+    }, 0);
+  }
+  /**
+   * 스타일이 적용된 code 요소 생성 (공통 함수)
+   */
+  function createStyledCodeElement(textContent) {
+    const codeElement = document.createElement('code');
+    codeElement.textContent = textContent || '\u200B';
+    
+    // ✅ 공통 블록 레벨 스타일
     codeElement.style.display = 'block';
-    codeElement.style.width = '100%';
-    codeElement.style.padding = '10px';
-    codeElement.style.borderRadius = '4px';
     codeElement.style.fontFamily = 'monospace';
     codeElement.style.backgroundColor = '#f8f8f8';
+    codeElement.style.padding = '10px';
+    codeElement.style.borderRadius = '4px';
     codeElement.style.border = '1px solid #e0e0e0';
+    codeElement.style.whiteSpace = 'pre-wrap';
+    codeElement.style.margin = '8px 0';
     codeElement.contentEditable = 'true';
     
     return codeElement;
   }
 
   /**
-   * 기본 한줄짜리 코드 블록 삽입
+   * code 요소 내부 끝으로 커서 이동 및 포커스 (공통 함수)
    */
-  function insertDefaultCodeBlock(range) {
-    const codeElement = createDefaultCodeElement();
-    range.insertNode(codeElement);
-    
-    // 포커스 + 커서 끝으로
+  function focusCodeElementEnd(codeElement) {
     setTimeout(() => {
-        codeElement.focus();
-        const range = document.createRange();
-        range.selectNodeContents(codeElement);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(codeElement);
+      newRange.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      codeElement.focus();
     }, 0);
-  }
-  
-  /**
-   * 맨 끝에 기본 코드 블록 삽입
-   */
-  function insertDefaultCodeBlockAtEnd(contentArea) {
-    const codeElement = createDefaultCodeElement();
-    contentArea.appendChild(codeElement);
-    
-    setTimeout(() => codeElement.focus(), 0);
   }
 })();
