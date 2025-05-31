@@ -85,6 +85,15 @@
       button.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // ✅ 레이어 체크 및 포커스 확인
+        if (!util.utils.canExecutePlugin(contentArea)) {
+            return;
+        }
+        
+        // ✅ 포커스 설정 (이미 체크 완료된 상태)
+        contentArea.focus();
+        
         document.execCommand('formatBlock', false, 'blockquote');
       });
 

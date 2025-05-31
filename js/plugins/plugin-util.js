@@ -74,22 +74,80 @@ const PluginUtil = (function() {
             }
         },
         
-        // 모든 레이어 닫기 (특정 레이어 제외 가능)
-        closeAll(exceptLayer) {
+        // 모든 레이어 닫기 (특정 레이어 제외 가능) - ✅ 선택 영역 복원 기능 추가
+        closeAll(exceptLayer, onComplete) {
+            // ✅ 1. 현재 활성화된 contentArea 찾기
+            const activeContentArea = document.querySelector('.lite-editor-content:focus, [contenteditable="true"]:focus') || 
+                                      document.querySelector('.lite-editor-content, [contenteditable="true"]');
+            
+            // ✅ 2. 선택 영역 복원 필요성 확인 (기존 로직)
+            let needsSelectionRestore = false;
+            const currentSelection = window.getSelection();
+            
+            if (currentSelection && currentSelection.rangeCount > 0 && activeContentArea) {
+                const range = currentSelection.getRangeAt(0);
+                const selectionContainer = range.commonAncestorContainer;
+                
+                this.activeLayersList.forEach(item => {
+                    if (item.element !== exceptLayer && document.body.contains(item.element)) {
+                        if (item.element.contains(selectionContainer) || 
+                            selectionContainer === item.element) {
+                            needsSelectionRestore = true;
+                        }
+                    }
+                });
+            }
+            
+            // ✅ 3. 레이어 닫기 (기존 로직)
             this.activeLayersList.forEach(item => {
                 if (item.element !== exceptLayer && document.body.contains(item.element)) {
                     if (item.type === 'dropdown') {
-                        // 드롭다운 닫기
                         item.element.classList.remove('show');
                         if (item.button) item.button.classList.remove('active');
                     } else {
-                        // 모달 닫기
                         if (item.element.closeCallback) {
                             item.element.closeCallback();
                         }
                     }
                 }
             });
+            
+            // ✅ 4. 선택 영역 복원 + 콜백 실행
+            if (needsSelectionRestore && activeContentArea) {
+                setTimeout(() => {
+                    try {
+                        activeContentArea.focus();
+                        const range = document.createRange();
+                        range.selectNodeContents(activeContentArea);
+                        range.collapse(false);
+                        
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        
+                        if (window.errorHandler) {
+                            errorHandler.colorLog('LAYER_MANAGER', '✅ 선택 영역 복원 완료', {
+                                target: activeContentArea.className || activeContentArea.id || 'contentArea'
+                            }, '#4caf50');
+                        }
+                    } catch (e) {
+                        if (activeContentArea && activeContentArea.focus) {
+                            activeContentArea.focus();
+                        }
+                        console.warn('LayerManager: 선택 영역 복원 실패, 포커스만 설정:', e);
+                    }
+                    
+                    // ✅ 콜백 실행 (레이어 완전 닫힌 후)
+                    if (onComplete && typeof onComplete === 'function') {
+                        onComplete();
+                    }
+                }, 50); // ✅ 충분한 시간 확보
+            } else {
+                // ✅ 선택 영역 복원이 필요없어도 콜백 실행
+                if (onComplete && typeof onComplete === 'function') {
+                    setTimeout(onComplete, 10);
+                }
+            }
             
             // 제외된 레이어 외에는 모두 제거
             this.activeLayersList = exceptLayer ? 
@@ -137,9 +195,8 @@ const PluginUtil = (function() {
         }
     };
 
-    // 현재 활성화된 모달/레이어 관리 (layerManager 위임)
+    // 현재 활성화된 모달/레이어 관리 (단순화)
     const activeModalManager = {
-        // layerManager 위임
         register(modal) {
             layerManager.register(modal);
         },
@@ -152,7 +209,6 @@ const PluginUtil = (function() {
             layerManager.closeAll();
         },
         
-        // 버튼 등록 (WeakSet 사용)
         registerButton(button) {
             if (!button) return;
             if (state.registeredButtons.has(button)) return;
@@ -1165,19 +1221,14 @@ const PluginUtil = (function() {
         // 이미 설정되었으면 스킵
         if (state.globalCleanupFunctions.length > 0) return;
         
-        // 툴바 클릭 핸들러
+        // 툴바 클릭 핸들러 (단순화 버전)
         const toolbarClickHandler = (e) => {
             const isToolbarButtonClick = !!e.target.closest('.lite-editor-button, .lite-editor-font-button');
             const isDropdownClick = !!e.target.closest('.lite-editor-dropdown-menu');
             const isModalClick = !!e.target.closest('.lite-editor-modal');
-            
-            // 🔧 분리 모드 추가 체크: 툴바 컨테이너 내부 클릭인지 확인
             const isInSeparatedToolbar = !!e.target.closest('.lite-editor-toolbar');
-            
-            // 🔧 contentArea 클릭인지 확인 (에디터 내부 클릭)
             const isInContentArea = !!e.target.closest('.lite-editor-content');
             
-            // 🔧 어떤 에디터 관련 요소 클릭인지 종합 판단
             const isEditorRelatedClick = isToolbarButtonClick || isDropdownClick || isModalClick || 
                                        isInSeparatedToolbar || isInContentArea;
             
@@ -1228,6 +1279,79 @@ const PluginUtil = (function() {
     window.addEventListener('beforeunload', cleanup);
 
     // 공개 API
+    const utils = {
+        /**
+         * 열린 레이어가 있는지 확인하고 있으면 닫기
+         * @returns {boolean} 레이어가 있어서 닫았으면 true, 없으면 false
+         */
+        closeOpenLayersIfAny() {
+            // ✅ 모든 종류의 레이어/드롭다운/모달 검사
+            const layerSelectors = [
+                '.lite-editor-dropdown-menu.show',           // 일반 드롭다운
+                '.modal-overlay.show',                       // 모달
+                '.grid-layer[style*="display: block"]',      // table 그리드 레이어
+                '.grid-layer:not([style*="display: none"])', // 숨겨지지 않은 그리드 레이어
+                '.lite-editor-popup-layer.show',             // 팝업 레이어
+                '.table-size-selector[style*="display: block"]', // 기타 테이블 관련
+                '[class*="dropdown"][style*="display: block"]',  // 기타 드롭다운
+                '[class*="modal"][style*="display: block"]',     // 기타 모달
+                '[class*="layer"][style*="display: block"]'      // 기타 레이어
+            ];
+            
+            const hasOpenLayers = document.querySelector(layerSelectors.join(', '));
+            
+            if (hasOpenLayers) {
+                // ✅ 디버깅 로그 추가
+                if (window.errorHandler) {
+                    errorHandler.colorLog('UTILS', '🔍 열린 레이어 감지', {
+                        layerType: hasOpenLayers.className,
+                        layerId: hasOpenLayers.id || 'No ID',
+                        display: hasOpenLayers.style.display
+                    }, '#ff9800');
+                }
+                
+                activeModalManager.closeAll();
+                return true;
+            }
+            return false;
+        },
+
+        /**
+         * contentArea 포커스 상태 확인
+         * @param {HTMLElement} contentArea - 체크할 contentArea
+         * @returns {boolean} 포커스되어 있으면 true
+         */
+        isContentAreaFocused(contentArea) {
+            if (!contentArea) return false;
+            return document.activeElement === contentArea || 
+                   contentArea.contains(document.activeElement);
+        },
+
+        /**
+         * 플러그인 실행 전 기본 체크 (레이어 + 포커스)
+         * @param {HTMLElement} contentArea - 체크할 contentArea  
+         * @returns {boolean} 실행 가능하면 true, 중단해야 하면 false
+         */
+        canExecutePlugin(contentArea) {
+            // 1. 레이어 체크 - 있으면 닫고 중단
+            if (this.closeOpenLayersIfAny()) {
+                return false;
+            }
+            
+            // 2. 포커스 체크 - 없으면 중단
+            if (!this.isContentAreaFocused(contentArea)) {
+                return false;
+            }
+            
+            // 3. contentArea 유효성 체크
+            if (!contentArea || !contentArea.isConnected) {
+                return false;
+            }
+            
+            return true; // 모든 체크 통과
+        }
+    };
+
     return {
         dom,
         selection,
@@ -1249,7 +1373,8 @@ const PluginUtil = (function() {
         modal,
         dataLoader,
         setupDropdownButton,
-        cleanup // 수동 정리 함수 노출
+        utils,
+        cleanup
     };
 })();
 
