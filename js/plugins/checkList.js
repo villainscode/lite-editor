@@ -416,14 +416,33 @@
       }
       contentArea.focus();
       
-      // ✅ 다른 리스트 타입 체크 (새로 추가)
+      // ✅ 선택 영역 저장 (모달 표시 전에)
+      const savedSelection = PluginUtil.selection.saveSelection();
+      
+      // ✅ 다른 리스트 타입 체크 (수정된 버전)
       const otherListType = detectOtherListTypes();
       if (otherListType) {
         LiteEditorModal.alert(
-          '이미 ' + otherListType.type + '가 적용되었습니다.<br>리스트 적용을 해제한 뒤 체크리스트를 적용해주세요.',
+          '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 체크리스트를 적용해주세요.',
           {
             titleText: '리스트 중복 적용 불가',
-            confirmText: '확인'
+            confirmText: '확인',
+            onConfirm: function() {
+              // ✅ 모달 닫힌 후 선택 영역 및 포커스 복원
+              setTimeout(() => {
+                try {
+                  contentArea.focus();
+                  if (savedSelection) {
+                    PluginUtil.selection.restoreSelection(savedSelection);
+                  }
+                  console.log('🔄 [CheckList] 선택 영역 복원 완료');
+                } catch (e) {
+                  console.warn('[CheckList] 선택 영역 복원 실패:', e);
+                  // 폴백: 에디터 끝에 커서 설정
+                  contentArea.focus();
+                }
+              }, 50);
+            }
           }
         );
         return;
