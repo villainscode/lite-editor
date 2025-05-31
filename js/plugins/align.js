@@ -11,11 +11,10 @@
 
   function applyAlignment(alignType, contentArea) {
     try {
-      if (!savedRange || savedRange.toString().trim().length === 0) {
+      if (!savedRange) {
         throw new Error('No selection to restore');
       }
       
-      // 스타일 직접 적용 (execCommand 대신)
       const alignStyles = {
         'Left': 'left',
         'Center': 'center', 
@@ -26,31 +25,47 @@
       const alignValue = alignStyles[alignType];
       if (!alignValue) return;
       
-      // 현재 스크롤 위치 저장
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
       
-      // 선택된 텍스트를 span으로 감싸서 정확한 범위에만 적용
-      const selectedText = savedRange.toString();
-      const spanElement = document.createElement('span');
-      spanElement.style.display = 'block';
-      spanElement.style.textAlign = alignValue;
-      spanElement.textContent = selectedText;
-      
-      // 기존 선택 영역을 새 요소로 교체
-      savedRange.deleteContents();
-      savedRange.insertNode(spanElement);
-      
-      // 새로 생성된 span 요소를 선택
+      // ✅ 선택 영역 복원
       const selection = window.getSelection();
       selection.removeAllRanges();
+      selection.addRange(savedRange);
       
-      const newRange = document.createRange();
-      newRange.selectNodeContents(spanElement);
-      selection.addRange(newRange);
+      const selectedText = savedRange.toString().trim();
       
-      // 새로운 선택 영역을 저장
-      savedRange = newRange.cloneRange();
+      if (selectedText.length > 0) {
+        // ✅ 케이스 1: 선택된 텍스트가 있는 경우 (기존 로직)
+        const spanElement = document.createElement('span');
+        spanElement.style.display = 'block';
+        spanElement.style.textAlign = alignValue;
+        spanElement.textContent = selectedText;
+        
+        savedRange.deleteContents();
+        savedRange.insertNode(spanElement);
+        
+        const newRange = document.createRange();
+        newRange.selectNodeContents(spanElement);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+        
+      } else {
+        // ✅ 케이스 2: 커서만 있는 경우 - 블록 전체에 정렬 적용
+        const range = selection.getRangeAt(0);
+        const currentBlock = util.dom.findClosestBlock(range.startContainer, contentArea);
+        
+        if (currentBlock) {
+          currentBlock.style.textAlign = alignValue;
+          
+          // 커서 위치 유지
+          const newRange = document.createRange();
+          newRange.setStart(range.startContainer, range.startOffset);
+          newRange.setEnd(range.endContainer, range.endOffset);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+      }
       
       // 스크롤 위치 복원
       if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
@@ -74,11 +89,14 @@
     let selectedText = range.toString();
     
     if (selectedText.trim().length > 0) {
-      // 정확한 범위만 저장 - 더 엄격하게
-      savedRange = range.cloneRange();
-      return true;
+        // ✅ 선택 영역이 있는 경우
+        savedRange = range.cloneRange();
+        return true;
+    } else {
+        // ✅ 커서만 있는 경우도 저장 (블록 전체 정렬용)
+        savedRange = range.cloneRange();
+        return true;
     }
-    return false;
   }
 
   // 정렬 플러그인 등록
@@ -207,8 +225,8 @@
           e.preventDefault();
           e.stopPropagation();
           
-          // 이미 저장된 선택 영역이 있으면 바로 정렬 적용
-          if (savedRange && savedRange.toString().trim().length > 0) {
+          // ✅ savedRange가 있으면 무조건 정렬 적용 (선택 여부 무관)
+          if (savedRange) {
             
             // 1. 먼저 드롭다운 닫기
             dropdownMenu.classList.remove('show');
