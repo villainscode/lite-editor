@@ -557,8 +557,9 @@
         e.preventDefault();
         e.stopPropagation();
         
-        // 스크롤 위치 저장
-        const scrollPosition = util.scroll.savePosition();
+        // ✅ 스크롤 위치 저장 (즉시)
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
         
         // 선택 영역 저장
         saveSelection();
@@ -568,231 +569,241 @@
         
         // 다른 모든 드롭다운 닫기
         if (!isVisible) {
-          util.activeModalManager.closeAll();
+            util.activeModalManager.closeAll();
         }
         
         if (isVisible) {
-          // 닫기
-          dropdownMenu.classList.remove('show');
-          dropdownMenu.style.display = 'none';
-          mediaButton.classList.remove('active');
-          isDropdownOpen = false;
-          
-          util.activeModalManager.unregister(dropdownMenu);
-        } else {
-          // 열기
-          dropdownMenu.classList.add('show');
-          dropdownMenu.style.display = 'flex';
-          mediaButton.classList.add('active');
-          isDropdownOpen = true;
-          
-          // 위치 설정
-          const buttonRect = mediaButton.getBoundingClientRect();
-          dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
-          dropdownMenu.style.left = buttonRect.left + 'px';
-          
-          // 입력창 초기화 및 포커스
-          urlInput.value = '';
-          setTimeout(() => urlInput.focus(), 10);
-          
-          // 활성 모달 등록
-          dropdownMenu.closeCallback = () => {
+            // 닫기
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             mediaButton.classList.remove('active');
             isDropdownOpen = false;
-          };
-          
-          util.activeModalManager.register(dropdownMenu);
-          
-          // 외부 클릭 시 닫기 설정
-          util.setupOutsideClickHandler(dropdownMenu, () => {
-            dropdownMenu.classList.remove('show');
-            dropdownMenu.style.display = 'none';
-            mediaButton.classList.remove('active');
-            isDropdownOpen = false;
+            
             util.activeModalManager.unregister(dropdownMenu);
-          }, [mediaButton]);
+        } else {
+            // 열기
+            dropdownMenu.classList.add('show');
+            dropdownMenu.style.display = 'flex';
+            mediaButton.classList.add('active');
+            isDropdownOpen = true;
+            
+            // 위치 설정
+            const buttonRect = mediaButton.getBoundingClientRect();
+            dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+            dropdownMenu.style.left = buttonRect.left + 'px';
+            
+            // 입력창 초기화
+            urlInput.value = '';
+            
+            // ✅ preventScroll로 포커스 설정 + 스크롤 즉시 복원
+            setTimeout(() => {
+                try {
+                    urlInput.focus({ preventScroll: true });
+                } catch (e) {
+                    urlInput.focus();
+                }
+                // ✅ 즉시 스크롤 복원
+                window.scrollTo(scrollX, scrollY);
+            }, 10);
+            
+            // 활성 모달 등록
+            dropdownMenu.closeCallback = () => {
+                dropdownMenu.classList.remove('show');
+                dropdownMenu.style.display = 'none';
+                mediaButton.classList.remove('active');
+                isDropdownOpen = false;
+            };
+            
+            util.activeModalManager.register(dropdownMenu);
+            
+            // 외부 클릭 시 닫기 설정
+            util.setupOutsideClickHandler(dropdownMenu, () => {
+                dropdownMenu.classList.remove('show');
+                dropdownMenu.style.display = 'none';
+                mediaButton.classList.remove('active');
+                isDropdownOpen = false;
+                util.activeModalManager.unregister(dropdownMenu);
+            }, [mediaButton]);
         }
         
-        // 스크롤 위치 복원
-        util.scroll.restorePosition(scrollPosition);
-      };
-
-      mediaButton.addEventListener('click', buttonClickHandler);
-      
-      return mediaButton;
-    }
-  });
-
-  // ✅ 개선된 리사이즈 핸들 (타이머 메모리 관리 개선)
-  function setupVideoResizeHandle(wrapper, resizeHandle) {
-    let isResizing = false;
-    let startX, startY, startWidth, startHeight;
-    let rafId = null;
-
-    // ✅ 핵심 개선: handleResize 함수만 최적화
-    const handleResize = (e) => {
-      if (!isResizing) return;
-      
-      // ✅ 성능 개선: 직접 스타일 적용
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-      
-      const newWidth = Math.max(100, startWidth + deltaX);
-      const newHeight = Math.max(60, startHeight + deltaY);
-      
-      // ✅ 핵심 변경: 복잡한 cssText 정규식 → 직접 프로퍼티 설정
-      wrapper.style.width = newWidth + 'px';
-      wrapper.style.height = newHeight + 'px';
+        // ✅ 즉시 스크롤 위치 복원 (지연 없음)
+        window.scrollTo(scrollX, scrollY);
     };
 
-    // ✅ stopResize 함수 (타이머 메모리 관리 개선)
-    const stopResize = () => {
-      if (!isResizing) return;
-      
-      // ✅ 상태 초기화
-      isResizing = false;
-      wrapper.removeAttribute('data-resizing');
-      
-      // ✅ RAF 정리 코드 유지
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      
-      // ✅ 이벤트 리스너 제거
-      document.removeEventListener('mousemove', handleResize, { passive: true });
-      document.removeEventListener('mouseup', stopResize);
-      
-      // ✅ 개선: WeakMap 기반 타이머 관리
-      const existingTimeout = resizeTimeoutMap.get(wrapper);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-      
-      const timeoutId = setTimeout(() => {
-        const contentArea = document.querySelector('.lite-editor-content');
-        if (contentArea && util.editor?.dispatchEditorEvent) {
-          util.editor.dispatchEditorEvent(contentArea);
-        }
-        resizeTimeoutMap.delete(wrapper);
-      }, 100);
-      
-      resizeTimeoutMap.set(wrapper, timeoutId);
-    };
-
-    // ✅ startResize 함수 (기존 로직 100% 유지)
-    const startResize = (e) => {
-      if (isResizing) return;
-      
-      e.preventDefault();
-      e.stopPropagation();
-      
-      isResizing = true;
-      wrapper.setAttribute('data-resizing', 'true');
-      
-      startX = e.clientX;
-      startY = e.clientY;
-      
-      const rect = wrapper.getBoundingClientRect();
-      startWidth = rect.width;
-      startHeight = rect.height;
-      
-      document.addEventListener('mousemove', handleResize, { passive: true });
-      document.addEventListener('mouseup', stopResize);
-    };
-
-    // ✅ mousedown 이벤트 등록
-    resizeHandle.addEventListener('mousedown', startResize);
-
-    // ✅ cleanup 함수 정의 (타이머 정리 추가)
-    const cleanup = () => {
-      // RAF 정리
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      
-      // ✅ 타이머 정리
-      const existingTimeout = resizeTimeoutMap.get(wrapper);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-        resizeTimeoutMap.delete(wrapper);
-      }
-      
-      // 이벤트 리스너 제거
-      resizeHandle.removeEventListener('mousedown', startResize);
-      document.removeEventListener('mousemove', handleResize, { passive: true });
-      document.removeEventListener('mouseup', stopResize);
-      
-      // 상태 초기화
-      isResizing = false;
-      wrapper.removeAttribute('data-resizing');
-    };
+    mediaButton.addEventListener('click', buttonClickHandler);
     
-    // ✅ WeakMap에 cleanup 함수 저장
-    resizeCleanupMap.set(wrapper, cleanup);
+    return mediaButton;
+  }
+});
 
-    // ✅ 래퍼가 DOM에서 제거될 때 자동 정리
-    if ('MutationObserver' in window) {
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          mutation.removedNodes.forEach((node) => {
-            if (node === wrapper || (node.contains && node.contains(wrapper))) {
-              cleanup();
-              observer.disconnect();
-              resizeCleanupMap.delete(wrapper);
-            }
-          });
+// ✅ 개선된 리사이즈 핸들 (타이머 메모리 관리 개선)
+function setupVideoResizeHandle(wrapper, resizeHandle) {
+  let isResizing = false;
+  let startX, startY, startWidth, startHeight;
+  let rafId = null;
+
+  // ✅ 핵심 개선: handleResize 함수만 최적화
+  const handleResize = (e) => {
+    if (!isResizing) return;
+    
+    // ✅ 성능 개선: 직접 스타일 적용
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    
+    const newWidth = Math.max(100, startWidth + deltaX);
+    const newHeight = Math.max(60, startHeight + deltaY);
+    
+    // ✅ 핵심 변경: 복잡한 cssText 정규식 → 직접 프로퍼티 설정
+    wrapper.style.width = newWidth + 'px';
+    wrapper.style.height = newHeight + 'px';
+  };
+
+  // ✅ stopResize 함수 (타이머 메모리 관리 개선)
+  const stopResize = () => {
+    if (!isResizing) return;
+    
+    // ✅ 상태 초기화
+    isResizing = false;
+    wrapper.removeAttribute('data-resizing');
+    
+    // ✅ RAF 정리 코드 유지
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    
+    // ✅ 이벤트 리스너 제거
+    document.removeEventListener('mousemove', handleResize, { passive: true });
+    document.removeEventListener('mouseup', stopResize);
+    
+    // ✅ 개선: WeakMap 기반 타이머 관리
+    const existingTimeout = resizeTimeoutMap.get(wrapper);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    const timeoutId = setTimeout(() => {
+      const contentArea = document.querySelector('.lite-editor-content');
+      if (contentArea && util.editor?.dispatchEditorEvent) {
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+      resizeTimeoutMap.delete(wrapper);
+    }, 100);
+    
+    resizeTimeoutMap.set(wrapper, timeoutId);
+  };
+
+  // ✅ startResize 함수 (기존 로직 100% 유지)
+  const startResize = (e) => {
+    if (isResizing) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isResizing = true;
+    wrapper.setAttribute('data-resizing', 'true');
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    const rect = wrapper.getBoundingClientRect();
+    startWidth = rect.width;
+    startHeight = rect.height;
+    
+    document.addEventListener('mousemove', handleResize, { passive: true });
+    document.addEventListener('mouseup', stopResize);
+  };
+
+  // ✅ mousedown 이벤트 등록
+  resizeHandle.addEventListener('mousedown', startResize);
+
+  // ✅ cleanup 함수 정의 (타이머 정리 추가)
+  const cleanup = () => {
+    // RAF 정리
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    
+    // ✅ 타이머 정리
+    const existingTimeout = resizeTimeoutMap.get(wrapper);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      resizeTimeoutMap.delete(wrapper);
+    }
+    
+    // 이벤트 리스너 제거
+    resizeHandle.removeEventListener('mousedown', startResize);
+    document.removeEventListener('mousemove', handleResize, { passive: true });
+    document.removeEventListener('mouseup', stopResize);
+    
+    // 상태 초기화
+    isResizing = false;
+    wrapper.removeAttribute('data-resizing');
+  };
+  
+  // ✅ WeakMap에 cleanup 함수 저장
+  resizeCleanupMap.set(wrapper, cleanup);
+
+  // ✅ 래퍼가 DOM에서 제거될 때 자동 정리
+  if ('MutationObserver' in window) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+          if (node === wrapper || (node.contains && node.contains(wrapper))) {
+            cleanup();
+            observer.disconnect();
+            resizeCleanupMap.delete(wrapper);
+          }
         });
       });
-      
-      observer.observe(document.body, { childList: true, subtree: true });
-      videoObservers.set(wrapper, observer);
-    }
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    videoObservers.set(wrapper, observer);
   }
+}
 
-  // ✅ 전역 cleanup 함수 개선 (타이머 정리 추가)
-  function cleanup() {
-    // ✅ 모든 리사이즈 타이머 정리
-    resizeTimeoutMap.forEach((timeoutId, wrapper) => {
-      clearTimeout(timeoutId);
-    });
-    resizeTimeoutMap.clear();
+// ✅ 전역 cleanup 함수 개선 (타이머 정리 추가)
+function cleanup() {
+  // ✅ 모든 리사이즈 타이머 정리
+  resizeTimeoutMap.forEach((timeoutId, wrapper) => {
+    clearTimeout(timeoutId);
+  });
+  resizeTimeoutMap.clear();
 
-    // ✅ 드롭다운 이벤트 리스너 정리
-    dropdownCleanupMap.forEach((cleanup, button) => {
-      cleanup();
-    });
-    dropdownCleanupMap.clear();
-    
-    // 모든 Observer 정리
-    videoObservers.forEach((observer, wrapper) => {
-      observer.disconnect();
-    });
-    videoObservers.clear();
-    
-    // 모든 리사이즈 핸들 정리
-    resizeCleanupMap.forEach((cleanup, wrapper) => {
-      cleanup();
-    });
-    resizeCleanupMap.clear();
-    
-    // ✅ 캐시된 드롭다운 정리
-    if (cachedDropdownElements) {
-      const { dropdownMenu } = cachedDropdownElements;
-      if (dropdownMenu.parentNode) {
-        dropdownMenu.parentNode.removeChild(dropdownMenu);
-      }
-      cachedDropdownElements = null;
+  // ✅ 드롭다운 이벤트 리스너 정리
+  dropdownCleanupMap.forEach((cleanup, button) => {
+    cleanup();
+  });
+  dropdownCleanupMap.clear();
+  
+  // 모든 Observer 정리
+  videoObservers.forEach((observer, wrapper) => {
+    observer.disconnect();
+  });
+  videoObservers.clear();
+  
+  // 모든 리사이즈 핸들 정리
+  resizeCleanupMap.forEach((cleanup, wrapper) => {
+    cleanup();
+  });
+  resizeCleanupMap.clear();
+  
+  // ✅ 캐시된 드롭다운 정리
+  if (cachedDropdownElements) {
+    const { dropdownMenu } = cachedDropdownElements;
+    if (dropdownMenu.parentNode) {
+      dropdownMenu.parentNode.removeChild(dropdownMenu);
     }
-    
-    // 전역 변수 초기화
-    savedRange = null;
-    isDropdownOpen = false;
+    cachedDropdownElements = null;
   }
+  
+  // 전역 변수 초기화
+  savedRange = null;
+  isDropdownOpen = false;
+}
 
-  // 페이지 언로드 시 정리
-  window.addEventListener('beforeunload', cleanup);
+// 페이지 언로드 시 정리
+window.addEventListener('beforeunload', cleanup);
 })();

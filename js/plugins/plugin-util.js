@@ -116,7 +116,7 @@ const PluginUtil = (function() {
             if (savedSelection && activeContentArea) {
                 setTimeout(() => {
                     try {
-                        activeContentArea.focus();
+                        activeContentArea.focus({ preventScroll: true });
                         
                         // 선택 영역 복원 시도
                         const restored = selection.restoreSelection(savedSelection);
@@ -1182,10 +1182,16 @@ const PluginUtil = (function() {
         /**
          * 스크롤 위치 복원
          * @param {Object} position - 복원할 스크롤 위치 {x, y}
-         * @param {number} delay - 복원 지연 시간(ms, 기본값: 50)
+         * @param {number} delay - 복원 지연 시간(ms, 기본값: 10)
          */
-        restorePosition(position, delay = 50) {
+        restorePosition(position, delay = 10) {
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
+                return;
+            }
+            
+            // ✅ 즉시 복원 옵션 추가
+            if (delay === 0) {
+                window.scrollTo(position.x, position.y);
                 return;
             }
             
