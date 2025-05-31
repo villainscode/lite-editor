@@ -15,28 +15,25 @@
   const CDN_STYLE = 'https://unpkg.com/@speed-highlight/core/dist/themes/default.css';
   const CDN_DETECT = '/js/plugins/customDetect.js';  // 루트에서부터의 경로
   
-  // 지원 언어 목록
-  const LANGUAGES = [
-    { value: "auto", label: "Auto Detect" },
-    { value: "bash", label: "Bash" },
-    { value: "c", label: "C" },
-    { value: "css", label: "CSS" },
-    { value: "docker", label: "Docker" },
-    { value: "go", label: "Go" },
-    { value: "html", label: "HTML" },
-    { value: "http", label: "HTTP" },
-    { value: "java", label: "Java" },
-    { value: "js", label: "JavaScript" },
-    { value: "json", label: "JSON" },
-    { value: "md", label: "Markdown" },
-    { value: "plain", label: "Plain Text" },
-    { value: "py", label: "Python" },
-    { value: "rs", label: "Rust" },
-    { value: "sql", label: "SQL" },
-    { value: "ts", label: "TypeScript" },
-    { value: "xml", label: "XML" },
-    { value: "yaml", label: "YAML" }
-  ];
+  // ✅ 언어 목록을 외부 데이터 파일에서 가져오기
+  function getLanguageList() {
+    // LiteEditorCodeData가 로드되었는지 확인
+    if (typeof window.LiteEditorCodeData !== 'undefined' && window.LiteEditorCodeData.CODE_LANGUAGES) {
+      return window.LiteEditorCodeData.CODE_LANGUAGES;
+    }
+    
+    // 폴백: 기본 언어 목록 (데이터 파일 로드 실패 시)
+    console.warn('CodeBlock: LiteEditorCodeData를 찾을 수 없습니다. 기본 언어 목록을 사용합니다.');
+    return [
+      { value: "auto", label: "Auto Detect" },
+      { value: "js", label: "JavaScript" },
+      { value: "html", label: "HTML" },
+      { value: "css", label: "CSS" },
+      { value: "java", label: "Java" },
+      { value: "py", label: "Python" },
+      { value: "plain", label: "Plain Text" }
+    ];
+  }
   
   // PluginUtil 참조 및 검증
   const util = window.PluginUtil || {};
@@ -159,6 +156,13 @@
     dropdownMenu.setAttribute('aria-orientation', 'vertical');
     dropdownMenu.tabIndex = -1;
     
+    // ✅ 코드 블록 레이어 위에 표시되도록 z-index 설정
+    dropdownMenu.style.position = 'absolute';
+    dropdownMenu.style.zIndex = '99999'; // 코드 블록 레이어(9999)보다 높게
+    
+    // ✅ 외부 데이터에서 언어 목록 가져오기
+    const LANGUAGES = getLanguageList();
+    
     // 메뉴 아이템 생성
     LANGUAGES.forEach(lang => {
       const item = document.createElement('div');
@@ -203,16 +207,27 @@
       const isHidden = dropdownMenu.classList.contains('hidden');
       
       if (isHidden) {
+        // ✅ 메뉴를 body에 추가하고 위치 계산
+        document.body.appendChild(dropdownMenu);
+        
+        const buttonRect = button.getBoundingClientRect();
+        dropdownMenu.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+        dropdownMenu.style.left = (buttonRect.left + window.scrollX) + 'px';
+        
         dropdownMenu.classList.remove('hidden');
         button.setAttribute('aria-expanded', 'true');
       } else {
         dropdownMenu.classList.add('hidden');
+        // ✅ 메뉴를 body에서 제거
+        if (dropdownMenu.parentNode) {
+          dropdownMenu.parentNode.removeChild(dropdownMenu);
+        }
         button.setAttribute('aria-expanded', 'false');
       }
     });
     
+    // ✅ 컨테이너에는 버튼만 추가 (메뉴는 제외)
     dropdownContainer.appendChild(button);
-    dropdownContainer.appendChild(dropdownMenu);
     
     return {
       container: dropdownContainer,
@@ -223,19 +238,6 @@
         return activeItem ? activeItem.dataset.value : 'auto';
       }
     };
-  }
-  
-  /**
-   * HTML 특수 문자 이스케이프 처리
-   */
-  function escapeHtml(unsafe) {
-    return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;")
-         .replace(/`/g, "&#96;");
   }
   
   /**
@@ -386,7 +388,7 @@
       }
       
       // HTML 특수 문자 이스케이프 처리
-      const escapedCode = escapeHtml(code);
+      const escapedCode = LiteEditorSecurity.escapeHtml(code);
       
       // 코드 블록 생성
       const codeBlockHTML = `

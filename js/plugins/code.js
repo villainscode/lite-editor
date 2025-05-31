@@ -68,7 +68,7 @@
             
             const formattedText = selectedText
               .split('\n')
-              .map(line => line.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+              .map(line => LiteEditorSecurity.escapeHtml(line.trim()))
               .join('\n');
             
             range.deleteContents();
