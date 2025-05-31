@@ -40,37 +40,26 @@
   });
 
   /**
-   * 코드 삽입 공통 로직 (디버깅 버전)
+   * 코드 삽입 공통 로직
    */
   function executeCodeAction(contentArea) {
-    console.log('🔍 [CODE DEBUG] executeCodeAction 시작');
-    
-    // ✅ 레이어 체크 및 포커스 확인
+    // 레이어 체크 및 포커스 확인
     const canExecute = util.utils.canExecutePlugin(contentArea);
-    console.log('🔍 [CODE DEBUG] canExecutePlugin 결과:', canExecute);
     
     if (!canExecute) {
-        console.log('❌ [CODE DEBUG] canExecutePlugin이 false 반환 - 실행 취소');
         return;
     }
     
     contentArea.focus();
-    console.log('✅ [CODE DEBUG] contentArea.focus() 완료');
     
     // 선택 영역 확인
     const selection = util.selection.getSafeSelection();
-    console.log('🔍 [CODE DEBUG] selection:', selection);
-    console.log('🔍 [CODE DEBUG] selection.rangeCount:', selection?.rangeCount);
     
     if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        console.log('🔍 [CODE DEBUG] range:', range);
-        console.log('🔍 [CODE DEBUG] range.collapsed:', range.collapsed);
-        console.log('🔍 [CODE DEBUG] range.toString():', `"${range.toString()}"`);
         
         if (!range.collapsed) {
-            console.log('📝 [CODE DEBUG] 선택 영역 있음 - 기존 로직 실행');
-            // ✅ 선택 영역이 있는 경우: 기존 로직 그대로
+            // 선택 영역이 있는 경우: 기존 로직
             const offsets = util.selection.calculateOffsets(contentArea);
             
             let selectedText = range.toString();
@@ -103,11 +92,11 @@
                 }
               });
         } else {
-            console.log('✨ [CODE DEBUG] 선택 영역 없음 - 기본 코드 블록 삽입');
+            // 선택 영역이 없는 경우: 기본 코드 블록 삽입
             insertDefaultCodeBlock(range);
         }
     } else {
-        console.log('🎯 [CODE DEBUG] 선택 객체 없음 - 맨 끝에 기본 코드 블록 삽입');
+        // 선택 객체가 없는 경우: 맨 끝에 기본 코드 블록 삽입
         insertDefaultCodeBlockAtEnd(contentArea);
     }
   }
@@ -117,34 +106,34 @@
    */
   function createDefaultCodeElement() {
     const codeElement = document.createElement('code');
-    codeElement.textContent = '\u200B'; // Zero-width space (눈에 안보이는 공백)
+    codeElement.textContent = '\u200B'; // Zero-width space
     
-    // ✅ 멀티라인과 동일한 스타일 적용
+    // 멀티라인과 동일한 스타일 적용
     codeElement.style.display = 'block';
     codeElement.style.width = '100%';
     codeElement.style.padding = '10px';
     codeElement.style.borderRadius = '4px';
     codeElement.style.fontFamily = 'monospace';
-    codeElement.style.backgroundColor = '#f8f8f8';  // 선택사항
-    codeElement.style.border = '1px solid #e0e0e0';  // 선택사항
+    codeElement.style.backgroundColor = '#f8f8f8';
+    codeElement.style.border = '1px solid #e0e0e0';
     codeElement.contentEditable = 'true';
     
     return codeElement;
   }
 
   /**
-   * 기본 한줄짜리 코드 블록 삽입 (초간단 버전)
+   * 기본 한줄짜리 코드 블록 삽입
    */
   function insertDefaultCodeBlock(range) {
     const codeElement = createDefaultCodeElement();
     range.insertNode(codeElement);
     
-    // ✅ 포커스 + 커서 끝으로
+    // 포커스 + 커서 끝으로
     setTimeout(() => {
         codeElement.focus();
         const range = document.createRange();
         range.selectNodeContents(codeElement);
-        range.collapse(false); // 끝으로
+        range.collapse(false);
         const sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
@@ -152,13 +141,12 @@
   }
   
   /**
-   * 맨 끝에 기본 코드 블록 삽입 (초간단 버전)
+   * 맨 끝에 기본 코드 블록 삽입
    */
   function insertDefaultCodeBlockAtEnd(contentArea) {
     const codeElement = createDefaultCodeElement();
     contentArea.appendChild(codeElement);
     
-    // ✅ 아주 짧은 지연만 주면 끝!
     setTimeout(() => codeElement.focus(), 0);
   }
 })();

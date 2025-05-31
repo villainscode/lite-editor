@@ -28,10 +28,6 @@
         util.styles.loadCssFile(STYLE_ID, CSS_PATH);
     }
 
-    // link.js 파일 상단에 디버깅 유틸리티 추가
-    function debugLog(action, data) {
-        errorHandler.logError('LinkPlugin', errorHandler.codes.PLUGINS.LINK.DEBUG, { action, data });
-    }
 
     /**
      * URL 유효성 검사
