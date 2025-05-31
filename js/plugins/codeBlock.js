@@ -306,10 +306,7 @@
     
     // 코드 삽입 처리 함수
     const processCode = (code, language) => {
-      console.log('🔧 processCode 호출됨:', { code: code?.substring(0, 50) + '...', language, codeLength: code?.length });
-      
       if (!code.trim()) {
-        console.log('⚠️ 코드가 비어있음 - 알림 표시');
         errorHandler.showUserAlert('P405');
         return;
       }
@@ -320,7 +317,6 @@
         contentArea.focus();
       }
       
-      console.log('🚀 insertCodeBlock 호출 예정');
       setTimeout(() => {
         insertCodeBlock(code, language, contentArea, SpeedHighlight);
       }, 0);
@@ -330,11 +326,6 @@
     insertButton.addEventListener('click', () => {
       const selectedLanguage = languageDropdown.getValue();
       const codeValue = codeInput.value;
-      console.log('🖱️ 삽입 버튼 클릭됨:', { 
-        language: selectedLanguage, 
-        codeLength: codeValue?.length,
-        codePreview: codeValue?.substring(0, 30) + '...'
-      });
       processCode(codeValue, selectedLanguage);
     });
     
@@ -344,29 +335,15 @@
     // 외부 클릭 시 닫기 설정
     util.setupOutsideClickHandler(activeLayer, closeCodeBlockLayer, [buttonElement]);
     
-    // 텍스트 영역에 포커스
-    setTimeout(() => {
-      try {
-        codeInput.focus({ preventScroll: true });
-      } catch (e) {
-        codeInput.focus();
-      }
-    }, 0);
+    // ✅ 텍스트 영역에 즉시 포커스 (setTimeout 제거)
+    codeInput.focus();
   }
   
   /**
    * 코드 블록 삽입
    */
   function insertCodeBlock(code, language, contentArea, SpeedHighlight) {
-    console.log('📝 insertCodeBlock 함수 시작:', { 
-      code: code?.substring(0, 50) + '...', 
-      language, 
-      contentArea: !!contentArea, 
-      SpeedHighlight: !!SpeedHighlight 
-    });
-    
     if (!code.trim()) {
-      console.log('⚠️ insertCodeBlock: 코드가 비어있음');
       return;
     }
     
@@ -376,7 +353,7 @@
       if (!language) {
         finalLanguage = 'plain';
       } else if (language === 'auto') {
-        finalLanguage = SpeedHighlight.detectLanguage(code) || 'plain';
+        finalLanguage = SpeedHighlight?.detectLanguage(code) || 'plain';
       }
       
       try {
@@ -434,11 +411,13 @@
       }, 10);
       
       // 방금 삽입된 코드 블록 찾고 하이라이팅 적용
-      const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
-      const newBlock = codeBlocks[codeBlocks.length - 1];
-      
-      if (newBlock) {
-        SpeedHighlight.highlightElement(newBlock, finalLanguage);
+      if (SpeedHighlight) {
+        const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
+        const newBlock = codeBlocks[codeBlocks.length - 1];
+        
+        if (newBlock) {
+          SpeedHighlight.highlightElement(newBlock, finalLanguage);
+        }
       }
       
       // 에디터 변경 이벤트 발생
@@ -449,10 +428,6 @@
       }
     } catch (error) {
       errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.INSERT, error);
-      // 디버깅: errorHandler 확인
-      console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
-      console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
-      console.log('P404 메시지:', errorHandler?.messages?.P404);
       errorHandler.showUserAlert('P404');
     } finally {
       // 레이어 닫기 및 선택 영역 초기화
@@ -465,7 +440,7 @@
   }
   
   // ==================== 코드 블록 내 Enter 키 처리 ====================
-
+  
   /**
    * 코드 블록 내에서 새 라인 생성
    */
@@ -513,7 +488,7 @@
       createNewLineInCodeBlock(selection, range);
     }
   }, true); // capture 단계에서 처리
-
+  
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
     title: 'Code Block',
@@ -558,7 +533,7 @@
       // 버튼 참조 저장
       codeBlockButton = button;
       
-      // 클릭 이벤트
+      // ✅ 클릭 이벤트 (성능 최적화)
       button.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -572,18 +547,15 @@
           return;
         }
         
-        // 스크립트 로드
-        const SpeedHighlight = await loadScripts();
+        // ✅ 스크립트 즉시 확인 (네트워크 요청 없음)
+        const SpeedHighlight = window.SpeedHighlight || null;
+        
+        // 스크립트가 없으면 백그라운드 로드
         if (!SpeedHighlight) {
-          // 디버깅: errorHandler 확인
-          console.log('errorHandler 존재:', typeof errorHandler !== 'undefined');
-          console.log('showUserAlert 함수:', typeof errorHandler?.showUserAlert);
-          console.log('P403 메시지:', errorHandler?.messages?.P403);
-          errorHandler.showUserAlert('P403');
-          return;
+          loadScripts(); // await 제거로 즉시 진행
         }
         
-        // 코드 블록 레이어 표시
+        // ✅ 기존 showCodeBlockLayer 함수 사용
         showCodeBlockLayer(button, contentArea, SpeedHighlight);
       });
       
