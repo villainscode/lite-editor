@@ -5,7 +5,7 @@
 
 (function() {
     const versionScript = document.createElement('script');
-    versionScript.src = 'js/data/version.js';
+    versionScript.src = `js/data/version.js?t=${Date.now()}`; // ✅ 타임스탬프 추가
     
     versionScript.onload = function() {
         const VERSION = window.LiteEditorVersion?.version || 'v1.0.05';
