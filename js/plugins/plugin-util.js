@@ -80,25 +80,28 @@ const PluginUtil = (function() {
             const activeContentArea = document.querySelector('.lite-editor-content:focus, [contenteditable="true"]:focus') || 
                                       document.querySelector('.lite-editor-content, [contenteditable="true"]');
             
-            // ✅ 2. 선택 영역 복원 필요성 확인 (기존 로직)
-            let needsSelectionRestore = false;
-            const currentSelection = window.getSelection();
+            // ✅ 2. 저장된 선택 영역 찾기 (여러 소스에서)
+            let savedSelection = null;
             
-            if (currentSelection && currentSelection.rangeCount > 0 && activeContentArea) {
-                const range = currentSelection.getRangeAt(0);
-                const selectionContainer = range.commonAncestorContainer;
-                
-                this.activeLayersList.forEach(item => {
-                    if (item.element !== exceptLayer && document.body.contains(item.element)) {
-                        if (item.element.contains(selectionContainer) || 
-                            selectionContainer === item.element) {
-                            needsSelectionRestore = true;
-                        }
-                    }
-                });
+            // media.js의 savedRange 확인
+            if (window.mediaPluginSavedRange) {
+                savedSelection = window.mediaPluginSavedRange;
+                console.log('🔍 [LAYER_MANAGER] media.js 저장된 선택 영역 발견');
             }
             
-            // ✅ 3. 레이어 닫기 (기존 로직)
+            // 전역 liteEditorSelection 확인
+            if (!savedSelection && window.liteEditorSelection && window.liteEditorSelection.get) {
+                savedSelection = window.liteEditorSelection.get();
+                console.log('🔍 [LAYER_MANAGER] 전역 저장된 선택 영역 발견');
+            }
+            
+            // PluginUtil.selection에서 저장된 선택 영역 확인
+            if (!savedSelection && this.lastSavedSelection) {
+                savedSelection = this.lastSavedSelection;
+                console.log('🔍 [LAYER_MANAGER] PluginUtil 저장된 선택 영역 발견');
+            }
+            
+            // ✅ 3. 기존 레이어 닫기 로직
             this.activeLayersList.forEach(item => {
                 if (item.element !== exceptLayer && document.body.contains(item.element)) {
                     if (item.type === 'dropdown') {
@@ -112,38 +115,59 @@ const PluginUtil = (function() {
                 }
             });
             
-            // ✅ 4. 선택 영역 복원 + 콜백 실행
-            if (needsSelectionRestore && activeContentArea) {
+            // ✅ 4. 저장된 선택 영역 복원 + 콜백 실행
+            if (savedSelection && activeContentArea) {
                 setTimeout(() => {
                     try {
                         activeContentArea.focus();
-                        const range = document.createRange();
-                        range.selectNodeContents(activeContentArea);
-                        range.collapse(false);
                         
-                        const selection = window.getSelection();
-                        selection.removeAllRanges();
-                        selection.addRange(range);
+                        // 선택 영역 복원 시도
+                        const restored = selection.restoreSelection(savedSelection);
+                        
+                        if (restored) {
+                            console.log('✅ [LAYER_MANAGER] 저장된 선택 영역 복원 완료');
+                        } else {
+                            // 복원 실패 시 커서를 적절한 위치에
+                            const range = document.createRange();
+                            range.selectNodeContents(activeContentArea);
+                            range.collapse(false); // 끝으로
+                            
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                            
+                            console.log('⚠️ [LAYER_MANAGER] 선택 영역 복원 실패, 커서를 끝으로 이동');
+                        }
+                        
+                        // ✅ 저장된 선택 영역 정리
+                        if (window.mediaPluginSavedRange) {
+                            window.mediaPluginSavedRange = null;
+                        }
+                        if (this.lastSavedSelection) {
+                            this.lastSavedSelection = null;
+                        }
                         
                         if (window.errorHandler) {
-                            errorHandler.colorLog('LAYER_MANAGER', '✅ 선택 영역 복원 완료', {
+                            errorHandler.colorLog('LAYER_MANAGER', '✅ 레이어 닫기 및 선택 영역 처리 완료', {
                                 target: activeContentArea.className || activeContentArea.id || 'contentArea'
                             }, '#4caf50');
                         }
+                        
                     } catch (e) {
+                        console.warn('LayerManager: 선택 영역 복원 중 오류:', e);
+                        // 최소한 포커스는 설정
                         if (activeContentArea && activeContentArea.focus) {
                             activeContentArea.focus();
                         }
-                        console.warn('LayerManager: 선택 영역 복원 실패, 포커스만 설정:', e);
                     }
                     
-                    // ✅ 콜백 실행 (레이어 완전 닫힌 후)
+                    // ✅ 콜백 실행 (복원 완료 후)
                     if (onComplete && typeof onComplete === 'function') {
                         onComplete();
                     }
                 }, 50); // ✅ 충분한 시간 확보
             } else {
-                // ✅ 선택 영역 복원이 필요없어도 콜백 실행
+                // ✅ 저장된 선택 영역이 없어도 콜백 실행
                 if (onComplete && typeof onComplete === 'function') {
                     setTimeout(onComplete, 10);
                 }
