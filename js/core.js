@@ -888,7 +888,16 @@ const LiteEditor = (function() {
         if (sel && sel.getRangeAt && sel.rangeCount) {
           const range = sel.getRangeAt(0);
           range.deleteContents();
-          range.insertNode(document.createTextNode(text));
+          
+          // ✅ 텍스트 노드 삽입
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+          
+          // ✅ 커서를 삽입된 텍스트 끝으로 이동 (핵심 수정사항)
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
       } catch (e) {
         errorHandler.logError('Core', errorHandler.codes.COMMON.PASTE, e);
