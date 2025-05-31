@@ -10,6 +10,32 @@
   let tabKeyCleanup = null;
   const BULLET_STYLES = ['disc', 'circle', 'square'];
   
+  // ✅ 다른 리스트 타입 감지 함수 (불릿리스트용)
+  function detectOtherListTypes() {
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
+    
+    // 체크리스트 감지
+    const checklistItem = element.closest('.checklist-item') || 
+                         element.querySelector('.checklist-item');
+    if (checklistItem) {
+      return { type: '체크리스트', element: checklistItem };
+    }
+    
+    // 넘버 리스트 감지  
+    const numberedList = element.closest('ol[data-lite-editor-number]') ||
+                        element.querySelector('ol[data-lite-editor-number]');
+    if (numberedList) {
+      return { type: '넘버 리스트', element: numberedList };
+    }
+    
+    return null;
+  }
+  
   // ✅ 플러그인 등록 (히스토리 통합)
   PluginUtil.registerPlugin('unorderedList', {
     title: 'Bullet List',
@@ -17,6 +43,38 @@
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();
       contentArea.focus();
+      
+      // ✅ 선택 영역 저장 (모달 표시 전에)
+      const savedSelection = PluginUtil.selection.saveSelection();
+      
+      // ✅ 다른 리스트 타입 체크 (수정된 버전)
+      const otherListType = detectOtherListTypes();
+      if (otherListType) {
+        LiteEditorModal.alert(
+          '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 불릿리스트를 적용해주세요.',
+          {
+            titleText: '리스트 중복 적용 불가',
+            confirmText: '확인',
+            onConfirm: function() {
+              // ✅ 모달 닫힌 후 선택 영역 및 포커스 복원
+              setTimeout(() => {
+                try {
+                  contentArea.focus();
+                  if (savedSelection) {
+                    PluginUtil.selection.restoreSelection(savedSelection);
+                  }
+                  console.log('🔄 [BulletList] 선택 영역 복원 완료');
+                } catch (e) {
+                  console.warn('[BulletList] 선택 영역 복원 실패:', e);
+                  // 폴백: 에디터 끝에 커서 설정
+                  contentArea.focus();
+                }
+              }, 50);
+            }
+          }
+        );
+        return;
+      }
       
       // ✅ 히스토리에 적용 전 상태 기록
       if (window.LiteEditorHistory) {
@@ -32,10 +90,10 @@
       const existingList = findExistingList(range);
       
       try {
-      if (existingList) {
-        unwrapBulletList(existingList.ul, range);
-      } else {
-        createBulletList(contentArea, range);
+        if (existingList) {
+          unwrapBulletList(existingList.ul, range);
+        } else {
+          createBulletList(contentArea, range);
         }
         
         // ✅ 작업 완료 후 상태 기록

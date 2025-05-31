@@ -355,6 +355,7 @@
             }
             
             // 레이어 표시
+            state.gridLayer.classList.add('show');
             state.gridLayer.style.display = 'block';
         },
         
@@ -363,6 +364,7 @@
             if (!state.gridLayer) return;
             
             // 레이어 숨기기
+            state.gridLayer.classList.remove('show');
             state.gridLayer.style.display = 'none';
             
             // 버튼 상태 업데이트
@@ -409,7 +411,7 @@
 
             // 새 레이어 생성
             const gridLayer = createElement('div', {
-                className: 'grid-layer'
+                className: 'grid-layer lite-editor-dropdown-menu'
             });
             
             // 제목 추가

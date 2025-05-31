@@ -12,6 +12,32 @@
   // 스타일 순환 정의
   const NUMBER_STYLES = ['decimal', 'lower-alpha', 'lower-roman'];
   
+  // ✅ 다른 리스트 타입 감지 함수 (넘버리스트용)
+  function detectOtherListTypes() {
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.TEXT_NODE ? container.parentNode : container;
+    
+    // 체크리스트 감지
+    const checklistItem = element.closest('.checklist-item') || 
+                         element.querySelector('.checklist-item');
+    if (checklistItem) {
+      return { type: '체크리스트', element: checklistItem };
+    }
+    
+    // 불릿 리스트 감지
+    const bulletList = element.closest('ul[data-lite-editor-bullet]') || 
+                       element.querySelector('ul[data-lite-editor-bullet]');
+    if (bulletList) {
+      return { type: '불릿 리스트', element: bulletList };
+    }
+    
+    return null;
+  }
+  
   // ✅ 플러그인 등록 (히스토리 통합)
   PluginUtil.registerPlugin('orderedList', {
     title: 'Numbered List',
@@ -19,6 +45,38 @@
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();
       contentArea.focus();
+      
+      // ✅ 선택 영역 저장 (모달 표시 전에)
+      const savedSelection = PluginUtil.selection.saveSelection();
+      
+      // ✅ 다른 리스트 타입 체크 (수정된 버전)
+      const otherListType = detectOtherListTypes();
+      if (otherListType) {
+        LiteEditorModal.alert(
+          '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 넘버리스트를 적용해주세요.',
+          {
+            titleText: '리스트 중복 적용 불가',
+            confirmText: '확인',
+            onConfirm: function() {
+              // ✅ 모달 닫힌 후 선택 영역 및 포커스 복원
+              setTimeout(() => {
+                try {
+                  contentArea.focus();
+                  if (savedSelection) {
+                    PluginUtil.selection.restoreSelection(savedSelection);
+                  }
+                  console.log('🔄 [NumberedList] 선택 영역 복원 완료');
+                } catch (e) {
+                  console.warn('[NumberedList] 선택 영역 복원 실패:', e);
+                  // 폴백: 에디터 끝에 커서 설정
+                  contentArea.focus();
+                }
+              }, 50);
+            }
+          }
+        );
+        return;
+      }
       
       // 히스토리 기록
       if (window.LiteEditorHistory) {

@@ -72,15 +72,18 @@
     });
 
     /**
-     * HR 라인 삽입 함수 (메모리 안전 버전)
+     * HR 라인 삽입 함수 (공통 함수 사용)
      */
     function insertLine(contentArea) {
-        // 🔧 추가: contentArea 유효성 검사
-        if (!contentArea || !contentArea.isConnected) {
-            console.warn('LINE: contentArea가 유효하지 않음');
+        // ✅ 한 줄로 모든 체크 완료!
+        if (!PluginUtil.utils.canExecutePlugin(contentArea)) {
             return;
         }
         
+        // ✅ 포커스 설정 (이미 체크 완료된 상태)
+        contentArea.focus();
+        
+        // ✅ 기존 HR 삽입 로직...
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) {
             appendHrToEnd(contentArea);
@@ -88,18 +91,24 @@
         }
         
         const range = selection.getRangeAt(0);
+        const selectionContainer = range.commonAncestorContainer;
+        const isSelectionInContentArea = contentArea.contains(selectionContainer) || 
+                                       selectionContainer === contentArea;
+        
+        if (!isSelectionInContentArea) {
+            appendHrToEnd(contentArea);
+            return;
+        }
+        
         const hr = createHrElement();
         
         try {
-            // 선택된 텍스트 삭제 (있다면)
             if (!range.collapsed) {
                 range.deleteContents();
             }
             
-            // HR 직접 삽입
             range.insertNode(hr);
             
-            // 🔧 개선: 새로운 Range 생성 (기존 Range 재사용 방지)
             const newRange = document.createRange();
             newRange.setStartAfter(hr);
             newRange.collapse(true);
@@ -107,14 +116,7 @@
             selection.removeAllRanges();
             selection.addRange(newRange);
             
-            if (window.errorHandler) {
-                errorHandler.colorLog('LINE', '✅ HR 삽입 성공', {
-                    위치: 'Range API 직접 삽입'
-                }, '#4caf50');
-            }
-            
         } catch (error) {
-            // 🔧 대안: 간단한 DOM 삽입
             insertHrFallback(range, hr, contentArea);
         }
     }

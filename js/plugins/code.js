@@ -25,34 +25,54 @@
       button.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        executeCodeAction(contentArea);
+      });
+
+      return button;
+    }
+  });
+
+  // Code 단축키 (Alt+C)
+  LiteEditor.registerShortcut('code', {
+    key: 'c',
+    alt: true,
+    action: executeCodeAction
+  });
+
+  /**
+   * 코드 삽입 공통 로직
+   */
+  function executeCodeAction(contentArea) {
+    // 레이어 체크 및 포커스 확인
+    const canExecute = util.utils.canExecutePlugin(contentArea);
+    
+    if (!canExecute) {
+        return;
+    }
+    
+    contentArea.focus();
+    
+    // 선택 영역 확인
+    const selection = util.selection.getSafeSelection();
+    
+    if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
         
-        // 선택 영역이 있는 경우에만 처리
-        const selection = util.selection.getSafeSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          if (!range.collapsed) {
-            // 선택 영역의 오프셋 저장
+        if (!range.collapsed) {
+            // 선택 영역이 있는 경우: 기존 로직
             const offsets = util.selection.calculateOffsets(contentArea);
             
-            // 선택된 텍스트 가져오기
             let selectedText = range.toString();
-            
-            // 선택된 텍스트의 줄 수 계산 (공백 제거 후)
             const trimmedText = selectedText.replace(/[\s\n\r]+$/, '');
-            
-            // 선택된 텍스트의 마지막에 있는 불필요한 줄바꿈 제거
             selectedText = trimmedText;
             
-            // 각 줄의 공백을 정리하면서 HTML 이스케이프 처리
             const formattedText = selectedText
               .split('\n')
               .map(line => line.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
               .join('\n');
             
-            // 선택 영역 삭제 후 코드 태그 삽입
             range.deleteContents();
             
-            // 코드 요소 생성 및 삽입
             const codeElement = document.createElement('code');
             codeElement.setAttribute('data-selection-marker', 'true');
             codeElement.style.display = 'block';
@@ -64,7 +84,6 @@
             
             range.insertNode(codeElement);
             
-            // 선택 영역 복원 - 마커를 찾아서 복원
             util.selection.restoreSelectionByMarker(contentArea, 'code[data-selection-marker="true"]', 10)
               .then(success => {
                 if (!success) {
@@ -72,65 +91,62 @@
                   contentArea.focus();
                 }
               });
-          }
+        } else {
+            // 선택 영역이 없는 경우: 기본 코드 블록 삽입
+            insertDefaultCodeBlock(range);
         }
-      });
-
-      return button;
+    } else {
+        // 선택 객체가 없는 경우: 맨 끝에 기본 코드 블록 삽입
+        insertDefaultCodeBlockAtEnd(contentArea);
     }
-  });
+  }
 
-  // Code 단축키 (Alt+C)
-  LiteEditor.registerShortcut('code', {
-    key: 'c',
-    alt: true,
-    action: function(contentArea) {
-      // 선택 영역이 있는 경우에만 처리
-      const selection = util.selection.getSafeSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (!range.collapsed) {
-          // 선택 영역의 오프셋 저장
-          const offsets = util.selection.calculateOffsets(contentArea);
-          
-          // 선택된 텍스트 가져오기
-          let selectedText = range.toString();
-          
-          // 불필요한 줄바꿈 제거 및 포맷
-          const trimmedText = selectedText.replace(/[\s\n\r]+$/, '');
-          selectedText = trimmedText;
-          
-          // HTML 이스케이프 처리
-          const formattedText = selectedText
-            .split('\n')
-            .map(line => line.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
-            .join('\n');
-          
-          // 선택 영역 삭제 후 코드 태그 삽입
-          range.deleteContents();
-          
-          // 코드 요소 생성 및 삽입
-          const codeElement = document.createElement('code');
-          codeElement.setAttribute('data-selection-marker', 'true');
-          codeElement.style.display = 'block';
-          codeElement.style.width = '100%';
-          codeElement.style.padding = '10px';
-          codeElement.style.borderRadius = '4px';
-          codeElement.style.fontFamily = 'monospace';
-          codeElement.innerHTML = formattedText;
-          
-          range.insertNode(codeElement);
-          
-          // 선택 영역 복원
-          util.selection.restoreSelectionByMarker(contentArea, 'code[data-selection-marker="true"]', 10)
-            .then(success => {
-              if (!success) {
-                util.selection.restoreFromOffsets(contentArea, offsets);
-                contentArea.focus();
-              }
-            });
-        }
-      }
-    }
-  });
+  /**
+   * 기본 코드 요소 생성 (통일된 스타일)
+   */
+  function createDefaultCodeElement() {
+    const codeElement = document.createElement('code');
+    codeElement.textContent = '\u200B'; // Zero-width space
+    
+    // 멀티라인과 동일한 스타일 적용
+    codeElement.style.display = 'block';
+    codeElement.style.width = '100%';
+    codeElement.style.padding = '10px';
+    codeElement.style.borderRadius = '4px';
+    codeElement.style.fontFamily = 'monospace';
+    codeElement.style.backgroundColor = '#f8f8f8';
+    codeElement.style.border = '1px solid #e0e0e0';
+    codeElement.contentEditable = 'true';
+    
+    return codeElement;
+  }
+
+  /**
+   * 기본 한줄짜리 코드 블록 삽입
+   */
+  function insertDefaultCodeBlock(range) {
+    const codeElement = createDefaultCodeElement();
+    range.insertNode(codeElement);
+    
+    // 포커스 + 커서 끝으로
+    setTimeout(() => {
+        codeElement.focus();
+        const range = document.createRange();
+        range.selectNodeContents(codeElement);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }, 0);
+  }
+  
+  /**
+   * 맨 끝에 기본 코드 블록 삽입
+   */
+  function insertDefaultCodeBlockAtEnd(contentArea) {
+    const codeElement = createDefaultCodeElement();
+    contentArea.appendChild(codeElement);
+    
+    setTimeout(() => codeElement.focus(), 0);
+  }
 })();
