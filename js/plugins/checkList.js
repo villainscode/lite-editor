@@ -39,7 +39,7 @@
     // ✅ 체크박스 이벤트 (한 곳에서만 처리)
     checkbox.addEventListener('change', function() {
       label.style.textDecoration = this.checked ? 'line-through' : 'none';
-      label.style.color = this.checked ? '#666' : '';
+      label.style.color = this.checked ? '#999' : '';
     });
     
     container.appendChild(checkbox);
@@ -354,13 +354,13 @@
         
         checkbox.addEventListener('change', function() {
           label.style.textDecoration = this.checked ? 'line-through' : 'none';
-          label.style.color = this.checked ? '#666' : '';
+          label.style.color = this.checked ? '#999' : '';
         });
         
         // 현재 상태 반영
         if (checkbox.checked) {
           label.style.textDecoration = 'line-through';
-          label.style.color = '#666';
+          label.style.color = '#999';
         }
       }
     });
