@@ -566,7 +566,7 @@
     };
     
     // 디버깅 모드 설정 (이전 설정 유지)
-    window.DEBUG_MODE = window.DEBUG_MODE !== undefined ? window.DEBUG_MODE : true;
+    window.DEBUG_MODE = window.DEBUG_MODE !== undefined ? window.DEBUG_MODE : false;
     
     // 개발자 모드 설정 (이전 설정 유지)
     window.DEVELOPER_MODE = window.DEVELOPER_MODE !== undefined ? window.DEVELOPER_MODE : false;

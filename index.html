@@ -559,8 +559,8 @@
     
     <script>
         // 디버그 모드를 명시적으로 활성화 (loader.js 로드 전에 설정)
-        window.DEBUG_MODE = true;
-        console.log('[DEBUG] 디버그 모드 활성화됨 - index.html에서 설정');
+        window.DEBUG_MODE = false;
+        console.log(`[DEBUG] 디버그 모드 ${window.DEBUG_MODE ? '활성화' : '비활성화'}됨 - index.html에서 설정`);
 
         // 버전 정보 표시 및 클릭 추적 초기화
         document.addEventListener('lite-editor-loaded', function() {
@@ -570,7 +570,7 @@
                 versionDisplay.textContent = window.LiteEditorVersion.version;
             }
             
-            // �� 수정: errorHandler 로드 확인 후 실행
+            // 수정: errorHandler 로드 확인 후 실행
             if (window.errorHandler) {
                 const contentArea = document.querySelector('#lite-editor-content');
                 if (contentArea) {

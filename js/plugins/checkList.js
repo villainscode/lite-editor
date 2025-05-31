@@ -452,9 +452,6 @@
       if (window.LiteEditorHistory) {
         const editorId = contentArea.getAttribute('data-editor') || 'main-editor';
         const beforeState = contentArea.innerHTML;
-        
-        console.log('📚 [CheckList] 히스토리 기록 - 이전 상태:', beforeState.substring(0, 200) + '...');
-        
         window.LiteEditorHistory.recordState(editorId, beforeState, 'CheckList Action');
       }
       
