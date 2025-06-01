@@ -342,6 +342,24 @@ const LiteEditorSecurity = (function() {
   }
   
   /**
+   * HTML 특수 문자 디코딩 처리 (이스케이프 해제)
+   * @param {string} escaped - 디코딩할 문자열
+   * @returns {string} 디코딩된 문자열
+   */
+  function unescapeHtml(escaped) {
+    if (!escaped) return '';
+    
+    return String(escaped)
+         .replace(/&amp;/g, "&")
+         .replace(/&lt;/g, "<")
+         .replace(/&gt;/g, ">")
+         .replace(/&quot;/g, '"')
+         .replace(/&#039;/g, "'")
+         .replace(/&#96;/g, "`")
+         .replace(/&nbsp;/g, " ");
+  }
+  
+  /**
    * 이미지 URL 유효성 검사
    * @param {string} url - 검사할 이미지 URL
    * @returns {boolean} 유효성 여부
@@ -445,7 +463,8 @@ const LiteEditorSecurity = (function() {
     createEmbedUrl,
     VIDEO_PLATFORM_PATTERNS,
     VIDEO_EMBED_CONFIG,
-    escapeHtml
+    escapeHtml,
+    unescapeHtml
   };
 })();
 

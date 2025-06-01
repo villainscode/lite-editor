@@ -82,8 +82,11 @@
     codeElement.style.display = 'block';
     codeElement.style.width = '100%';
     codeElement.style.padding = '5px 10px';
-    codeElement.style.margin = '8px 0';
+    codeElement.style.margin = '0';
     codeElement.textContent = '\u200B'; // 보이지 않는 문자
+
+    // ✅ 키보드 이벤트 핸들러 추가
+    setupCodeBlockKeyboardEvents(codeElement, contentArea);
 
     // 삽입 및 포커스
     range.insertNode(codeElement);
@@ -101,7 +104,7 @@
   }
 
   /**
-   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구조 보존)
+   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구존 보존)
    */
   function wrapSelectedTextWithCode(contentArea, range) {
     // ✅ 오프셋 계산 (복원용)
@@ -114,14 +117,13 @@
     const tempDiv = document.createElement('div');
     tempDiv.appendChild(selectedContent.cloneNode(true));
     
-    // ✅ HTML에서 텍스트 추출 (br 태그 → \n 변환)
+    // ✅ HTML에서 텍스트 추출 (security-manager.js 활용)
     let selectedText = tempDiv.innerHTML
       .replace(/<br\s*\/?>/gi, '\n')  // <br> → \n
-      .replace(/<[^>]*>/g, '')         // 다른 HTML 태그 제거
-      .replace(/&nbsp;/g, ' ')         // &nbsp; → 공백
-      .replace(/&amp;/g, '&')         // &amp; → &
-      .replace(/&lt;/g, '<')          // &lt; → <
-      .replace(/&gt;/g, '>');         // &gt; → >
+      .replace(/<[^>]*>/g, '');       // 다른 HTML 태그 제거
+    
+    // ✅ security-manager.js의 unescapeHtml 함수 사용
+    selectedText = window.LiteEditorSecurity.unescapeHtml(selectedText);
     
     if (!selectedText.trim()) {
       // 실패 시 원래 내용 복원
@@ -141,11 +143,8 @@
       }, '#9c27b0');
     }
 
-    // ✅ HTML 이스케이프 + 줄바꿈 → <br> 변환
-    const escapedText = selectedText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+    // ✅ security-manager.js의 escapeHtml 함수 사용 + 줄바꿈 → <br> 변환
+    const escapedText = window.LiteEditorSecurity.escapeHtml(selectedText)
       .replace(/\n/g, '<br>'); // 줄바꿈 → <br>
 
     // ✅ 인라인 코드 요소 생성 (core.css 기본 활용)
@@ -157,6 +156,9 @@
       codeElement.style.display = 'inline-block';
       codeElement.style.whiteSpace = 'pre-wrap';
     }
+
+    // ✅ 키보드 이벤트 핸들러 추가 (인라인 코드에도)
+    setupCodeBlockKeyboardEvents(codeElement, contentArea);
 
     try {
       // ✅ 선택 영역에 코드 요소 삽입 (이미 extractContents()로 삭제됨)
@@ -175,7 +177,7 @@
         contentArea.focus();
         
         if (window.errorHandler) {
-          errorHandler.colorLog('CODE', '✅ 코드 적용 완료', {
+          errorHandler.colorLog('CODE', '✅ 코드 적용 완료 (Security Manager 활용)', {
             hasLineBreaks: selectedText.includes('\n'),
             display: selectedText.includes('\n') ? 'inline-block' : 'inline',
             finalText: escapedText
@@ -194,5 +196,90 @@
         util.selection.restoreFromOffsets(contentArea, offsets);
       }
     }
+  }
+
+  /**
+   * ✅ 새로 추가: 코드 블럭 키보드 이벤트 설정
+   */
+  function setupCodeBlockKeyboardEvents(codeElement, contentArea) {
+    codeElement.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          // ✅ Shift + Enter: 코드 블럭 안에서 줄바꿈
+          e.preventDefault();
+          insertLineBreakInCode(codeElement);
+          
+          if (window.errorHandler) {
+            errorHandler.colorLog('CODE', '📝 코드 블럭 내 줄바꿈', {}, '#2196f3');
+          }
+        } else {
+          // ✅ Enter: 코드 블럭 탈출 → 새로운 P 태그
+          e.preventDefault();
+          exitCodeBlockToNewParagraph(codeElement, contentArea);
+          
+          if (window.errorHandler) {
+            errorHandler.colorLog('CODE', '🚪 코드 블럭 탈출 → 새 문단', {}, '#4caf50');
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * ✅ 코드 블럭 안에서 줄바꿈 삽입
+   */
+  function insertLineBreakInCode(codeElement) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // 현재 커서 위치에 <br> 태그 삽입
+    const br = document.createElement('br');
+    range.deleteContents();
+    range.insertNode(br);
+    
+    // 커서를 <br> 다음으로 이동
+    range.setStartAfter(br);
+    range.collapse(true);
+    
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  /**
+   * ✅ 코드 블럭에서 탈출하여 새로운 P 태그 생성
+   */
+  function exitCodeBlockToNewParagraph(codeElement, contentArea) {
+    // ✅ 새로운 P 태그 생성
+    const newParagraph = util.dom.createElement('p');
+    newParagraph.innerHTML = '<br>'; // 빈 문단 표시용
+    
+    // ✅ 코드 블럭 다음에 P 태그 삽입
+    if (codeElement.nextSibling) {
+      contentArea.insertBefore(newParagraph, codeElement.nextSibling);
+    } else {
+      contentArea.appendChild(newParagraph);
+    }
+    
+    // ✅ 새로운 P 태그로 커서 이동
+    setTimeout(() => {
+      const newRange = document.createRange();
+      newRange.setStart(newParagraph, 0);
+      newRange.collapse(true);
+      
+      const selection = util.selection.getSafeSelection();
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+      
+      // contentArea에 포커스 설정
+      contentArea.focus();
+      
+      if (window.errorHandler) {
+        errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
+          newParagraph: newParagraph.outerHTML
+        }, '#4caf50');
+      }
+    }, 10);
   }
 })();
