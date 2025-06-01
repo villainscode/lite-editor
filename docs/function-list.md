@@ -59,33 +59,39 @@ lite-editor/
 ### 기본 툴바 기능
 
 1. fontFamily : 폰트 설정 (한글, 영문, 코딩용)
-2. heading : 제목 스타일 지정 (H1 ~ H6)
+2. heading : 제목 스타일 지정 (H1 ~ H6) - `Alt+1` (H1), `Alt+2` (H2), `Alt+3` (H3), `Alt+4` (본문)
 3. fontColor : 글자 색상
 4. backgroundColor : 글자 배경색
-5. bold : 텍스트 굵게
-6. italic : 텍스트 기울임
-7. underline : 텍스트 밑줄
-8. strike : 취소선 
-9. link : 하이퍼링크 삽입/편집
-10. image : 이미지 업로드/삽입
+5. bold : 텍스트 굵게 - `⌘+B`
+6. italic : 텍스트 기울임 - `⌘+I`
+7. underline : 텍스트 밑줄 - `⌘+U`
+8. strike : 취소선 - `⌘+Shift+S`
+9. link : 하이퍼링크 삽입/편집 - `Alt+K`
+10. image : 이미지 업로드/삽입 - `Alt+I`
 11. table : 표 삽입/편집
-12. video : 동영상 삽입
-13. line : 구분선 삽입
-14. blockquote : 블록 강조 
-15. code : 배경색 박스 
+12. video : 동영상 삽입 - `Alt+M`
+13. line : 구분선 삽입 - `Alt+H`
+14. blockquote : 블록 강조 - `Alt+Q`
+15. code : 배경색 박스 - `Alt+C`
 16. codeBlock : 코드 블록 삽입
-17. bulletList : 불릿 목록
-18. numberedList : 번호 목록
-19. checkList : 체크리스트
-20. align-left : 왼쪽 정렬
-21. align-center : 가운데 정렬
-22. align-right : 오른쪽 정렬
-23. align-justify : 양쪽 정렬
-24. indent : 들여쓰기 
-25. outdent : 내어쓰기 
-26. reset : 포맷 제거 
+17. bulletList : 불릿 목록 - `Alt+U`
+18. numberedList : 번호 목록 - `Alt+O`
+19. checkList : 체크리스트 - `Alt+K`
+20. align-left : 왼쪽 정렬 - `Alt+Shift+L`
+21. align-center : 가운데 정렬 - `Alt+Shift+C`
+22. align-right : 오른쪽 정렬 - `Alt+Shift+R`
+23. align-justify : 양쪽 정렬 - `Alt+Shift+J`
+24. indent : 들여쓰기 - `Tab`
+25. outdent : 내어쓰기 - `Shift+Tab`
+26. reset : 포맷 제거 - `⌘+Shift+\`
 
+### 편집 도구 단축키
 
+- undo : 실행 취소 - `⌘+Z` (window: `Ctrl+Z`)
+- redo : 재실행 - `⌘+Shift+Z` (window: `Ctrl+Shift+Z`)
+- copy : 복사 - `⌘+C` (window: `Ctrl+C`)
+- paste : 붙여넣기 - `⌘+V` (window: `Ctrl+V`)
+- cut : 잘라내기 - `⌘+X` (Mac: `Ctrl+X`)
 
 ## 🔧 Core 시스템 파일
 

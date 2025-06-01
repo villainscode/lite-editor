@@ -1,7 +1,7 @@
 /**
  * LiteEditor Code Plugin
  * 텍스트 코드 서식 플러그인
- * 여러 줄에 걸친 코드 적용 시에도 줄바꿈이 유지되도록 개선
+ * 선택 영역에 따른 정확한 코드 처리
  */
 
 (function() {
@@ -27,7 +27,7 @@
         e.stopPropagation();
         
         if (!util.utils.canExecutePlugin(contentArea)) {
-            return;
+          return;
         }
         
         contentArea.focus();
@@ -48,7 +48,7 @@
   });
 
   /**
-   * 코드 서식 적용 - blockquote와 동일한 UX
+   * ✅ 시퀀셜 처리: 코드 서식 적용 메인 함수
    */
   function applyCodeFormat(contentArea) {
     const selection = util.selection.getSafeSelection();
@@ -56,106 +56,143 @@
     
     const range = selection.getRangeAt(0);
     
-    if (!range.collapsed) {
-      // 선택 영역이 있는 경우: 인라인 code 적용
-      applyInlineCode(range);
+    if (range.collapsed) {
+      // ✅ 시퀀스 1: 빈 커서 → 100% 블록 코드
+      createEmptyCodeBlock(contentArea, range);
     } else {
-      // ✅ execCommand와 동일한 방식으로 블록 찾기
-      applyBlockCodeUsingExecCommand(contentArea);
+      // ✅ 시퀀스 2: 선택 영역 → 정확한 범위만 코드로 감싸기
+      wrapSelectedTextWithCode(contentArea, range);
     }
   }
 
   /**
-   * 선택된 영역을 code 태그로 감싸기
+   * ✅ 빈 커서 → 100% 사이즈 빈 코드 블록 생성
    */
-  function applyInlineCode(range) {
-    const selectedText = range.toString();
-    range.deleteContents();
+  function createEmptyCodeBlock(contentArea, range) {
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '📝 빈 코드 블록 생성', {}, '#9c27b0');
+    }
+
+    // ✅ core.css 기본 스타일 + 블록 속성
+    const codeElement = util.dom.createElement('code', {
+      'contenteditable': 'true'
+    });
     
-    // ✅ 앞뒤 불필요한 공백만 제거, 중간 구조는 보존
-    const cleanedText = selectedText.trim();
-    
-    const codeElement = createStyledCodeElement(cleanedText);
-    
+    // ✅ 블록 레벨 스타일만 추가 (core.css 기본 활용)
+    codeElement.style.display = 'block';
+    codeElement.style.width = '100%';
+    codeElement.style.padding = '5px 10px';
+    codeElement.style.margin = '8px 0';
+    codeElement.textContent = '\u200B'; // 보이지 않는 문자
+
+    // 삽입 및 포커스
     range.insertNode(codeElement);
     
-    // ✅ 공통 함수 사용
-    focusCodeElementEnd(codeElement);
-  }
-
-  /**
-   * ✅ execCommand('formatBlock')과 동일한 방식으로 블록 code 적용
-   */
-  function applyBlockCodeUsingExecCommand(contentArea) {
-    // 1. 임시로 pre 태그로 변환 (execCommand가 정확한 블록 찾기)
-    document.execCommand('formatBlock', false, 'pre');
-    
-    // 2. 생성된 pre 태그를 code 태그로 변환
-    setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection || !selection.rangeCount) return;
-      
-      const range = selection.getRangeAt(0);
-      let preElement = null;
-      
-      // 현재 선택 영역에서 pre 태그 찾기
-      let current = range.startContainer;
-      if (current.nodeType === Node.TEXT_NODE) {
-        current = current.parentElement;
-      }
-      
-      while (current && current !== contentArea) {
-        if (current.tagName === 'PRE') {
-          preElement = current;
-          break;
-        }
-        current = current.parentElement;
-      }
-      
-      if (preElement) {
-        const codeElement = createStyledCodeElement(preElement.textContent);
-        
-        // pre를 code로 교체
-        preElement.parentNode.replaceChild(codeElement, preElement);
-        
-        // ✅ 공통 함수 사용
-        focusCodeElementEnd(codeElement);
-      }
-    }, 0);
-  }
-  /**
-   * 스타일이 적용된 code 요소 생성 (공통 함수)
-   */
-  function createStyledCodeElement(textContent) {
-    const codeElement = document.createElement('code');
-    codeElement.textContent = textContent || '\u200B';
-    
-    // ✅ 공통 블록 레벨 스타일
-    codeElement.style.display = 'block';
-    codeElement.style.fontFamily = 'monospace';
-    codeElement.style.backgroundColor = '#f8f8f8';
-    codeElement.style.padding = '10px';
-    codeElement.style.borderRadius = '4px';
-    codeElement.style.border = '1px solid #e0e0e0';
-    codeElement.style.whiteSpace = 'pre-wrap';
-    codeElement.style.margin = '8px 0';
-    codeElement.contentEditable = 'true';
-    
-    return codeElement;
-  }
-
-  /**
-   * code 요소 내부 끝으로 커서 이동 및 포커스 (공통 함수)
-   */
-  function focusCodeElementEnd(codeElement) {
     setTimeout(() => {
       const newRange = document.createRange();
       newRange.selectNodeContents(codeElement);
-      newRange.collapse(false);
-      const sel = window.getSelection();
+      newRange.collapse(true);
+      
+      const sel = util.selection.getSafeSelection();
       sel.removeAllRanges();
       sel.addRange(newRange);
       codeElement.focus();
-    }, 0);
+    }, 10);
+  }
+
+  /**
+   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구조 보존)
+   */
+  function wrapSelectedTextWithCode(contentArea, range) {
+    // ✅ 오프셋 계산 (복원용)
+    const offsets = util.selection.calculateOffsets(contentArea);
+    
+    // ✅ HTML 구조를 보존하면서 내용 추출
+    const selectedContent = range.extractContents();
+    
+    // ✅ 추출된 내용을 임시 div에 넣어서 HTML 분석
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(selectedContent.cloneNode(true));
+    
+    // ✅ HTML에서 텍스트 추출 (br 태그 → \n 변환)
+    let selectedText = tempDiv.innerHTML
+      .replace(/<br\s*\/?>/gi, '\n')  // <br> → \n
+      .replace(/<[^>]*>/g, '')         // 다른 HTML 태그 제거
+      .replace(/&nbsp;/g, ' ')         // &nbsp; → 공백
+      .replace(/&amp;/g, '&')         // &amp; → &
+      .replace(/&lt;/g, '<')          // &lt; → <
+      .replace(/&gt;/g, '>');         // &gt; → >
+    
+    if (!selectedText.trim()) {
+      // 실패 시 원래 내용 복원
+      range.insertNode(selectedContent);
+      if (window.errorHandler) {
+        errorHandler.logError('CODE', 'EMPTY_SELECTION', new Error('선택된 텍스트가 없습니다.'));
+      }
+      return;
+    }
+
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '📝 선택 영역 코드 적용', {
+        text: selectedText.substring(0, 50) + '...',
+        hasLineBreaks: selectedText.includes('\n'),
+        length: selectedText.length,
+        originalHTML: tempDiv.innerHTML.substring(0, 100) + '...'
+      }, '#9c27b0');
+    }
+
+    // ✅ HTML 이스케이프 + 줄바꿈 → <br> 변환
+    const escapedText = selectedText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>'); // 줄바꿈 → <br>
+
+    // ✅ 인라인 코드 요소 생성 (core.css 기본 활용)
+    const codeElement = util.dom.createElement('code');
+    codeElement.innerHTML = escapedText;
+    
+    // ✅ CSS :has(br) 룰 오버라이드 (인라인 유지)
+    if (selectedText.includes('\n')) {
+      codeElement.style.display = 'inline-block';
+      codeElement.style.whiteSpace = 'pre-wrap';
+    }
+
+    try {
+      // ✅ 선택 영역에 코드 요소 삽입 (이미 extractContents()로 삭제됨)
+      range.insertNode(codeElement);
+      
+      // ✅ 커서를 코드 요소 다음으로 이동
+      setTimeout(() => {
+        const newRange = document.createRange();
+        newRange.setStartAfter(codeElement);
+        newRange.collapse(true);
+        
+        const sel = util.selection.getSafeSelection();
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        
+        contentArea.focus();
+        
+        if (window.errorHandler) {
+          errorHandler.colorLog('CODE', '✅ 코드 적용 완료', {
+            hasLineBreaks: selectedText.includes('\n'),
+            display: selectedText.includes('\n') ? 'inline-block' : 'inline',
+            finalText: escapedText
+          }, '#4caf50');
+        }
+      }, 10);
+      
+    } catch (error) {
+      if (window.errorHandler) {
+        errorHandler.logError('CODE', 'WRAP_ERROR', error);
+      }
+      
+      // ✅ 실패 시 원래 내용 복원
+      range.insertNode(selectedContent);
+      if (offsets) {
+        util.selection.restoreFromOffsets(contentArea, offsets);
+      }
+    }
   }
 })();

@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LiteEditor 데모</title>
+    
+    <!-- ✅ LiteEditor CSS 로드 -->
+    <link rel="stylesheet" href="css/core.css">
+    <link rel="stylesheet" href="css/plugins/plugins.css">
+    
+    <!-- 새로 추가할 링크 -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    
     <style>
-
     /* 페이지 레이아웃 스타일 */
     body.demo-page {
       background-color: #f5f5f7;
@@ -70,6 +77,33 @@
       margin-bottom: 0.5rem;
     }
 
+
+    /* ✅ 에디터 콘텐츠 내 헤딩 스타일 */
+    #lite-editor-content h1 {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 0.5em 0;
+      color: #333;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 0.3em;
+    }
+
+    #lite-editor-content h2 {
+      font-size: 1.75rem;
+      font-weight: bold;
+      margin: 0.4em 0;
+      color: #333;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 0.2em;
+    }
+
+    #lite-editor-content h3 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 0.3em 0;
+      color: #333;
+    }
+
     /* 기능 목록 스타일 */
     .features-list {
       display: grid;
@@ -91,17 +125,19 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .feature-item h4 {
+    .feature-item h3 {
       color: #333;
       margin-top: 0;
+      margin-bottom: 0.5rem;
       font-size: 1.1rem;
       display: flex;
       align-items: center;
     }
 
-    .feature-item h4 .material-icons {
+    .feature-item h3 .material-icons {
       margin-right: 8px;
       color: #1a73e8;
+      font-size: 1.2rem;
     }
 
     .feature-item p {
@@ -133,78 +169,118 @@
       }
     } 
 
-    /* 단축키 치트시트 스타일 */
-    .shortcuts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-      margin: 1.5rem 0;
-    }
-
-    .shortcut-item {
-      display: flex;
-      align-items: center;
-      background-color: #f8f9fa;
-      border-radius: 6px;
-      padding: 12px 16px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
-      border-left: 4px solid #1a73e8;
-    }
-
-    .shortcut-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .shortcut-item .material-icons {
-      color: #1a73e8;
-      margin-right: 12px;
-      flex-shrink: 0;
-    }
-
-    .shortcut-item .shortcut-key {
-      background-color: #e8f0fe;
-      color: #1a73e8;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-family: monospace;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-right: 8px;
-      min-width: 60px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .shortcut-item .shortcut-desc {
-      color: #333;
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-
+    /* ✅ 단축키 치트시트 스타일 - 레이아웃 통일성 개선 */
     .shortcuts-category {
-      margin-bottom: 2rem;
+        margin-bottom: 40px;
+        max-width: 1080px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .shortcuts-category h3 {
-      color: #1a73e8;
-      margin-bottom: 1rem;
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 1.3em;
+        color: #333;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+        width: 100%;
     }
 
-    .shortcuts-category h3 .material-icons {
-      margin-right: 8px;
-      font-size: 1.2rem;
+    .shortcuts-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        align-items: flex-start;
     }
 
-    /* 반응형 디자인 */
-    @media (max-width: 768px) {
-      .shortcuts-grid {
-        grid-template-columns: 1fr;
-      }
+    /* ✅ 단축키 아이템 - 한줄 구조 */
+    .shortcut-item {
+        width: 240px; /* 너비 고정 */
+        height: 60px; /* 높이 조정 */
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: row; /* 가로 배치 */
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+
+    .shortcut-item:hover {
+        background: #e7f3ff;
+        border-color: #007bff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+
+    /* ✅ 아이콘 + 설명 부분 */
+    .shortcut-item-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1; /* 남은 공간 차지 */
+    }
+
+    .shortcut-item .material-icons {
+        font-size: 18px;
+        color: #007bff;
+        flex-shrink: 0;
+    }
+
+    .shortcut-desc {
+        font-size: 13px;
+        color: #333;
+        font-weight: 500;
+    }
+
+    /* ✅ 단축키 부분 */
+    .shortcut-key {
+        background: #495057;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: bold;
+        white-space: nowrap;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .shortcut-key .material-icons {
+        font-size: 14px !important;
+        color: white !important;
+    }
+
+    /* ✅ 강제 우선순위 적용 */
+    .example .lite-editor-content ul,
+    .example .lite-editor-content ol {
+        margin-top: 0 !important;
+        margin-bottom: 0.2em !important;
+        padding-left: 2em !important;
+        list-style: initial !important;
+    }
+
+    .example .lite-editor-content ul {
+        list-style-type: disc !important;
+    }
+
+    .example .lite-editor-content ol {
+        list-style-type: decimal !important;
+    }
+
+    .example .lite-editor-content li + li {
+        margin-top: 0.25em !important;
     }
     </style>
 
@@ -227,71 +303,46 @@
                         <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
                         <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
                         <p></p>
+                       
+
                         1. fontFamily : 폰트 설정 (한글, 영문, 코딩용)<br>
-                        2. heading : 제목 스타일 지정 (H1 ~ H3, p)<br>
+                        2. heading : 제목 스타일 지정 (H1 ~ H6) - <code>Alt+1</code> (H1), <code>Alt+2</code> (H2), <code>Alt+3</code> (H3), <code>Alt+4</code> (본문)<br>
                         3. fontColor : 글자 색상<br>
                         4. backgroundColor : 글자 배경색<br>
-                        5. bold : 텍스트 굵게<br>
-                        6. italic : 텍스트 기울임<br>
-                        7. underline : 텍스트 밑줄<br>
-                        8. strike : 취소선 <br>
-                        9. link : 하이퍼링크 삽입/편집<br>
+                        5. bold : 텍스트 굵게 - <code>⌘+B</code><br>
+                        6. italic : 텍스트 기울임 - <code>⌘+I</code><br>
+                        7. underline : 텍스트 밑줄 - <code>⌘+U</code><br>
+                        8. strike : 취소선 - <code>⌘+Shift+S</code><br>
+                        9. link : 하이퍼링크 삽입/편집 - <code>Alt+K</code><br>
                         10. image : 이미지 업로드/삽입<br>
                         11. table : 표 삽입/편집<br>
-                        12. video : 동영상 삽입<br>
-                        13. line : 구분선 삽입<br>
-                        14. blockquote : 블록 강조<br> 
-                        15. code : 배경색 박스 <br>
+                        12. video : 동영상 삽입 - <code>Alt+M</code><br>
+                        13. line : 구분선 삽입 - <code>Alt+H</code><br>
+                        14. blockquote : 블록 강조 - <code>Alt+Q</code><br>
+                        15. code : 배경색 박스 - <code>Alt+C</code><br>
                         16. codeBlock : 코드 블록 삽입<br>
-                        17. bulletList : 불릿 목록<br>
-                        18. numberedList : 번호 목록<br>
-                        19. checkList : 체크리스트<br>
-                        20. align-left : 왼쪽 정렬<br>
-                        21. align-center : 가운데 정렬<br>
-                        22. align-right : 오른쪽 정렬<br>
-                        23. align-justify : 양쪽 정렬<br>
-                        24. indent : 들여쓰기 <br>
-                        25. outdent : 내어쓰기 <br>
-                        26. reset : 포맷 제거 <br>
+                        17. bulletList : 불릿 목록 - <code>Alt+U</code><br>
+                        18. numberedList : 번호 목록 - <code>Alt+O</code><br>
+                        19. checkList : 체크리스트 - <code>Alt+K</code><br>
+                        20. align-left : 왼쪽 정렬 - <code>Alt+Shift+L</code><br>
+                        21. align-center : 가운데 정렬 - <code>Alt+Shift+C</code><br>
+                        22. align-right : 오른쪽 정렬 - <code>Alt+Shift+R</code><br>
+                        23. align-justify : 양쪽 정렬 - <code>Alt+Shift+J</code><br>
+                        24. indent : 들여쓰기 - <code>Tab</code><br>
+                        25. outdent : 내어쓰기 - <code>Shift+Tab</code><br>
+                        26. reset : 포맷 제거 - <code>⌘+Shift+\</code><br>
 
-                        
-                        <h3>텍스트 서식</h3>
-                        <ul>
-                          <li><kbd>Alt+B</kbd>: 굵게</li>
-                          <li><kbd>Alt+I</kbd>: 기울임</li>
-                          <li><kbd>Alt+U</kbd>: 밑줄</li>
-                          <li><kbd>Alt+S</kbd>: 취소선</li>
-                        </ul>
-                        
-                        <h3>헤딩</h3>
-                        <ul>
-                          <li><kbd>Alt+1</kbd>: 제목 1</li>
-                          <li><kbd>Alt+2</kbd>: 제목 2</li>
-                          <li><kbd>Alt+3</kbd>: 제목 3</li>
-                          <li><kbd>Alt+4</kbd>: 본문</li>
-                        </ul>
+                        <br>
+                        편집 도구 단축키<br>
+                        <br>
+                        - undo : 실행 취소 - <code>⌘+Z</code> (window: <code>Ctrl+Z</code>)<br>
+                        - redo : 재실행 - <code>⌘+Shift+Z</code> (window: <code>Ctrl+Shift+Z</code>)<br>
+                        - copy : 복사 - <code>⌘+C</code> (window: <code>Ctrl+C</code>)<br>
+                        - paste : 붙여넣기 - <code>⌘+V</code> (window: <code>Ctrl+V</code>)<br>
+                        - cut : 잘라내기 - <code>⌘+X</code> (Mac: <code>Ctrl+X</code>)
                         <br>https://raw.githubusercontent.com/villainscode/tech-interview-for-junior/main/image/comment.png<br>
-                        <h3>정렬</h3>
-                        <ul>
-                          <li><kbd>Ctrl+Alt+L</kbd>: 왼쪽 정렬</li>
-                          <li><kbd>Ctrl+Alt+C</kbd>: 가운데 정렬</li>
-                          <li><kbd>Ctrl+Alt+R</kbd>: 오른쪽 정렬</li>
-                        </ul>
-                        
-                        <h3>목록</h3>
-                        <ul>
-                          <li><kbd>Alt+U</kbd>: 순서 없는 목록</li>
-                          <li><kbd>Alt+O</kbd>: 순서 있는 목록</li>
-                          <li><kbd>Alt+K</kbd>: 체크 목록</li>
-                        </ul>
-                        
-                        <h3>기타</h3>
-                        <ul>
-                          <li><kbd>Alt+Q</kbd>: 인용구</li>
-                          <li><kbd>Alt+H</kbd>: 수평선 삽입</li>
-                          <li><kbd>Alt+C</kbd>: 코드 삽입</li>
-                        </ul>
 
+                    
                         <p>LiteEditor 기능 테스트용 샘플 텍스트, 이 크기는 h2 태그입니다.</p>
 
                         <p>기본 서식 테스트, 이 크기는 h3 태그입니다.</p>
@@ -359,7 +410,9 @@
 
                         <h3>코드 및 코드블럭 하일라이팅, 자동 Syntax 하일라이팅 적용</h3>
                         <p>인라인 코드를 테스트하려면 이 부분을 선택하고 Code 버튼을 클릭하세요.</p>
-                        <p>코드블럭을 테스트하려면 아래 텍스트를 선택하고 CodeBlock 버튼을 클릭하세요:</p>
+                        <div class="example">
+                            이 함수는 <code>console.log()</code>를 사용합니다.
+                        </div>
                         
                     function testFunction() {<br>
                       &nbsp;&nbsp;&nbsp;&nbsp;console.log("Hello, LiteEditor!");<br>
@@ -451,38 +504,56 @@
             
             <div class="features-list">
                 <div class="feature-item">
-                    <span class="material-icons">format_bold</span>
-                    <h3>굵게 (Bold)</h3>
-                    <p><strong>중요한 텍스트를 강조</strong>할 때 사용합니다. 단축키: Ctrl+B</p>
-                    <div class="example">예시: <strong>이 텍스트는 굵게 표시됩니다</strong></div>
-                </div>
-                
-                <div class="feature-item">
-                    <span class="material-icons">format_italic</span>
-                    <h3>기울임 (Italic)</h3>
-                    <p><em>강조나 인용</em>에 사용되는 기울임 서식입니다. 단축키: Ctrl+I</p>
-                    <div class="example">예시: <em>이 텍스트는 기울임으로 표시됩니다</em></div>
-                </div>
-                
-                <div class="feature-item">
-                    <span class="material-icons">format_underlined</span>
-                    <h3>밑줄 (Underline)</h3>
-                    <p><u>텍스트에 밑줄</u>을 추가하여 강조합니다. 단축키: Ctrl+U</p>
-                    <div class="example">예시: <u>이 텍스트에는 밑줄이 그어집니다</u></div>
-                </div>
-                
-                <div class="feature-item">
-                    <span class="material-icons">format_strikethrough</span>
-                    <h3>취소선 (Strikethrough)</h3>
-                    <p><s>삭제된 내용이나 수정사항</s>을 표시할 때 사용합니다.</p>
-                    <div class="example">예시: <s>이 텍스트는 취소선 처리됩니다</s></div>
-                </div>
-                
-                <div class="feature-item">
-                    <span class="material-icons">title</span>
-                    <h3>제목 (Heading)</h3>
-                    <p>문서의 계층 구조 지원</p>
+                    <h3>
+                        <span class="material-symbols-outlined">format_bold</span>
+                        굵게 (Bold)
+                    </h3>
+                    <p><strong>중요한 텍스트를 강조</strong>할 때 사용합니다. <br>단축키: ⌘+B</p>
                     <div class="example">
+                        <strong>이 텍스트는 굵게 표시</strong>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>
+                        <span class="material-symbols-outlined">format_italic</span>
+                        기울임 (Italic)
+                    </h3>
+                    <p><em>강조나 인용</em>에 사용되는 기울임 서식 <br>단축키: ⌘+I</p>
+                    <div class="example">
+                        <em>이 텍스트는 기울임으로 표시</em>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>
+                        <span class="material-symbols-outlined">format_underlined</span>
+                        밑줄 (Underline)
+                    </h3>
+                    <p><u>텍스트에 밑줄</u>을 추가하여 강조합니다. <br>단축키: ⌘+U</p>
+                    <div class="example">
+                        <u>이 텍스트에는 밑줄이 그어짐</u>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>
+                        <span class="material-symbols-outlined">format_strikethrough</span>
+                        취소선 (Strikethrough)
+                    </h3>
+                    <p><s>삭제된 내용이나 수정사항</s>을 표시할 때 사용합니다. <br>단축키: ⌘+S</p>
+                    <div class="example">
+                        <s>이 텍스트는 취소선 처리</s>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>
+                        <span class="material-symbols-outlined">title</span>
+                        제목 (Heading)
+                    </h3>
+                    <p>문서의 계층 구조를 만들기 위한 제목 스타일입니다.</p>
+                    <div class="example lite-editor-content">
                         <h1>제목 1 (H1)</h1>
                         <h2>제목 2 (H2)</h2>
                         <h3>제목 3 (H3)</h3>
@@ -491,10 +562,12 @@
                 </div>
                 
                 <div class="feature-item">
-                    <span class="material-icons">format_quote</span>
-                    <h3>인용구 (Blockquote)</h3>
+                    <h3>
+                        <span class="material-symbols-outlined">format_quote</span>
+                        인용구 (Blockquote)
+                    </h3>
                     <p>다른 사람의 말이나 중요한 인용문을 표시할 때 사용합니다.</p>
-                    <div class="example">
+                    <div class="example lite-editor-content">
                         <blockquote>
                             "혁신은 1%의 영감과 99%의 노력으로 이루어진다" - 토마스 에디슨
                         </blockquote>
@@ -502,9 +575,11 @@
                 </div>
                 
                 <div class="feature-item">
-                    <span class="material-icons">format_align_justify</span>
-                    <h3>정렬 (Alignment)</h3>
-                    <p>텍스트의 정렬 방향을 설정할 수 있습니다.</p>
+                    <h3>
+                        <span class="material-symbols-outlined">format_align_justify</span>
+                        정렬 (Alignment)
+                    </h3>
+                    <p>텍스트의 정렬 방향을 설정할 수 있습니다.<br>단축키: Alt+Shift+L, C, R, J</p>
                     <div class="example">
                         <p style="text-align: left;">← 왼쪽 정렬</p>
                         <p style="text-align: center;">중앙 정렬</p>
@@ -513,8 +588,10 @@
                 </div>
                 
                 <div class="feature-item">
-                    <span class="material-icons">format_indent_increase</span>
-                    <h3>들여쓰기 (Indent)</h3>
+                    <h3>
+                        <span class="material-symbols-outlined">format_indent_increase</span>
+                        들여쓰기 (Indent), 내어쓰기 (Outdent)
+                    </h3>
                     <p>텍스트나 목록의 들여쓰기를 조정할 수 있습니다.</p>
                     <div class="example">
                         <p>기본 들여쓰기</p>
@@ -525,186 +602,220 @@
 
                 <!-- 글꼴 선택 (Font Family) -->
                 <div class="feature-item">
-                  <span class="material-icons">font_download</span>
-                  <h3>글꼴 (Font Family)</h3>
-                  <p>다양한 글꼴을 선택하여 텍스트 스타일을 변경할 수 있습니다.</p>
-                  <div class="example">
-                    <div style="font-family: Arial;">Arial 글꼴로 작성된 텍스트</div>
-                    <div style="font-family: 'Times New Roman';">Times New Roman 글꼴로 작성된 텍스트</div>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">font_download</span>
+                        글꼴 (Font Family)
+                    </h3>
+                    <p>다양한 글꼴을 선택하여 텍스트 스타일을 변경할 수 있습니다.</p>
+                    <div class="example lite-editor-content">
+                      <div style="font-family: 'Do Hyeon';">도현체 글꼴로 작성된 텍스트</div>   
+                        <div style="font-family: 'Times New Roman';">Times New Roman 글꼴로 작성된 텍스트</div>
+                    </div>
                 </div>
 
                 <!-- 글자색 (Font Color) -->
                 <div class="feature-item">
-                  <span class="material-icons">palette</span>
-                  <h3>글자색 (Font Color)</h3>
-                  <p>텍스트 색상을 변경하여 시각적 효과를 줄 수 있습니다.</p>
-                  <div class="example">
-                    <span style="color: #ff0000;">빨간색 텍스트</span> |
-                    <span style="color: #0000ff;">파란색 텍스트</span> |
-                    <span style="color: #00aa00;">초록색 텍스트</span>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">palette</span>
+                        글자색 (Font Color)
+                    </h3>
+                    <p>텍스트 색상을 변경하여 시각적 효과를 줄 수 있습니다.</p>
+                    <div class="example lite-editor-content">
+                        <span style="color: #ff0000;">빨간색 텍스트</span> |
+                        <span style="color: #0000ff;">파란색 텍스트</span> |
+                        <span style="color: #00aa00;">초록색 텍스트</span>
+                    </div>
                 </div>
 
-                <!-- 형광펜 (Emphasis/Highlight) -->
+                <!-- 형광펜 (Emphasis) -->
                 <div class="feature-item">
-                  <span class="material-icons">format_color_fill</span>
-                  <h3>형광펜 (Emphasis)</h3>
-                  <p>중요한 내용에 배경색을 추가하여 강조할 수 있습니다.</p>
-                  <div class="example">
-                    <mark style="background-color: #ffff00;">노란색 형광펜</mark> |
-                    <mark style="background-color: #ffaa00;">주황색 형광펜</mark>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">format_color_fill</span>
+                        형광펜 (Emphasis)
+                    </h3>
+                    <p>중요한 내용에 배경색을 추가하여 강조할 수 있습니다.</p>
+                    <div class="example lite-editor-content">
+                        <mark style="background-color: #ffff00;">노란색 형광펜</mark> |
+                        <mark style="background-color: #ffaa00;">주황색 형광펜</mark>
+                    </div>
                 </div>
 
                 <!-- 불릿 목록 (Bullet List) -->
                 <div class="feature-item">
-                  <span class="material-icons">format_list_bulleted</span>
-                  <h3>불릿 목록 (Bullet List)</h3>
-                  <p>순서가 없는 항목들을 나열할 때 사용합니다.</p>
-                  <div class="example">
-                    <ul>
-                      <li>첫 번째 항목</li>
-                      <li>두 번째 항목</li>
-                      <li>세 번째 항목</li>
-                    </ul>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">format_list_bulleted</span>
+                        불릿 목록 (Bullet List)
+                    </h3>
+                    <p>순서가 없는 항목들을 나열할 때 사용합니다.</p>
+                    <div class="example">
+                        <div class="lite-editor-content">
+                            <ul>
+                                <li>첫 번째 항목</li>
+                                <li>두 번째 항목</li>
+                                <li>세 번째 항목</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 번호 목록 (Numbered List) -->
                 <div class="feature-item">
-                  <span class="material-icons">format_list_numbered</span>
-                  <h3>번호 목록 (Numbered List)</h3>
-                  <p>순서가 있는 항목들을 나열할 때 사용합니다.</p>
-                  <div class="example">
-                    <ol>
-                      <li>첫 번째 단계</li>
-                      <li>두 번째 단계</li>
-                      <li>세 번째 단계</li>
-                    </ol>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">format_list_numbered</span>
+                        번호 목록 (Numbered List)
+                    </h3>
+                    <p>순서가 있는 항목들을 나열할 때 사용합니다.</p>
+                    <div class="example">
+                        <div class="lite-editor-content">
+                            <ol>
+                                <li>첫 번째 단계</li>
+                                <li>두 번째 단계</li>
+                                <li>세 번째 단계</li>
+                            </ol>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 체크리스트 (Check List) -->
                 <div class="feature-item">
-                  <span class="material-icons">checklist</span>
-                  <h3>체크리스트 (Check List)</h3>
-                  <p>할 일 목록이나 완료 체크가 필요한 항목에 사용합니다.</p>
-                  <div class="example">
-                    <div>☑️ 완료된 작업</div>
-                    <div>☐ 진행 중인 작업</div>
-                    <div>☐ 대기 중인 작업</div>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">checklist</span>
+                        체크리스트 (Check List)
+                    </h3>
+                    <p>할 일 목록이나 완료 체크가 필요한 항목에 사용합니다.</p>
+                    <div class="example lite-editor-content">
+                        <div>☑️ <s>완료된 작업</s></div>
+                        <div>☐ 진행 중인 작업</div>
+                        <div>☐ 대기 중인 작업</div>
+                    </div>
                 </div>
 
                 <!-- 이미지 업로드 (Image Upload) -->
                 <div class="feature-item">
-                  <span class="material-icons">photo_camera</span>
-                  <h3>이미지 업로드 (Image Upload)</h3>
-                  <p>이미지를 업로드하거나 URL로 삽입할 수 있습니다.</p>
-                  <div class="example">
-                    <div style="border: 2px dashed #ccc; padding: 20px; text-align: center;">
-                      📷 이미지 업로드 영역
+                    <h3>
+                        <span class="material-symbols-outlined">photo_camera</span>
+                        이미지 업로드 (link & file)
+                    </h3>
+                    <p>이미지를 업로드하거나 URL로 삽입할 수 있습니다. <br>- 이미지 리사이즈<br>- Copy & Paste<br>- Drag & Drop</p>
+                    <div class="example">
+                        <div style="border: 2px dashed #ccc; padding: 20px; text-align: center;">
+                            📷 이미지 업로드 영역
+                        </div>
                     </div>
-                  </div>
                 </div>
 
                 <!-- 테이블 (Table) -->
                 <div class="feature-item">
-                  <span class="material-icons">grid_on</span>
-                  <h3>테이블 (Table)</h3>
-                  <p>정형화된 데이터를 표 형태로 구성할 수 있습니다.</p>
-                  <div class="example">
-                    <table style="border-collapse: collapse; border: 1px solid #ddd;">
-                      <tr>
-                        <th contenteditable="true" style="padding: 5px; height: 32px; border: 1px solid rgb(204, 204, 204); font-weight: bold; width: 521px; position: relative;"><div class="resizer" contenteditable="false" style="position: absolute; top: 0px; right: 0px; width: 5px; height: 100%; cursor: col-resize; z-index: 10;"></div>제목 1</th>
-                        <th contenteditable="true" style="padding: 5px; height: 32px; border: 1px solid rgb(204, 204, 204); font-weight: bold; width: 521px; position: relative;"><div class="resizer" contenteditable="false" style="position: absolute; top: 0px; right: 0px; width: 5px; height: 100%; cursor: col-resize; z-index: 10;"></div>제목 2</th>
-                      </tr>
-                      <tr>
-                        <td style="border: 1px solid #fff; padding: 8px;">데이터 1</td>
-                        <td style="border: 1px solid #fff; padding: 8px;">데이터 2</td>
-                      </tr>
-                    </table>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">grid_on</span>
+                        테이블 (Table)
+                    </h3>
+                    <p>정형화된 데이터를 표 형태로 구성할 수 있습니다.</p>
+                    <div class="example lite-editor-content">
+                        <table style="border-collapse: collapse; border: 1px solid #ddd;">
+                            <tr>
+                                <th style="border: 1px solid #ddd; padding: 8px;">제목 1</th>
+                                <th style="border: 1px solid #ddd; padding: 8px;">제목 2</th>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">데이터 1</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">데이터 2</td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 링크 (Link) -->
                 <div class="feature-item">
-                  <span class="material-icons">link</span>
-                  <h3>링크 (Link)</h3>
-                  <p>외부 사이트나 내부 페이지로 연결되는 링크를 생성합니다.</p>
-                  <div class="example">
-                    <a href="#" style="color: #1a73e8; text-decoration: underline;">이것은 링크입니다</a>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">link</span>
+                        링크 (Link)
+                    </h3>
+                    <p>외부 사이트나 내부 페이지로 연결되는 링크를 생성합니다.</p>
+                    <div class="example">
+                        <a href="#" style="color: #1a73e8; text-decoration: underline;">이것은 링크입니다</a>
+                    </div>
                 </div>
 
                 <!-- 미디어 (Media) -->
                 <div class="feature-item">
-                  <span class="material-icons">video_library</span>
-                  <h3>미디어 (Media)</h3>
-                  <p>유튜브등 동영상  미디어 랑쿠룰 삽입할 수 있습니다.</p>
-                  <div class="example">
-                    <div style="border: 2px solid #ddd; padding: 20px; text-align: center;">
-                      🎬 동영상 플레이어 영역
+                    <h3>
+                        <span class="material-symbols-outlined">video_library</span>
+                        미디어 (Media)
+                    </h3>
+                    <p>유튜브등 동영상 미디어 링크를 삽입할 수 있습니다.</p>
+                    <div class="example">
+                        <div style="border: 2px solid #ddd; padding: 20px; text-align: center;">
+                            🎬 동영상 플레이어 영역
+                        </div>
                     </div>
-                  </div>
                 </div>
 
                 <!-- 인라인 코드 (Inline Code) -->
                 <div class="feature-item">
-                  <span class="material-icons">code</span>
-                  <h3>인라인 코드 (Inline Code)</h3>
-                  <p>문장 내에서 짧은 코드나 명령어를 표시할 때 사용합니다.</p>
-                  <div class="example">
-                    이 함수는 <code style="background: #d2d0d0; padding: 5px; border-radius: 4px;">console.log()</code>를 사용합니다.
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">code</span>
+                        인라인 코드 (Inline Code)
+                    </h3>
+                    <p>문장 내에서 짧은 코드나 명령어를 표시할 때 사용합니다.</p>
+                    <div class="example lite-editor-content">
+                        이 함수는 <code>console.log()</code>를 사용합니다.
+                    </div>
                 </div>
 
                 <!-- 코드 블록 (Code Block) -->
                 <div class="feature-item">
-                  <span class="material-icons">code_blocks</span>
-                  <h3>코드 블록 (Code Block)</h3>
-                  <p>여러 줄의 코드를 구문 강조와 함께 표시할 수 있습니다.</p>
-                  <div class="example">
-                    <pre style="background: #e1e1e1; padding: 5px; border-radius: 4px; font-size: 12px;"><code>function hello() {
+                    <h3>
+                        <span class="material-symbols-outlined">code_blocks</span>
+                        코드 블록 (Code Block)
+                    </h3>
+                    <p>여러 줄의 코드를 구문 강조와 함께 표시할 수 있습니다.</p>
+                    
+                        <pre class="example lite-editor-content">function hello() {
   console.log("Hello, World!");
   return true;
-}</code></pre>
-                  </div>
+}</pre>
+
                 </div>
 
                 <!-- 수평선 (Horizontal Line) -->
                 <div class="feature-item">
-                  <span class="material-icons">horizontal_rule</span>
-                  <h3>수평선 (Horizontal Line)</h3>
-                  <p>문서 내용을 구분하는 수평선을 삽입할 수 있습니다.</p>
-                  <div class="example">
-                    <p>위쪽 내용</p>
-                    <hr style="border: 1px solid #ddd; margin: 10px 0;">
-                    <p>아래쪽 내용</p>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">horizontal_rule</span>
+                        수평선 (Horizontal Line)
+                    </h3>
+                    <p>문서 내용을 구분하는 수평선을 삽입할 수 있습니다.</p>
+                    <div class="example">
+                        <p>위쪽 내용</p>
+                        <hr style="border: 1px solid #ddd; margin: 10px 0;">
+                        <p>아래쪽 내용</p>
+                    </div>
                 </div>
 
                 <!-- 실행 취소/되돌리기 (Undo/Redo) -->
                 <div class="feature-item">
-                  <span class="material-icons">undo</span>
-                  <span class="material-icons">redo</span>
-                  <h3>실행 취소/되돌리기 (Undo/Redo)</h3>
-                  <p>작업을 취소하거나 다시 실행할 수 있습니다. 단축키: Ctrl+Z / Ctrl+Shift+Z</p>
-                  <div class="example">
-                    <button style="margin-right: 5px;">← 되돌리기</button>
-                    <button>앞으로 →</button>
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">undo</span>
+                        <span class="material-symbols-outlined">redo</span>
+                        실행 취소/되돌리기 (Undo/Redo)
+                    </h3>
+                    <p>작업을 취소하거나 다시 실행할 수 있습니다. 단축키: Ctrl+Z / Ctrl+Shift+Z</p>
+                    <div class="example">
+                        <button style="margin-right: 5px;">← 되돌리기</button>
+                        <button>앞으로 →</button>
+                    </div>
                 </div>
 
                 <!-- 서식 지우기 (Clear Format) -->
                 <div class="feature-item">
-                  <span class="material-icons">format_clear</span>
-                  <h3>서식 지우기 (Clear Format)</h3>
-                  <p>선택된 텍스트의 모든 서식을 제거하고 기본 텍스트로 되돌립니다.</p>
-                  <div class="example">
-                    <span style="color: #666;">서식이 적용된 텍스트</span> → 일반 텍스트
-                  </div>
+                    <h3>
+                        <span class="material-symbols-outlined">format_clear</span>
+                        서식 지우기 (Clear Format)
+                    </h3>
+                    <p>선택된 텍스트의 모든 서식을 제거하고 기본 텍스트로 되돌립니다.</p>
+                    <div class="example">
+                        <span style="color: #666;">서식이 적용된 텍스트</span> → 일반 텍스트
+                    </div>
                 </div>
             </div>
         </div>
@@ -828,35 +939,6 @@
 &lt;/body&gt;
 &lt;/html&gt;
             </pre>
-
-            <h4>📊 모드 비교</h4>
-            <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
-                <tr style="background-color: #f8f9fa;">
-                    <th style="border: 1px solid #ddd; padding: 8px;">구분</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">분리 모드</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">통합 모드</th>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>HTML 구조</strong></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">사용자 정의</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">자동 생성</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>레이아웃 제어</strong></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">높음</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">제한적</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>dimensions 적용</strong></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">부분적 (버그)</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">완전 적용</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>설치 복잡도</strong></td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">중간</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">간단</td>
-                </tr>
-            </table>
         </div>
     </div>
 
@@ -923,183 +1005,322 @@
     <!-- 단축키 치트시트 섹션 -->
     <div class="demo-section">
         <h2>⌨️ 단축키 치트시트 (Keyboard Shortcuts)</h2>
-        <p>효율적인 편집을 위한 키보드 단축키를 활용해보세요. 모든 단축키는 선택된 텍스트나 현재 커서 위치에 적용됩니다.</p>
-        
+        <p>- 효율적인 편집을 위한 키보드 단축키를 활용해보세요. 모든 단축키는 선택된 텍스트나 현재 커서 위치에 적용됩니다.</p>
+        <br>
         <!-- 텍스트 서식 단축키 -->
         <div class="shortcuts-category">
             <h3><span class="material-icons">format_bold</span>텍스트 서식</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">format_bold</span>
-                    <span class="shortcut-key">Ctrl+B</span>
-                    <span class="shortcut-desc">굵게</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_bold</span>
+                        <span class="shortcut-desc">굵게</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+B
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_italic</span>
-                    <span class="shortcut-key">Ctrl+I</span>
-                    <span class="shortcut-desc">기울임</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_italic</span>
+                        <span class="shortcut-desc">기울임</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+I
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_underlined</span>
-                    <span class="shortcut-key">Ctrl+U</span>
-                    <span class="shortcut-desc">밑줄</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_underlined</span>
+                        <span class="shortcut-desc">밑줄</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+U
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_strikethrough</span>
-                    <span class="shortcut-key">Alt+S</span>
-                    <span class="shortcut-desc">취소선</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_strikethrough</span>
+                        <span class="shortcut-desc">취소선</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Shift+S
+                    </span>
                 </div>
             </div>
         </div>
 
         <!-- 헤딩 단축키 -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">title</span>제목 및 구조</h3>
+            <h3><span class="material-symbols-outlined">title</span>제목 및 구조</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">title</span>
-                    <span class="shortcut-key">Alt+1</span>
-                    <span class="shortcut-desc">제목 1 (H1)</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_h1</span>
+                        <span class="shortcut-desc">제목 1 (H1)</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+1
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">title</span>
-                    <span class="shortcut-key">Alt+2</span>
-                    <span class="shortcut-desc">제목 2 (H2)</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_h2</span>
+                        <span class="shortcut-desc">제목 2 (H2)</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+2
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">title</span>
-                    <span class="shortcut-key">Alt+3</span>
-                    <span class="shortcut-desc">제목 3 (H3)</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_h3</span>
+                        <span class="shortcut-desc">제목 3 (H3)</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+3
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">text_fields</span>
-                    <span class="shortcut-key">Alt+4</span>
-                    <span class="shortcut-desc">본문 (P)</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">title</span>
+                        <span class="shortcut-desc">본문 (P)</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+4
+                    </span>
                 </div>
             </div>
         </div>
 
         <!-- 정렬 단축키 -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">format_align_center</span>텍스트 정렬</h3>
+            <h3><span class="material-symbols-outlined">format_align_center</span>텍스트 정렬</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">format_align_left</span>
-                    <span class="shortcut-key">Ctrl+Alt+L</span>
-                    <span class="shortcut-desc">왼쪽 정렬</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_align_left</span>
+                        <span class="shortcut-desc">왼쪽 정렬</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+Shift+L
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_align_center</span>
-                    <span class="shortcut-key">Ctrl+Alt+C</span>
-                    <span class="shortcut-desc">중앙 정렬</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_align_center</span>
+                        <span class="shortcut-desc">중앙 정렬</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+Shift+C
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_align_right</span>
-                    <span class="shortcut-key">Ctrl+Alt+R</span>
-                    <span class="shortcut-desc">오른쪽 정렬</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_align_right</span>
+                        <span class="shortcut-desc">오른쪽 정렬</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+Shift+R
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_align_justify</span>
-                    <span class="shortcut-key">Ctrl+Alt+J</span>
-                    <span class="shortcut-desc">양쪽 정렬</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_align_justify</span>
+                        <span class="shortcut-desc">양쪽 정렬</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+Shift+J
+                    </span>
                 </div>
             </div>
         </div>
 
         <!-- 목록 단축키 -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">format_list_bulleted</span>목록</h3>
+            <h3><span class="material-symbols-outlined">format_list_bulleted</span>목록</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">format_list_bulleted</span>
-                    <span class="shortcut-key">Alt+U</span>
-                    <span class="shortcut-desc">불릿 목록</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_list_bulleted</span>
+                        <span class="shortcut-desc">불릿 목록</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+U
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_list_numbered</span>
-                    <span class="shortcut-key">Alt+O</span>
-                    <span class="shortcut-desc">번호 목록</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_list_numbered</span>
+                        <span class="shortcut-desc">번호 목록</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+O
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">checklist</span>
-                    <span class="shortcut-key">Alt+K</span>
-                    <span class="shortcut-desc">체크리스트</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">checklist</span>
+                        <span class="shortcut-desc">체크리스트</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+K
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">format_indent_increase</span>
-                    <span class="shortcut-key">Tab</span>
-                    <span class="shortcut-desc">들여쓰기</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_indent_increase</span>
+                        <span class="shortcut-desc">들여쓰기</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Tab
+                    </span>
                 </div>
             </div>
         </div>
 
         <!-- 콘텐츠 삽입 단축키 -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">add_circle</span>콘텐츠 삽입</h3>
+            <h3><span class="material-symbols-outlined">add_circle</span>콘텐츠 삽입</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">format_quote</span>
-                    <span class="shortcut-key">Alt+Q</span>
-                    <span class="shortcut-desc">인용구</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_quote</span>
+                        <span class="shortcut-desc">인용구</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+Q
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">code</span>
-                    <span class="shortcut-key">Alt+C</span>
-                    <span class="shortcut-desc">인라인 코드</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">code</span>
+                        <span class="shortcut-desc">인라인 코드</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+C
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">horizontal_rule</span>
-                    <span class="shortcut-key">Alt+H</span>
-                    <span class="shortcut-desc">수평선</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">horizontal_rule</span>
+                        <span class="shortcut-desc">수평선</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+H
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">link</span>
-                    <span class="shortcut-key">Ctrl+K</span>
-                    <span class="shortcut-desc">링크 삽입</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">link</span>
+                        <span class="shortcut-desc">링크 삽입</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Alt+K
+                    </span>
                 </div>
             </div>
         </div>
 
         <!-- 편집 도구 단축키 -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">edit</span>편집 도구</h3>
+            <h3><span class="material-symbols-outlined">edit</span>편집 도구</h3>
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
-                    <span class="material-icons">undo</span>
-                    <span class="shortcut-key">Ctrl+Z</span>
-                    <span class="shortcut-desc">실행 취소</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">undo</span>
+                        <span class="shortcut-desc">실행 취소</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        ⌘+Z
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">redo</span>
-                    <span class="shortcut-key">Ctrl+Shift+Z</span>
-                    <span class="shortcut-desc">재실행</span>
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">redo</span>
+                        <span class="shortcut-desc">재실행</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        ⌘+Shift+Z
+                    </span>
                 </div>
                 <div class="shortcut-item">
-                    <span class="material-icons">content_copy</span>
-                    <span class="shortcut-key">Ctrl+C</span>
-                    <span class="shortcut-desc">복사</span>
-                </div>
-                <div class="shortcut-item">
-                    <span class="material-icons">content_paste</span>
-                    <span class="shortcut-key">Ctrl+V</span>
-                    <span class="shortcut-desc">붙여넣기</span>
-                </div>
-                <div class="shortcut-item">
-                    <span class="material-icons">content_cut</span>
-                    <span class="shortcut-key">Ctrl+X</span>
-                    <span class="shortcut-desc">잘라내기</span>
-                </div>
-                <div class="shortcut-item">
-                    <span class="material-icons">format_clear</span>
-                    <span class="shortcut-key">Ctrl+\</span>
-                    <span class="shortcut-desc">서식 지우기</span>
-                </div>
+                  <div class="shortcut-item-top">
+                      <span class="material-symbols-outlined">format_clear</span>
+                      <span class="shortcut-desc">서식 지우기</span>
+                  </div>
+                  <span class="shortcut-key">
+                      <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                      ⌘+\
+                  </span>
+              </div>  
             </div>
         </div>
 
+
+        <!-- 편집 도구 단축키 -->
+        <div class="shortcuts-category">
+          <h3><span class="material-symbols-outlined">content_cut</span>복사 도구</h3>
+          <div class="shortcuts-grid">
+              
+            <div class="shortcut-item">
+              <div class="shortcut-item-top">
+                  <span class="material-symbols-outlined">content_copy</span>
+                  <span class="shortcut-desc">복사</span>
+              </div>
+              <span class="shortcut-key">
+                  <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                  ⌘+C
+              </span>
+          </div>
+          <div class="shortcut-item">
+              <div class="shortcut-item-top">
+                  <span class="material-symbols-outlined">content_paste</span>
+                  <span class="shortcut-desc">붙여넣기</span>
+              </div>
+              <span class="shortcut-key">
+                  <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                  ⌘+V
+              </span>
+          </div>
+          <div class="shortcut-item">
+              <div class="shortcut-item-top">
+                  <span class="material-symbols-outlined">content_cut</span>
+                  <span class="shortcut-desc">잘라내기</span>
+              </div>
+              <span class="shortcut-key">
+                  <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                  ⌘+X
+              </span>
+          </div>
+          </div>
+      </div>
+
         <!-- Pro Tips -->
         <div class="shortcuts-category">
-            <h3><span class="material-icons">lightbulb</span>Pro Tips</h3>
+            <h3><span class="material-symbols-outlined">lightbulb</span>Pro Tips</h3>
             <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #1a73e8;">
                 <ul style="margin: 0; padding-left: 20px; color: #333;">
                     <li><strong>Mac 사용자:</strong> Ctrl 대신 Cmd(⌘) 키를 사용하세요</li>
