@@ -71,11 +71,6 @@
       margin-bottom: 2rem;
     }
 
-    .editor-container h3 {
-      font-size: 1.2rem;
-      color: #444;
-      margin-bottom: 0.5rem;
-    }
 
 
     /* ✅ 에디터 콘텐츠 내 헤딩 스타일 */
@@ -92,7 +87,6 @@
       font-weight: bold;
       margin: 0.4em 0;
       color: #333;
-      border-bottom: 1px solid #e0e0e0;
       padding-bottom: 0.2em;
     }
 
@@ -303,42 +297,48 @@
                         <p>LiteEditor는 웹 페이지에 쉽게 통합할 수 있는 고정형 리치 텍스트 에디터 플러그인입니다. 사용자가 다양한 서식을 적용할 수 있는 직관적인 도구 모음을 제공합니다.</p>
                         <p></p>
                        
-
-                        1. fontFamily : 폰트 설정 (한글, 영문, 코딩용)<br>
-                        2. heading : 제목 스타일 지정 (H1 ~ H6) - <code>Alt+1</code> (H1), <code>Alt+2</code> (H2), <code>Alt+3</code> (H3), <code>Alt+4</code> (본문)<br>
-                        3. fontColor : 글자 색상<br>
-                        4. backgroundColor : 글자 배경색<br>
-                        5. bold : 텍스트 굵게 - <code>⌘+B</code><br>
-                        6. italic : 텍스트 기울임 - <code>⌘+I</code><br>
-                        7. underline : 텍스트 밑줄 - <code>⌘+U</code><br>
-                        8. strike : 취소선 - <code>⌘+Shift+S</code><br>
-                        9. link : 하이퍼링크 삽입/편집 - <code>Alt+K</code><br>
-                        10. image : 이미지 업로드/삽입<br>
-                        11. table : 표 삽입/편집<br>
-                        12. video : 동영상 삽입 - <code>Alt+M</code><br>
-                        13. line : 구분선 삽입 - <code>Alt+H</code><br>
-                        14. blockquote : 블록 강조 - <code>Alt+Q</code><br>
-                        15. code : 배경색 박스 - <code>Alt+C</code><br>
-                        16. codeBlock : 코드 블록 삽입<br>
-                        17. bulletList : 불릿 목록 - <code>Alt+U</code><br>
-                        18. numberedList : 번호 목록 - <code>Alt+O</code><br>
-                        19. checkList : 체크리스트 - <code>Alt+K</code><br>
-                        20. align-left : 왼쪽 정렬 - <code>Alt+Shift+L</code><br>
-                        21. align-center : 가운데 정렬 - <code>Alt+Shift+C</code><br>
-                        22. align-right : 오른쪽 정렬 - <code>Alt+Shift+R</code><br>
-                        23. align-justify : 양쪽 정렬 - <code>Alt+Shift+J</code><br>
-                        24. indent : 들여쓰기 - <code>Tab</code><br>
-                        25. outdent : 내어쓰기 - <code>Shift+Tab</code><br>
-                        26. reset : 포맷 제거 - <code>⌘+Shift+\</code><br>
-
+                        <pre>
+  - bold: { key: 'b', cmd: true },           // ⌘+B / Ctrl+B
+  - italic: { key: 'i', cmd: true },         // ⌘+I / Ctrl+I  
+  - underline: { key: 'u', cmd: true },      // ⌘+U / Ctrl+U
+  - strike: { key: 's', cmd: true, shift: true }, // ⌘+Shift+S / Ctrl+Shift+S
+  
+    // 🏷️ 헤딩 (Alt 대신 Cmd+Shift 조합으로 변경)
+  - heading1: { key: '1', cmd: true, shift: true }, // ⌘+Shift+1
+  - heading2: { key: '2', cmd: true, shift: true }, // ⌘+Shift+2  
+  - heading3: { key: '3', cmd: true, shift: true }, // ⌘+Shift+3
+  - paragraph: { key: '0', cmd: true, shift: true }, // ⌘+Shift+0
+  
+    // 🔗 기능 단축키
+  - link: { key: 'k', cmd: true },           // ⌘+K / Ctrl+K
+  - image: { key: 'i', cmd: true, shift: true }, // ⌘+Shift+I
+  - code: { key: 'e', cmd: true },           // ⌘+E / Ctrl+E (E for codE)
+  - blockquote: { key: 'q', cmd: true, shift: true }, // ⌘+Shift+Q
+  
+    // 📋 리스트 (숫자 키 조합으로 직관적)
+  - bulletList: { key: '8', cmd: true },     // ⌘+8 (• 모양과 유사)
+  - numberedList: { key: '7', cmd: true },   // ⌘+7 (숫자 목록)
+  - checkList: { key: '9', cmd: true },      // ⌘+9 (체크리스트)
+  
+    // ⬅️➡️ 정렬 (방향키와 유사한 논리)
+  - alignLeft: { key: 'l', cmd: true, alt: true },    // ⌘+Alt+L
+  - alignCenter: { key: 'c', cmd: true, alt: true },  // ⌘+Alt+C  
+  - alignRight: { key: 'r', cmd: true, alt: true },   // ⌘+Alt+R
+  - alignJustify: { key: 'j', cmd: true, alt: true }, // ⌘+Alt+J
+  
+    // 🔄 편집 (현재 동작하는 것들 유지)
+  - undo: { key: 'z', cmd: true },           // ⌘+Z / Ctrl+Z
+  - redo: { key: 'z', cmd: true, shift: true }, // ⌘+Shift+Z / Ctrl+Shift+Z
+  - copy: { key: 'c', cmd: true },           // ⌘+C / Ctrl+C (시스템 기본)
+  - paste: { key: 'v', cmd: true },          // ⌘+V / Ctrl+V (시스템 기본)
+  - cut: { key: 'x', cmd: true },            // ⌘+X / Ctrl+X (시스템 기본)
+    
+    // 📐 들여쓰기 (Tab 키 유지)
+  - indent: { key: 'Tab' },                  // Tab
+  - outdent: { key: 'Tab', shift: true },    // Shift+Tab
+                      </pre>
                         <br>
-                        편집 도구 단축키<br>
-                        <br>
-                        - undo : 실행 취소 - <code>⌘+Z</code> (window: <code>Ctrl+Z</code>)<br>
-                        - redo : 재실행 - <code>⌘+Shift+Z</code> (window: <code>Ctrl+Shift+Z</code>)<br>
-                        - copy : 복사 - <code>⌘+C</code> (window: <code>Ctrl+C</code>)<br>
-                        - paste : 붙여넣기 - <code>⌘+V</code> (window: <code>Ctrl+V</code>)<br>
-                        - cut : 잘라내기 - <code>⌘+X</code> (Mac: <code>Ctrl+X</code>)
+                        
                         <br>https://raw.githubusercontent.com/villainscode/tech-interview-for-junior/main/image/comment.png<br>
 
                     

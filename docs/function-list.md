@@ -58,32 +58,44 @@ lite-editor/
 ## 에디터 툴바의 기능 목록
 ### 기본 툴바 기능
 
-1. fontFamily : 폰트 설정 (한글, 영문, 코딩용)
-2. heading : 제목 스타일 지정 (H1 ~ H6) - `Alt+1` (H1), `Alt+2` (H2), `Alt+3` (H3), `Alt+4` (본문)
-3. fontColor : 글자 색상
-4. backgroundColor : 글자 배경색
-5. bold : 텍스트 굵게 - `⌘+B`
-6. italic : 텍스트 기울임 - `⌘+I`
-7. underline : 텍스트 밑줄 - `⌘+U`
-8. strike : 취소선 - `⌘+Shift+S`
-9. link : 하이퍼링크 삽입/편집 - `Alt+K`
-10. image : 이미지 업로드/삽입 - `Alt+I`
-11. table : 표 삽입/편집
-12. video : 동영상 삽입 - `Alt+M`
-13. line : 구분선 삽입 - `Alt+H`
-14. blockquote : 블록 강조 - `Alt+Q`
-15. code : 배경색 박스 - `Alt+C`
-16. codeBlock : 코드 블록 삽입
-17. bulletList : 불릿 목록 - `Alt+U`
-18. numberedList : 번호 목록 - `Alt+O`
-19. checkList : 체크리스트 - `Alt+K`
-20. align-left : 왼쪽 정렬 - `Alt+Shift+L`
-21. align-center : 가운데 정렬 - `Alt+Shift+C`
-22. align-right : 오른쪽 정렬 - `Alt+Shift+R`
-23. align-justify : 양쪽 정렬 - `Alt+Shift+J`
-24. indent : 들여쓰기 - `Tab`
-25. outdent : 내어쓰기 - `Shift+Tab`
-26. reset : 포맷 제거 - `⌘+Shift+\`
+- bold: { key: 'b', cmd: true },           // ⌘+B / Ctrl+B
+- italic: { key: 'i', cmd: true },         // ⌘+I / Ctrl+I  
+- underline: { key: 'u', cmd: true },      // ⌘+U / Ctrl+U
+- strike: { key: 's', cmd: true, shift: true }, // ⌘+Shift+S / Ctrl+Shift+S
+
+  // 🏷️ 헤딩 (Alt 대신 Cmd+Shift 조합으로 변경)
+- heading1: { key: '1', cmd: true, shift: true }, // ⌘+Shift+1
+- heading2: { key: '2', cmd: true, shift: true }, // ⌘+Shift+2  
+- heading3: { key: '3', cmd: true, shift: true }, // ⌘+Shift+3
+- paragraph: { key: '0', cmd: true, shift: true }, // ⌘+Shift+0
+
+  // 🔗 기능 단축키
+- link: { key: 'k', cmd: true },           // ⌘+K / Ctrl+K
+- image: { key: 'i', cmd: true, shift: true }, // ⌘+Shift+I
+- code: { key: 'e', cmd: true },           // ⌘+E / Ctrl+E (E for codE)
+- blockquote: { key: 'q', cmd: true, shift: true }, // ⌘+Shift+Q
+
+  // 📋 리스트 (숫자 키 조합으로 직관적)
+- bulletList: { key: '8', cmd: true },     // ⌘+8 (• 모양과 유사)
+- numberedList: { key: '7', cmd: true },   // ⌘+7 (숫자 목록)
+- checkList: { key: '9', cmd: true },      // ⌘+9 (체크리스트)
+
+  // ⬅️➡️ 정렬 (방향키와 유사한 논리)
+- alignLeft: { key: 'l', cmd: true, alt: true },    // ⌘+Alt+L
+- alignCenter: { key: 'c', cmd: true, alt: true },  // ⌘+Alt+C  
+- alignRight: { key: 'r', cmd: true, alt: true },   // ⌘+Alt+R
+- alignJustify: { key: 'j', cmd: true, alt: true }, // ⌘+Alt+J
+
+  // 🔄 편집 (현재 동작하는 것들 유지)
+- undo: { key: 'z', cmd: true },           // ⌘+Z / Ctrl+Z
+- redo: { key: 'z', cmd: true, shift: true }, // ⌘+Shift+Z / Ctrl+Shift+Z
+- copy: { key: 'c', cmd: true },           // ⌘+C / Ctrl+C (시스템 기본)
+- paste: { key: 'v', cmd: true },          // ⌘+V / Ctrl+V (시스템 기본)
+- cut: { key: 'x', cmd: true },            // ⌘+X / Ctrl+X (시스템 기본)
+  
+  // 📐 들여쓰기 (Tab 키 유지)
+- indent: { key: 'Tab' },                  // Tab
+- outdent: { key: 'Tab', shift: true },    // Shift+Tab
 
 ### 편집 도구 단축키
 
