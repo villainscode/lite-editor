@@ -104,7 +104,7 @@
   }
 
   /**
-   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구존 보존)
+   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구조 보존)
    */
   function wrapSelectedTextWithCode(contentArea, range) {
     // ✅ 오프셋 계산 (복원용)
@@ -117,15 +117,18 @@
     const tempDiv = document.createElement('div');
     tempDiv.appendChild(selectedContent.cloneNode(true));
     
-    // ✅ HTML에서 텍스트 추출 (security-manager.js 활용)
+    // ✅ HTML에서 줄바꿈 보존하면서 텍스트 추출
     let selectedText = tempDiv.innerHTML
-      .replace(/<br\s*\/?>/gi, '\n')  // <br> → \n
+      .replace(/<br\s*\/?>/gi, '\n')  // <br> → \n 변환
       .replace(/<[^>]*>/g, '');       // 다른 HTML 태그 제거
-    
+
     // ✅ security-manager.js의 unescapeHtml 함수 사용
     selectedText = window.LiteEditorSecurity.unescapeHtml(selectedText);
     
-    if (!selectedText.trim()) {
+    // ✅ emphasis.js와 동일한 trim 처리 (앞뒤 공백 제거)
+    selectedText = selectedText.trim();
+    
+    if (!selectedText) {
       // 실패 시 원래 내용 복원
       range.insertNode(selectedContent);
       if (window.errorHandler) {
@@ -135,7 +138,7 @@
     }
 
     if (window.errorHandler) {
-      errorHandler.colorLog('CODE', '📝 선택 영역 코드 적용', {
+      errorHandler.colorLog('CODE', '📝 선택 영역 코드 적용 (HTML 구조 보존)', {
         text: selectedText.substring(0, 50) + '...',
         hasLineBreaks: selectedText.includes('\n'),
         length: selectedText.length,
@@ -143,24 +146,24 @@
       }, '#9c27b0');
     }
 
-    // ✅ security-manager.js의 escapeHtml 함수 사용 + 줄바꿈 → <br> 변환
-    const escapedText = window.LiteEditorSecurity.escapeHtml(selectedText)
-      .replace(/\n/g, '<br>'); // 줄바꿈 → <br>
-
-    // ✅ 인라인 코드 요소 생성 (core.css 기본 활용)
-    const codeElement = util.dom.createElement('code');
-    codeElement.innerHTML = escapedText;
-    
-    // ✅ CSS :has(br) 룰 오버라이드 (인라인 유지)
-    if (selectedText.includes('\n')) {
-      codeElement.style.display = 'inline-block';
-      codeElement.style.whiteSpace = 'pre-wrap';
-    }
-
-    // ✅ 키보드 이벤트 핸들러 추가 (인라인 코드에도)
-    setupCodeBlockKeyboardEvents(codeElement, contentArea);
-
     try {
+      // ✅ security-manager.js의 escapeHtml 함수 사용 + 줄바꿈 → <br> 변환
+      const escapedText = window.LiteEditorSecurity.escapeHtml(selectedText)
+        .replace(/\n/g, '<br>'); // 줄바꿈 → <br>
+
+      // ✅ 인라인 코드 요소 생성 (core.css 기본 활용)
+      const codeElement = util.dom.createElement('code');
+      codeElement.innerHTML = escapedText;
+      
+      // ✅ CSS :has(br) 룰 오버라이드 (인라인 유지)
+      if (selectedText.includes('\n')) {
+        codeElement.style.display = 'inline-block';
+        codeElement.style.whiteSpace = 'pre-wrap';
+      }
+
+      // ✅ 키보드 이벤트 핸들러 추가 (인라인 코드에도)
+      setupCodeBlockKeyboardEvents(codeElement, contentArea);
+
       // ✅ 선택 영역에 코드 요소 삽입 (이미 extractContents()로 삭제됨)
       range.insertNode(codeElement);
       
@@ -177,7 +180,7 @@
         contentArea.focus();
         
         if (window.errorHandler) {
-          errorHandler.colorLog('CODE', '✅ 코드 적용 완료 (Security Manager 활용)', {
+          errorHandler.colorLog('CODE', '✅ 코드 적용 완료 (줄바꿈 보존)', {
             hasLineBreaks: selectedText.includes('\n'),
             display: selectedText.includes('\n') ? 'inline-block' : 'inline',
             finalText: escapedText
