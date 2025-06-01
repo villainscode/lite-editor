@@ -605,25 +605,86 @@
             e.preventDefault();
             e.stopPropagation();
             
-            let range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+            // ✅ 브라우저 호환성 개선
+            let range = null;
             
-            if (range && contentArea.contains(range.startContainer)) {
-                draggedElement.style.opacity = '1';
-                draggedElement.remove();
+            try {
+                // Chrome/Safari용 caretRangeFromPoint
+                if (document.caretRangeFromPoint) {
+                    range = document.caretRangeFromPoint(e.clientX, e.clientY);
+                }
+                // Firefox용 caretPositionFromPoint
+                else if (document.caretPositionFromPoint) {
+                    const position = document.caretPositionFromPoint(e.clientX, e.clientY);
+                    if (position) {
+                        range = document.createRange();
+                        range.setStart(position.offsetNode, position.offset);
+                    }
+                }
                 
-                try {
-                    range.insertNode(draggedElement);
-                    contentArea.focus();
+                // ✅ 유효한 드롭 위치 검증
+                if (range && contentArea.contains(range.startContainer)) {
+                    const startContainer = range.startContainer;
                     
-                    range.setStartAfter(draggedElement);
-                    range.collapse(true);
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    // 드래그된 요소 자신이나 그 내부에 드롭하는 것 방지
+                    if (draggedElement.contains(startContainer) || draggedElement === startContainer) {
+                        console.warn('[IMAGE_DRAG] 자기 자신에게는 드롭할 수 없습니다.');
+                        return;
+                    }
                     
-                    util.editor?.dispatchEditorEvent?.(contentArea);
-                } catch (error) {
-                    contentArea.focus();
+                    // 다른 이미지 내부에 드롭하는 것 방지
+                    const parentImageWrapper = startContainer.closest?.('.image-wrapper');
+                    if (parentImageWrapper && parentImageWrapper !== draggedElement) {
+                        console.warn('[IMAGE_DRAG] 다른 이미지 내부에는 드롭할 수 없습니다.');
+                        return;
+                    }
+                    
+                    // ✅ 안전한 DOM 조작
+                    draggedElement.style.opacity = '1';
+                    const originalParent = draggedElement.parentNode;
+                    draggedElement.remove();
+                    
+                    try {
+                        range.insertNode(draggedElement);
+                        contentArea.focus();
+                        
+                        // 커서 위치를 드롭된 이미지 뒤로 설정
+                        range.setStartAfter(draggedElement);
+                        range.collapse(true);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        
+                        // 에디터 이벤트 발생
+                        if (util.editor?.dispatchEditorEvent) {
+                            util.editor.dispatchEditorEvent(contentArea);
+                        }
+                        
+                        console.log('[IMAGE_DRAG] 이미지 이동 완료');
+                        
+                    } catch (insertError) {
+                        console.error('[IMAGE_DRAG] 삽입 실패:', insertError);
+                        // 실패 시 원래 위치로 복구
+                        if (originalParent) {
+                            originalParent.appendChild(draggedElement);
+                        } else {
+                            contentArea.appendChild(draggedElement);
+                        }
+                        contentArea.focus();
+                    }
+                    
+                } else {
+                    console.warn('[IMAGE_DRAG] 유효하지 않은 드롭 위치입니다.');
+                    draggedElement.style.opacity = '1';
+                }
+                
+            } catch (error) {
+                console.error('[IMAGE_DRAG] 드롭 처리 중 오류:', error);
+                draggedElement.style.opacity = '1';
+                
+                // 에러 발생 시 기본 위치에 추가
+                if (!draggedElement.parentNode) {
+                    contentArea.appendChild(draggedElement);
                 }
             }
         });
@@ -632,28 +693,54 @@
     // 복사/붙여넣기 기능
     function setupCopyPasteEvents() {
         document.addEventListener('keydown', (e) => {
+            // ✅ 붙여넣기는 copiedImageData가 있으면 selectedImage 없어도 허용
+            if (e.key === 'v' && (e.ctrlKey || e.metaKey) && copiedImageData) {
+                console.log('붙여넣기 시도:', { copiedImageData: !!copiedImageData, isCut, selectedImage: !!selectedImage });
+                e.preventDefault();
+                pasteImageAtCursor();
+                return;
+            }
+            
+            // 복사/잘라내기는 selectedImage가 필요
             if (!selectedImage || !(e.ctrlKey || e.metaKey)) return;
             
             switch(e.key) {
-                case 'c':
+                case 'c': {
                     e.preventDefault();
+                    // ✅ 선택 스타일 제거 후 복사
+                    const originalFilter = selectedImage.style.filter;
+                    const originalBorder = selectedImage.style.border;
+                    
+                    selectedImage.style.filter = '';
+                    selectedImage.style.border = '';
+                    
                     copiedImageData = selectedImage.outerHTML;
+                    
+                    // 원래 스타일 복원
+                    selectedImage.style.filter = originalFilter;
+                    selectedImage.style.border = originalBorder;
+                    
                     isCut = false;
                     break;
+                }
                     
-                case 'x':
+                case 'x': {
                     e.preventDefault();
-                    copiedImageData = selectedImage.outerHTML;
-                    isCut = true;
-                    selectedImage.style.opacity = '0.3';
-                    break;
+                    // ✅ 선택 스타일 제거 후 복사 (복사와 동일한 로직 적용)
+                    const originalFilter = selectedImage.style.filter;
+                    const originalBorder = selectedImage.style.border;
                     
-                case 'v':
-                    if (copiedImageData) {
-                        e.preventDefault();
-                        pasteImageAtCursor();
-                    }
+                    selectedImage.style.filter = '';
+                    selectedImage.style.border = '';
+                    
+                    copiedImageData = selectedImage.outerHTML;
+                    
+                    // ✅ 잘라내기는 바로 이미지 제거
+                    isCut = true;
+                    selectedImage.remove(); // 바로 제거
+                    selectedImage = null;   // 참조도 제거
                     break;
+                }
             }
         });
         
@@ -670,18 +757,14 @@
         
         const selection = window.getSelection();
         
-        if (isCut && selectedImage) {
-            selectedImage.remove();
-            deselectImage();
-            isCut = false;
-        }
-        
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = copiedImageData;
         const newImageWrapper = tempDiv.firstElementChild;
         
         newImageWrapper.id = `img-${Date.now()}`;
         newImageWrapper.style.opacity = '1';
+        newImageWrapper.style.filter = '';
+        newImageWrapper.style.border = '';
         
         if (selection?.rangeCount > 0) {
             const range = selection.getRangeAt(0);
@@ -698,8 +781,11 @@
         
         setupImageEvents(newImageWrapper);
         util.editor?.dispatchEditorEvent?.(contentArea);
+        
+        // ✅ 붙여넣기 후 데이터 초기화
+        isCut = false;
     }
-
+    
     // 플러그인 등록
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Image upload',
