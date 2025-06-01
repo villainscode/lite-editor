@@ -55,6 +55,26 @@
   });
 
   /**
+   * ✅ 추가: 현재 위치가 code 태그 내부인지 확인
+   */
+  function isInsideCodeElement(range, contentArea) {
+    let currentElement = range.startContainer;
+    
+    if (currentElement.nodeType === Node.TEXT_NODE) {
+      currentElement = currentElement.parentElement;
+    }
+    
+    while (currentElement && currentElement !== contentArea) {
+      if (currentElement.tagName === 'CODE') {
+        return currentElement;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return null;
+  }
+
+  /**
    * ✅ 시퀀셜 처리: 코드 서식 적용 메인 함수
    */
   function applyCodeFormat(contentArea) {
@@ -62,6 +82,12 @@
     if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
+    
+    // ✅ 추가: 중첩 방지 체크
+    const existingCodeElement = isInsideCodeElement(range, contentArea);
+    if (existingCodeElement) {
+      return; // 중첩 방지 - 아무것도 하지 않고 리턴
+    }
     
     if (range.collapsed) {
       // ✅ 시퀀스 1: 빈 커서 → 100% 블록 코드
@@ -331,38 +357,75 @@
   }
 
   /**
-   * ✅ 코드 블럭에서 탈출하여 새로운 P 태그 생성
+   * ✅ 안전한 코드 블럭 탈출 함수 (DOM 에러 수정)
    */
   function exitCodeBlockToNewParagraph(codeElement, contentArea) {
-    // ✅ 새로운 P 태그 생성
-    const newParagraph = util.dom.createElement('p');
-    newParagraph.innerHTML = '<br>'; // 빈 문단 표시용
-    
-    // ✅ 코드 블럭 다음에 P 태그 삽입
-    if (codeElement.nextSibling) {
-      contentArea.insertBefore(newParagraph, codeElement.nextSibling);
-    } else {
-      contentArea.appendChild(newParagraph);
-    }
-    
-    // ✅ 새로운 P 태그로 커서 이동
+    try {
+      const newParagraph = util.dom.createElement('p');
+      newParagraph.innerHTML = '<br>';
+      
+      // ✅ 안전한 삽입: code 요소의 최상위 블록 찾기
+      let targetBlock = codeElement;
+      while (targetBlock.parentNode && targetBlock.parentNode !== contentArea) {
+        targetBlock = targetBlock.parentNode;
+      }
+      
+      // ✅ contentArea의 직접 자식 블록 다음에 삽입
+      if (targetBlock && targetBlock.parentNode === contentArea) {
+        if (targetBlock.nextSibling) {
+          contentArea.insertBefore(newParagraph, targetBlock.nextSibling);
+        } else {
+          contentArea.appendChild(newParagraph);
+        }
+      } else {
+        // 예외 상황: contentArea 끝에 추가
+        contentArea.appendChild(newParagraph);
+      }
+      
+      // 커서 이동
     setTimeout(() => {
       const newRange = document.createRange();
-      newRange.setStart(newParagraph, 0);
-      newRange.collapse(true);
+        newRange.setStart(newParagraph, 0);
+        newRange.collapse(true);
+        
+        const selection = util.selection.getSafeSelection();
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+        
+        contentArea.focus();
+        
+        if (window.errorHandler) {
+          errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
+            newParagraph: newParagraph.outerHTML
+          }, '#4caf50');
+        }
+      }, 10);
       
-      const selection = util.selection.getSafeSelection();
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      
-      // contentArea에 포커스 설정
-      contentArea.focus();
-      
+    } catch (error) {
       if (window.errorHandler) {
-        errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
-          newParagraph: newParagraph.outerHTML
-        }, '#4caf50');
+        errorHandler.logError('CODE', 'EXIT_CODE_BLOCK_ERROR', error);
       }
-    }, 10);
+      
+      // 대체 방법: contentArea 끝에 추가
+      try {
+        const fallbackP = util.dom.createElement('p');
+        fallbackP.innerHTML = '<br>';
+        contentArea.appendChild(fallbackP);
+        
+        setTimeout(() => {
+          const range = document.createRange();
+          range.setStart(fallbackP, 0);
+          range.collapse(true);
+          
+          const selection = util.selection.getSafeSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          contentArea.focus();
+        }, 10);
+      } catch (e) {
+        // 최후의 수단도 실패하면 무시
+      }
+    }
   }
 })();
