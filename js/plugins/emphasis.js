@@ -80,7 +80,7 @@
   }
   
   /**
-   * 배경색(하이라이트) 적용 함수
+   * ✅ 완전한 서식 보존 배경색(하이라이트) 적용 함수 (execCommand 제거)
    */
   function applyHighlightColor(color, contentArea, colorIndicator) {
     try {
@@ -93,20 +93,90 @@
         // 선택 영역이 있는 경우
         const scrollPosition = util.scroll.savePosition();
         
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
+        try {
+          contentArea.focus({ preventScroll: true });
+        } catch (e) {
+          contentArea.focus();
+        }
+        
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
           errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, '선택 영역 복원 실패');
           return;
         }
         
-        // 🔧 execCommand 사용 (fontColor.js와 동일한 방식)
-        document.execCommand('hiliteColor', false, color);
+        // 🔧 서식 정보 직접 추출 방식 (cloneContents 문제 해결)
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          if (!range.collapsed) {
+            // ✅ 1단계: 선택된 텍스트만 추출 (안전)
+            const selectedText = range.toString();
+            
+            // ✅ 2단계: 시작 지점의 상위 요소들에서 서식 정보 추출
+            let startContainer = range.startContainer;
+            if (startContainer.nodeType === Node.TEXT_NODE) {
+              startContainer = startContainer.parentElement;
+            }
+            
+            // ✅ 3단계: 적용된 모든 서식 태그들 수집
+            const formatTags = [];
+            let currentElement = startContainer;
+            
+            while (currentElement && currentElement !== contentArea) {
+              const tagName = currentElement.tagName?.toLowerCase();
+              
+              // 서식 관련 태그들만 수집
+              if (['b', 'strong', 'i', 'em', 'u', 'strike', 's', 'del', 'ins', 'sub', 'sup', 'mark', 'small', 'code'].includes(tagName)) {
+                formatTags.unshift({
+                  tagName: tagName,
+                  element: currentElement.cloneNode(false) // 속성 포함 복사
+                });
+              }
+              
+              currentElement = currentElement.parentElement;
+            }
+            
+            errorHandler.colorLog('EMPHASIS', '🔧 추출된 서식 태그들', {
+              formatTags: formatTags.map(f => f.tagName),
+              selectedText: selectedText.substring(0, 50)
+            }, '#9c27b0');
+            
+            // ✅ 4단계: 선택 영역 제거
+            range.deleteContents();
+            
+            // ✅ 5단계: 서식 태그들을 중첩해서 적용
+            let finalElement = document.createTextNode(selectedText);
+            
+            // 안쪽부터 바깥쪽으로 태그 적용
+            formatTags.reverse().forEach(formatInfo => {
+              const newElement = formatInfo.element.cloneNode(false);
+              newElement.appendChild(finalElement);
+              finalElement = newElement;
+            });
+            
+            // ✅ 6단계: 하이라이트 span으로 감싸기
+            const spanElement = document.createElement('span');
+            spanElement.style.backgroundColor = color;
+            spanElement.appendChild(finalElement);
+            
+            // ✅ 7단계: 새 span을 원래 위치에 삽입
+            range.insertNode(spanElement);
+            
+            // ✅ 8단계: 새로운 범위로 선택 영역 설정
+            const newRange = document.createRange();
+            newRange.selectNodeContents(spanElement);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            errorHandler.colorLog('EMPHASIS', '✅ 서식 보존 하이라이트 완료', {
+              finalHTML: spanElement.outerHTML.substring(0, 200),
+              preservedFormats: formatTags.map(f => f.tagName),
+              color: color
+            }, '#4caf50');
+          }
+        }
         
         util.scroll.restorePosition(scrollPosition);
         
@@ -138,14 +208,37 @@
           } catch (e) {
             errorHandler.colorLog('EMPHASIS', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
           }
-      }
-      
-        // 🔧 execCommand 사용 (fontColor.js와 동일)
-        const success = document.execCommand('hiliteColor', false, color);
+        }
         
-        errorHandler.colorLog('EMPHASIS', 'execCommand hiliteColor 결과', {
-          success: success
-        }, success ? '#4caf50' : '#f44336');
+        // 🔧 커서 위치에 하이라이트 span 생성 (execCommand 제거)
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // 임시 텍스트 노드 삽입
+          const textNode = document.createTextNode('\u00A0');
+          range.insertNode(textNode);
+          
+          // span으로 감싸기
+          const spanElement = document.createElement('span');
+          spanElement.style.backgroundColor = color;
+          spanElement.appendChild(textNode);
+          
+          // 원래 위치에 span 삽입
+          const parentNode = textNode.parentNode;
+          parentNode.replaceChild(spanElement, textNode);
+          
+          // 커서를 span 내부로 이동
+          const newRange = document.createRange();
+          newRange.selectNodeContents(spanElement);
+          newRange.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          errorHandler.colorLog('EMPHASIS', '✅ 커서 하이라이트 생성 완료', {
+            color: color
+          }, '#4caf50');
+        }
       }
       
       util.editor.dispatchEditorEvent(contentArea);
@@ -155,22 +248,6 @@
     }
   }
   
-  // 🔧 헬퍼 함수: 마지막 텍스트 노드 찾기
-  function getLastTextNode(element) {
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    
-    let lastNode = null;
-    while (walker.nextNode()) {
-      lastNode = walker.currentNode;
-    }
-    
-    return lastNode;
-  }
   
   LiteEditor.registerPlugin('emphasis', {
     customRender: function(toolbar, contentArea) {
