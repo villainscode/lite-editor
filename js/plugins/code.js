@@ -236,30 +236,69 @@
   }
 
   /**
-   * ✅ 새로 추가: 코드 블럭 키보드 이벤트 설정
+   * ✅ 수정: 캡처 단계에서 코드 블럭 키보드 이벤트 우선 처리
    */
   function setupCodeBlockKeyboardEvents(codeElement, contentArea) {
-    codeElement.addEventListener('keydown', (e) => {
+    // ✅ 기존 개별 요소 이벤트 제거
+    // codeElement.addEventListener('keydown', ...) 
+
+    // ✅ contentArea 레벨에서 캡처 단계로 등록 (다른 플러그인과 동일한 패턴)
+    const keyboardHandler = (e) => {
       if (e.key === 'Enter') {
-        if (e.shiftKey) {
-          // ✅ Shift + Enter: 코드 블럭 안에서 줄바꿈
-          e.preventDefault();
-          insertLineBreakInCode(codeElement);
-          
-          if (window.errorHandler) {
-            errorHandler.colorLog('CODE', '📝 코드 블럭 내 줄바꿈', {}, '#2196f3');
+        // ✅ 현재 커서가 코드 블럭 내부에 있는지 확인
+        const selection = util.selection.getSafeSelection();
+        if (!selection || !selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        let currentElement = range.startContainer;
+        
+        // ✅ 텍스트 노드인 경우 부모 요소로 이동
+        if (currentElement.nodeType === Node.TEXT_NODE) {
+          currentElement = currentElement.parentElement;
+        }
+        
+        // ✅ 코드 요소 찾기
+        let codeBlock = null;
+        while (currentElement && currentElement !== contentArea) {
+          if (currentElement.tagName === 'CODE') {
+            codeBlock = currentElement;
+            break;
           }
-        } else {
-          // ✅ Enter: 코드 블럭 탈출 → 새로운 P 태그
-          e.preventDefault();
-          exitCodeBlockToNewParagraph(codeElement, contentArea);
-          
-          if (window.errorHandler) {
-            errorHandler.colorLog('CODE', '🚪 코드 블럭 탈출 → 새 문단', {}, '#4caf50');
+          currentElement = currentElement.parentElement;
+        }
+        
+        // ✅ 코드 블럭 내부에서만 처리
+        if (codeBlock) {
+          if (e.shiftKey) {
+            // ✅ Shift + Enter: 코드 블럭 안에서 줄바꿈
+            e.preventDefault();
+            e.stopImmediatePropagation(); // ✅ 다른 핸들러 차단
+            insertLineBreakInCode(codeBlock);
+            
+            if (window.errorHandler) {
+              errorHandler.colorLog('CODE', '📝 코드 블럭 내 줄바꿈', {}, '#2196f3');
+            }
+          } else {
+            // ✅ Enter: 코드 블럭 탈출 → 새로운 P 태그
+            e.preventDefault();
+            e.stopImmediatePropagation(); // ✅ 다른 핸들러 차단
+            exitCodeBlockToNewParagraph(codeBlock, contentArea);
+            
+            if (window.errorHandler) {
+              errorHandler.colorLog('CODE', '🚪 코드 블럭 탈출 → 새 문단', {}, '#4caf50');
+            }
           }
         }
       }
-    });
+    };
+    
+    // ✅ 캡처 단계로 등록 (다른 성공적인 플러그인들과 동일한 패턴)
+    contentArea.addEventListener('keydown', keyboardHandler, true);
+    
+    // ✅ cleanup 함수 반환 (메모리 누수 방지)
+    return () => {
+      contentArea.removeEventListener('keydown', keyboardHandler, true);
+    };
   }
 
   /**
