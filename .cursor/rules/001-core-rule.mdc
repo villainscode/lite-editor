@@ -65,12 +65,13 @@ alwaysApply: false
 - 중복 방지: 코드 중복을 피하고, 가능한 기존 기능을 재사용합니다 (DRY 원칙).
 - 가드레일: 테스트 외에는 개발이나 프로덕션 환경에서 모의 데이터를 사용하지 않습니다.
 - 효율성: 명확성을 희생하지 않으면서 토큰 사용을 최소화하도록 출력을 최적화합니다.
+- @format-util.js, @error-handler.js, @security-manager.js @plugin-util.js 등 파일을 참고하여 공통 코드로 재사용을 반드시 해야 합니다.
 
 ## 3. 리팩토링
 
 - 리팩토링이 필요한 경우 계획을 설명하고 허락을 받은 다음 진행합니다.
 - 코드 구조를 개선하는 것이 목표이며, 기능 변경은 아닙니다.
-- /js/plugins/plugin-util.js 파일을 참고하여 리팩토링을 진행합니다. 공통으로 써야 할 요소들은 plugin-util.js에 작성합니다. (@plugin-util.js)
+- [format-util.js](mdc:js/plugins/format-util.js), [error-handler.js](mdc:js/error-handler.js), [security-manager.js](mdc:js/security-manager.js) [plugin-util.js](mdc:js/plugins/plugin-util.js) 등 파일을 참고하여 리팩토링을 진행합니다. 공통으로 써야 할 요소들은 plugin-util.js에 작성합니다.
 - 리팩토링 후에는 모든 테스트가 통과하는지 확인합니다.
 
 ## 4. 디버깅
