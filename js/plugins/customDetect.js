@@ -17,7 +17,7 @@ const languages =
 		['http', [/^(GET|HEAD|POST|PUT|DELETE|PATCH|HTTP)\b/g, 500]],
 		['js', [/\b(console|await|async|function|export|import|this|class|for|let|const|map|join|require|if|else|var|return|window|document|setTimeout|setInterval|Promise)\b/g, 10]],
 		['ts', [/\b(console|await|async|function|export|import|this|class|for|let|const|map|join|require|implements|interface|namespace|type|enum)\b/g, 10], [/:\s*(string|number|boolean|object|any)\b/g, 15]],
-		['py', [/\b(def|print|class|and|or|lambda|import|from|if|else|elif|for|while|try|except|with|as|in|not|is)\b/g, 10], [/^\s*#\s*-\*-\s*coding[:=]/gm, 100]],
+		['py', [/\b(def|print|class|and|or|lambda|import|from|if|else|elif|for|while|try|except|with|as|in|not|is)\b/g, 10], [/^\s*#\s*-\*-\s*coding[:=]/gm, 100], [/:\s*int\b|:\s*str\b|:\s*float\b|:\s*bool\b/g, 20], [/\bsys\.stdin\b|\blen\(|\brange\(|\bstr\(|\bint\(/g, 15]],
 		['sql', [/\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY|CREATE|DROP|ALTER|TABLE)\b/gi, 20]],
 		['pl', [/#!(\/usr)?\/bin\/perl/g, 500], [/\b(use|print|my|our|sub|if|else|elsif|while|for|foreach)\b|\$/g, 10]],
 		['lua', [/#!(\/usr)?\/bin\/lua/g, 500], [/\b(function|local|end|if|then|else|elseif|for|while|do|repeat|until)\b/g, 15]],
