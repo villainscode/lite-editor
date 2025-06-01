@@ -784,6 +784,14 @@
   LiteEditor.registerPlugin('formatIndent', {
     title: 'Indentation',
     icon: 'format_indent_increase',
+    
+    // ✅ 새로 추가: action 함수
+    action: function(contentArea, buttonElement, event, shortcutId) {
+      // shortcutId에 따라 들여쓰기/내어쓰기 결정
+      const command = (shortcutId === 'outdent') ? 'outdent' : 'indent';
+      handleIndentation(contentArea, command);
+    },
+    
     customRender: function(toolbar, contentArea) {
       const containerWrapper = document.createElement('div');
       containerWrapper.style.display = 'contents';
@@ -819,14 +827,7 @@
     }
   });
   
-  // 이벤트 리스너 등록
-  const tabKeyHandler = handleTabKey;
-  document.addEventListener('keydown', tabKeyHandler, false);
-  
-  eventCleanupFunctions.push(() => {
-    document.removeEventListener('keydown', tabKeyHandler, false);
-  });
-  
+  // 메모리 정리
   const unloadHandler = cleanup;
   window.addEventListener('beforeunload', unloadHandler);
   eventCleanupFunctions.push(() => {

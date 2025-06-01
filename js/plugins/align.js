@@ -103,6 +103,42 @@
   LiteEditor.registerPlugin('align', {
     title: 'Align',
     icon: 'format_align_left',
+    
+    // ✅ 추가: 단축키용 action 함수
+    action: function(contentArea, buttonElement, event, shortcutId) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      contentArea.focus();
+      
+      // 선택 영역 저장
+      saveSelectionWithNormalization();
+      
+      // shortcutId에 따라 정렬 타입 결정
+      let alignType;
+      switch (shortcutId) {
+        case 'alignLeft':
+          alignType = 'Left';
+          break;
+        case 'alignCenter':
+          alignType = 'Center';
+          break;
+        case 'alignRight':
+          alignType = 'Right';
+          break;
+        case 'alignJustify':
+          alignType = 'Full';
+          break;
+        default:
+          return; // 알 수 없는 단축키 ID
+      }
+      
+      // 정렬 적용
+      applyAlignment(alignType, contentArea);
+    },
+    
     customRender: function(toolbar, contentArea) {
       // 1. 정렬 버튼 생성
       const alignButton = util.dom.createElement('div', {

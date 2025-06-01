@@ -790,6 +790,21 @@
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Image upload',
         icon: 'photo_camera',
+        
+        // ✅ 추가: 단축키용 action 함수  
+        action: function(contentArea, buttonElement, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // 다른 모달 닫기
+            closeAllOtherModals();
+            
+            // 이미지 모달 표시 (기존 로직 재사용)
+            showModal();
+        },
+        
         customRender: function(toolbar, contentArea) {
             if (util.styles && util.styles.loadCssFile) {
                 util.styles.loadCssFile(STYLE_ID, CSS_PATH);

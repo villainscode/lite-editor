@@ -122,6 +122,21 @@
     LiteEditor.registerPlugin(PLUGIN_ID, {
         title: 'Link',
         icon: 'link',
+        
+        // ✅ 추가: 단축키용 action 함수
+        action: function(contentArea, buttonElement, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // 다른 모달 닫기
+            closeAllOtherModals();
+            
+            // 이미지 모달 표시 (기존 로직 재사용)
+            showModal();
+        },
+        
         customRender: function(toolbar, contentArea) {
             // 1. 링크 버튼 생성
             const linkButton = util.dom.createElement('button', {

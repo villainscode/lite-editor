@@ -74,7 +74,7 @@
    * 일반 인라인 서식을 적용하는 함수 (Bold, Italic, Underline, Strike 등에 공통적으로 사용)
    * 토글 기능이 제거된 단순 포맷 적용 함수
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
-   * @param {HTMLElement} buttonElement - 클릭된 버튼 요소
+   * @param {HTMLElement|null} buttonElement - 클릭된 버튼 요소 (단축키의 경우 null 가능)
    * @param {string} commandName - 실행할 execCommand 명령어
    * @param {Event} event - 이벤트 객체
    */
@@ -85,11 +85,22 @@
       event.stopPropagation();
     }
     
+    // ✅ buttonElement 안전성 검사 추가
+    if (!buttonElement) {
+      // 단축키로 호출된 경우 가상 버튼 객체 생성
+      buttonElement = {
+        hasAttribute: () => false,
+        setAttribute: () => {},
+        removeAttribute: () => {},
+        _isVirtual: true
+      };
+    }
+    
     // 중복 실행 방지 플래그 확인 및 설정
-    if (buttonElement.hasAttribute('data-processing')) {
+    if (buttonElement && buttonElement.hasAttribute('data-processing')) {
       return; // 이미 처리 중이면 종료
     }
-    buttonElement.setAttribute('data-processing', 'true');
+    if (buttonElement) buttonElement.setAttribute('data-processing', 'true');
     
     // 현재 선택 영역 저장 (헬퍼 함수 사용)
     const savedRange = saveSelection();
@@ -111,14 +122,14 @@
         
         // 처리 상태 플래그 제거 및 이벤트 발생
         setTimeout(function() {
-          buttonElement.removeAttribute('data-processing');
+          if (buttonElement) buttonElement.removeAttribute('data-processing');
           contentArea.dispatchEvent(new Event('input', { bubbles: true }));
         }, 10);
       } catch (error) {
         if (window.errorHandler) {
           errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.APPLY, error);
         }
-        buttonElement.removeAttribute('data-processing');
+        if (buttonElement) buttonElement.removeAttribute('data-processing');
       }
     }, 10);
   };
@@ -126,7 +137,7 @@
   /**
    * 코드 태그 서식을 적용하는 함수 (Code 태그에 특화되어 있음)
    * @param {HTMLElement} contentArea - 에디터 콘텐츠 영역
-   * @param {HTMLElement} buttonElement - 클릭된 버튼 요소
+   * @param {HTMLElement|null} buttonElement - 클릭된 버튼 요소 (단축키의 경우 null 가능)
    * @param {Event} event - 이벤트 객체
    */
   LiteEditorUtils.applyCodeFormat = function(contentArea, buttonElement, event) {
@@ -136,11 +147,22 @@
       event.stopPropagation();
     }
     
+    // ✅ buttonElement 안전성 검사 추가
+    if (!buttonElement) {
+      // 단축키로 호출된 경우 가상 버튼 객체 생성
+      buttonElement = {
+        hasAttribute: () => false,
+        setAttribute: () => {},
+        removeAttribute: () => {},
+        _isVirtual: true
+      };
+    }
+    
     // 2. 중복 실행 방지 플래그 확인 및 설정
-    if (buttonElement.hasAttribute('data-processing')) {
+    if (buttonElement && buttonElement.hasAttribute('data-processing')) {
       return; // 이미 처리 중이면 종료
     }
-    buttonElement.setAttribute('data-processing', 'true');
+    if (buttonElement) buttonElement.setAttribute('data-processing', 'true');
     
     // 3. 현재 선택 영역 저장 (헬퍼 함수 사용)
     const savedRange = saveSelection();
@@ -279,7 +301,7 @@
                 }
                 
                 // 17. 처리 상태 플래그 제거
-                buttonElement.removeAttribute('data-processing');
+                if (buttonElement) buttonElement.removeAttribute('data-processing');
                 if (window.errorHandler) {
                   errorHandler.logInfo('FormatUtils', '코드 서식 적용 완료');
                 }
@@ -288,14 +310,14 @@
               if (window.errorHandler) {
                 errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, innerError);
               }
-              buttonElement.removeAttribute('data-processing');
+              if (buttonElement) buttonElement.removeAttribute('data-processing');
             }
           }, 20); // 명령 실행 전 지연
         } catch (outerError) {
           if (window.errorHandler) {
             errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.CODE.APPLY, outerError);
           }
-          buttonElement.removeAttribute('data-processing');
+          if (buttonElement) buttonElement.removeAttribute('data-processing');
         }
     }, 50); // 주요 실행 지연
   };

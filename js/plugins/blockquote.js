@@ -70,6 +70,22 @@
   LiteEditor.registerPlugin('blockquote', {
     title: 'Blockquote',
     icon: 'format_quote',
+    
+    // ✅ 추가: 단축키용 action 함수
+    action: function(contentArea, buttonElement, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      if (!util.utils.canExecutePlugin(contentArea)) {
+        return;
+      }
+      
+      contentArea.focus();
+      document.execCommand('formatBlock', false, 'blockquote');
+    },
+    
     customRender: function(toolbar, contentArea) {
       const button = util.dom.createElement('button', {
         className: 'lite-editor-button',
@@ -107,26 +123,6 @@
       });
 
       return button;
-    }
-  });
-
-  // Blockquote 단축키 (Alt+Q)
-  LiteEditor.registerShortcut('blockquote', {
-    key: 'q',
-    alt: true,
-    action: function(contentArea) {
-      document.execCommand('formatBlock', false, 'blockquote');
-      
-      // ✅ 커서를 텍스트 마지막으로 이동
-      setTimeout(() => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }, 0);
     }
   });
 })();

@@ -14,23 +14,5 @@
   function applyUnderline(contentArea) {
     document.execCommand('underline', false, null);
   }
-  
-  // Mac용 단축키 (⌘+U)
-  LiteEditor.registerShortcut('underline', {
-    key: 'u',
-    meta: true,
-    action: function(contentArea) {
-      applyUnderline(contentArea);
-    }
-  });
-  
-  // Windows/Linux용 단축키 (Ctrl+U)
-  LiteEditor.registerShortcut('underline', {
-    key: 'u',
-    ctrl: true,
-    action: function(contentArea) {
-      applyUnderline(contentArea);
-    }
-  });
 
 })();

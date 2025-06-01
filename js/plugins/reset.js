@@ -367,13 +367,13 @@
         // 현재 선택 상태 저장
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) {
-          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
+          log('선택 영역이 없습니다');
           return false;
         }
 
         const selectedText = selection.toString();
         if (!selectedText.trim()) {
-          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
+          log('선택된 텍스트가 없습니다');
           return false;
         }
 

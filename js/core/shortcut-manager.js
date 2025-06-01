@@ -197,17 +197,28 @@ class ShortcutManager {
         
         this._logInfo(`단축키 실행: ${this._getDisplayKey(matchedShortcut)}`);
         
-        // 단축키 액션 실행
-        try {
-          matchedShortcut.action(contentArea, e);
-        } catch (actionError) {
-          this._logError('단축키 액션 실행 실패:', actionError);
+        // ✅ 가상 버튼 요소 생성하여 전달
+        const virtualButton = {
+          hasAttribute: () => false,
+          setAttribute: () => {},
+          removeAttribute: () => {},
+          _isVirtual: true,
+          _shortcutId: matchedShortcut.id
+        };
+        
+        // 액션 실행 시 contentArea와 가상 버튼 전달
+        matchedShortcut.action(contentArea, virtualButton);
+        
+        if (window.errorHandler) {
+          errorHandler.colorLog('SHORTCUT', `✅ 단축키 실행: ${matchedShortcut.id}`, null, '#4caf50');
         }
         
         return false;
       }
     } catch (error) {
-      this._logError('키다운 이벤트 처리 실패:', error);
+      if (window.errorHandler) {
+        errorHandler.logError('ShortcutManager', '알 수 없는 오류', error);
+      }
     }
   }
 

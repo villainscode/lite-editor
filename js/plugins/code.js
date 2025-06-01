@@ -10,6 +10,22 @@
   LiteEditor.registerPlugin('code', {
     title: 'Code',
     icon: 'code',
+    
+    // ✅ 추가: 단축키용 action 함수
+    action: function(contentArea, buttonElement, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      if (!util.utils.canExecutePlugin(contentArea)) {
+        return;
+      }
+      
+      contentArea.focus();
+      applyCodeFormat(contentArea);
+    },
+    
     customRender: function(toolbar, contentArea) {
       const button = util.dom.createElement('button', {
         className: 'lite-editor-button',
@@ -27,7 +43,7 @@
         e.stopPropagation();
         
         if (!util.utils.canExecutePlugin(contentArea)) {
-          return;
+            return;
         }
         
         contentArea.focus();
@@ -35,15 +51,6 @@
       });
 
       return button;
-    }
-  });
-
-  // Code 단축키 (Alt+C)
-  LiteEditor.registerShortcut('code', {
-    key: 'c',
-    alt: true,
-    action: function(contentArea) {
-      applyCodeFormat(contentArea);
     }
   });
 

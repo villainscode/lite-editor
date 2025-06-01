@@ -552,7 +552,7 @@
    * Undo 플러그인
    */
   LiteEditor.registerPlugin('undo', {
-    title: 'Undo (Ctrl+Z)',
+    title: 'Undo',
     icon: 'undo',
     action: function(contentArea) {
       const historyManager = getHistoryManager(contentArea);
@@ -566,7 +566,7 @@
    * Redo 플러그인
    */
   LiteEditor.registerPlugin('redo', {
-    title: 'Redo (Ctrl+Shift+Z)',
+    title: 'Redo',
     icon: 'redo',
     action: function(contentArea) {
       const historyManager = getHistoryManager(contentArea);
@@ -575,101 +575,6 @@
       }
     }
   });
-  
-  // ==================== 직접 키보드 이벤트 처리 (개선됨) ====================
-  
-  /**
-   * 직접 키보드 이벤트 처리 - core.js의 단축키 시스템 우회
-   */
-  function setupDirectKeyboardHandling() {
-    // 키보드 핸들러가 이미 등록되었는지 확인
-    if (window.LiteEditorHistoryKeyboardHandlerRegistered) {
-      return;
-    }
-    
-    document.addEventListener('keydown', function(event) {
-      // contenteditable 영역에서만 작동
-      const contentArea = event.target.closest('[contenteditable="true"]');
-      if (!contentArea) return;
-      
-      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-      
-      // Mac: Cmd+Z (Undo)
-      if (isMac && event.metaKey && event.key === 'z' && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        
-        const historyManager = getHistoryManager(contentArea);
-        if (historyManager) {
-          const status = historyManager.getStatus();
-          
-          if (status.canUndo) {
-            historyManager.undo();
-          }
-        }
-        return false;
-      }
-      
-      // Mac: Shift+Cmd+Z (Redo)
-      if (isMac && event.metaKey && event.shiftKey && event.key === 'z' && !event.ctrlKey && !event.altKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        
-        const historyManager = getHistoryManager(contentArea);
-        if (historyManager) {
-          const status = historyManager.getStatus();
-          
-          if (status.canRedo) {
-            historyManager.redo();
-          }
-        }
-        return false;
-      }
-      
-      // Windows/Linux: Ctrl+Z (Undo)
-      if (!isMac && event.ctrlKey && event.key === 'z' && !event.metaKey && !event.shiftKey && !event.altKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        
-        const historyManager = getHistoryManager(contentArea);
-        if (historyManager) {
-          const status = historyManager.getStatus();
-          
-          if (status.canUndo) {
-            historyManager.undo();
-          }
-        }
-        return false;
-      }
-      
-      // Windows/Linux: Ctrl+Shift+Z (Redo)
-      if (!isMac && event.ctrlKey && event.shiftKey && event.key === 'z' && !event.metaKey && !event.altKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        
-        const historyManager = getHistoryManager(contentArea);
-        if (historyManager) {
-          const status = historyManager.getStatus();
-          
-          if (status.canRedo) {
-            historyManager.redo();
-          }
-        }
-        return false;
-      }
-      
-    }, true);
-    
-    // 중복 등록 방지 플래그 설정
-    window.LiteEditorHistoryKeyboardHandlerRegistered = true;
-  }
-  
-  // 직접 키보드 처리 시작
-  setupDirectKeyboardHandling();
   
   // ==================== 전역 API 노출 ====================
   

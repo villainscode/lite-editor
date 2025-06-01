@@ -304,6 +304,31 @@
       }
 
       return headingButton;
+    },
+    
+    // ✅ 추가: 단축키용 action 함수
+    action: function(contentArea, buttonElement, event, shortcutId) {
+      // 단축키 ID에 따라 적절한 태그 결정
+      let tag;
+      switch (shortcutId) {
+        case 'heading1':
+          tag = 'h1';
+          break;
+        case 'heading2':
+          tag = 'h2';
+          break;
+        case 'heading3':
+          tag = 'h3';
+          break;
+        case 'paragraph':
+          tag = 'p';
+          break;
+        default:
+          return; // 알 수 없는 단축키 ID
+      }
+      
+      // 단축키용 헤딩 적용 함수 호출
+      applyHeadingByShortcut(tag, contentArea);
     }
   });
 
@@ -388,37 +413,4 @@
     document.execCommand('formatBlock', false, tag.toLowerCase());
     util.editor.dispatchEditorEvent(contentArea);
   }
-  
-  // 단축키 등록
-  LiteEditor.registerShortcut('heading', {
-    key: '1',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h1', contentArea);
-    }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '2',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h2', contentArea);
-    }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '3',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h3', contentArea);
-    }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '4',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('p', contentArea);
-    }
-  });
 })();

@@ -18,19 +18,5 @@
    * 기울임 플러그인 (PluginUtil 유틸리티 활용)
    */
   PluginUtil.registerInlineFormatPlugin(PLUGIN_ID, 'Italic (⌘I)', 'format_italic');
-  
-  // 단축키 등록
-  LiteEditor.registerShortcut(PLUGIN_ID, {
-    key: 'i',
-    ctrl: true,  // Windows/Linux는 Ctrl+I
-    action: italicAction
-  });
-  
-  // Mac용 단축키 추가 (⌘+I)
-  LiteEditor.registerShortcut(PLUGIN_ID, {
-    key: 'i',
-    meta: true,  // Mac은 ⌘+I
-    action: italicAction
-  });
 
 })();

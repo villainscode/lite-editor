@@ -45,6 +45,11 @@
             'js/data/videoList.js',
             'js/data/codeLanguages.js',
             'js/error-handler.js',
+            
+            // ✅ 새로운 단축키 시스템 (core.js 이전에 로드)
+            'js/core/shortcut-definitions.js',
+            'js/core/shortcut-manager.js',
+            
             'js/core.js',
             'js/security-manager.js',
             

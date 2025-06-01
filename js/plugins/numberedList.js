@@ -577,40 +577,6 @@
     document.removeEventListener('keydown', handleEnterKey, true);
   };
   
-  // ✅ Alt+O 단축키 등록
-  LiteEditor.registerShortcut('orderedList', {
-    key: 'o',
-    alt: true,
-    action: function(contentArea) {
-      if (window.LiteEditorHistory) {
-        window.LiteEditorHistory.forceRecord(contentArea, 'Before Numbered List (Shortcut)');
-      }
-      
-      const selection = PluginUtil.selection.getSafeSelection();
-      if (!selection?.rangeCount) return;
-      
-      const range = selection.getRangeAt(0);
-      const existingList = findExistingList(range);
-      
-      try {
-        if (existingList) {
-          unwrapNumberedList(existingList.ol, range, contentArea);
-        } else {
-          createNumberedList(contentArea, range);
-        }
-        
-        setTimeout(() => {
-          if (window.LiteEditorHistory) {
-            window.LiteEditorHistory.recordState(contentArea, 'After Numbered List (Shortcut)');
-          }
-        }, 100);
-        
-      } catch (error) {
-        errorHandler.logError('PLUGINS', 'P601', error);
-      }
-    }
-  });
-  
   // ✅ 정리 함수 (bulletList.js 방식)
   if (PluginUtil.registerCleanup) {
     PluginUtil.registerCleanup('numberedList', function() {
