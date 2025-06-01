@@ -357,7 +357,7 @@
   }
 
   /**
-   * ✅ 안전한 코드 블럭 탈출 함수 (DOM 에러 수정)
+   * ✅ 수정된 코드 블럭 탈출 함수 (새 블록 위치 문제 해결)
    */
   function exitCodeBlockToNewParagraph(codeElement, contentArea) {
     try {
@@ -368,23 +368,35 @@
       let targetBlock = codeElement;
       while (targetBlock.parentNode && targetBlock.parentNode !== contentArea) {
         targetBlock = targetBlock.parentNode;
-  }
+      }
 
-      // ✅ contentArea의 직접 자식 블록 다음에 삽입
+      // ✅ 수정: 항상 targetBlock 바로 다음에 삽입 (insertAfter 방식)
       if (targetBlock && targetBlock.parentNode === contentArea) {
         if (targetBlock.nextSibling) {
+          // 다음 형제 앞에 삽입
           contentArea.insertBefore(newParagraph, targetBlock.nextSibling);
         } else {
-          contentArea.appendChild(newParagraph);
+          // ✅ 핵심 수정: nextSibling이 없어도 바로 다음에 삽입
+          targetBlock.parentNode.appendChild(newParagraph);
         }
+        
+        // ✅ 디버깅 로그
+        if (window.errorHandler) {
+          errorHandler.colorLog('CODE', '🔍 새 문단 삽입 위치', {
+            targetBlock: targetBlock.tagName,
+            hasNextSibling: !!targetBlock.nextSibling,
+            insertionMethod: targetBlock.nextSibling ? 'insertBefore' : 'appendChild'
+          }, '#ff9800');
+        }
+        
       } else {
         // 예외 상황: contentArea 끝에 추가
         contentArea.appendChild(newParagraph);
       }
       
       // 커서 이동
-    setTimeout(() => {
-      const newRange = document.createRange();
+      setTimeout(() => {
+        const newRange = document.createRange();
         newRange.setStart(newParagraph, 0);
         newRange.collapse(true);
         
@@ -396,7 +408,8 @@
         
         if (window.errorHandler) {
           errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
-            newParagraph: newParagraph.outerHTML
+            newParagraph: newParagraph.outerHTML,
+            previousSibling: newParagraph.previousSibling?.tagName || 'none'
           }, '#4caf50');
         }
       }, 10);
@@ -406,7 +419,7 @@
         errorHandler.logError('CODE', 'EXIT_CODE_BLOCK_ERROR', error);
       }
       
-      // 대체 방법: contentArea 끝에 추가
+      // 대체 방법은 동일
       try {
         const fallbackP = util.dom.createElement('p');
         fallbackP.innerHTML = '<br>';
