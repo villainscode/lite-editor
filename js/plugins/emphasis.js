@@ -101,7 +101,7 @@
         
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
-          errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, '선택 영역 복원 실패');
+          errorHandler.logError('EmphasisPlugin', 'P303', '선택 영역 복원 실패');  // ✅ 수정
           return;
         }
         
@@ -138,16 +138,30 @@
               currentElement = currentElement.parentElement;
             }
             
-            errorHandler.colorLog('EMPHASIS', '🔧 추출된 서식 태그들', {
-              formatTags: formatTags.map(f => f.tagName),
-              selectedText: selectedText.substring(0, 50)
-            }, '#9c27b0');
-            
+
+            // ✅ 4단계: 선택 범위 상세 분석 (디버깅)
+            errorHandler.colorLog('EMPHASIS', '🔍 선택 범위 분석', {
+              selectedText: range.toString(),
+              startContainer: range.startContainer.nodeName,
+              startOffset: range.startOffset,
+              endContainer: range.endContainer.nodeName,
+              endOffset: range.endOffset,
+              commonAncestor: range.commonAncestorContainer.nodeName,
+              // DOM 구조 확인
+              beforeDelete: range.startContainer.parentNode.innerHTML.substring(0, 200)
+            }, '#ff9800');
+
             // ✅ 4단계: 선택 영역 제거
             range.deleteContents();
-            
+
+            // ✅ 디버깅: 삭제 후 DOM 상태
+            errorHandler.colorLog('EMPHASIS', '🔍 삭제 후 DOM 상태', {
+              afterDelete: range.startContainer.parentNode.innerHTML.substring(0, 200)
+            }, '#ff5722');
+
             // ✅ 5단계: 서식 태그들을 중첩해서 적용
             let finalElement = document.createTextNode(selectedText);
+
             
             // 안쪽부터 바깥쪽으로 태그 적용
             formatTags.reverse().forEach(formatInfo => {
@@ -156,22 +170,27 @@
               finalElement = newElement;
             });
             
-            // ✅ 6단계: 하이라이트 span으로 감싸기
+            // ✅ 6단계: 서식 태그 중복 방지를 위한 구조 변경
             const spanElement = document.createElement('span');
             spanElement.style.backgroundColor = color;
-            spanElement.appendChild(finalElement);
-            
+
+            if (formatTags.length > 0) {
+              // 서식이 있는 경우: span 안에 서식 적용
+              spanElement.appendChild(finalElement);
+            } else {
+              // 서식이 없는 경우: span 안에 텍스트만
+              spanElement.appendChild(document.createTextNode(selectedText));
+            }
+
             // ✅ 7단계: 새 span을 원래 위치에 삽입
             range.insertNode(spanElement);
             
-            // ✅ 8단계: code.js 방식 - 다음 텍스트와 붙음 방지
-            insertLineBreakIfNeeded(spanElement);
-            
-            // ✅ 9단계: 새로운 범위로 선택 영역 설정
-            const newRange = document.createRange();
-            newRange.selectNodeContents(spanElement);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
+            // ✅ 8단계: contentArea 매개변수 전달
+            insertLineBreakIfNeeded(spanElement, contentArea);
+
+            // 그리고 커서 위치 모드에서도:
+            // ✅ 커서 위치에도 다음 텍스트와 붙음 방지 적용
+            insertLineBreakIfNeeded(spanElement, contentArea);
             
             errorHandler.colorLog('EMPHASIS', '✅ 서식 보존 하이라이트 완료', {
               finalHTML: spanElement.outerHTML.substring(0, 200),
@@ -257,26 +276,60 @@
   /**
    * ✅ 완전한 텍스트 붙음 방지 함수 (code.js 방식 적용)
    */
-  function insertLineBreakIfNeeded(spanElement) {
-    // 1. span 요소 바로 다음 노드 확인
-    const nextNode = spanElement.nextSibling;
+  function insertLineBreakIfNeeded(spanElement, contentArea) {  // ✅ contentArea 매개변수 추가
+    // 1. 가장 바깥쪽 서식 태그 찾기
+    let outerMostElement = spanElement;
+    let parentElement = spanElement.parentElement;
     
+    // span의 부모가 서식 태그인지 확인하며 가장 바깥쪽까지 찾기
+    while (parentElement && parentElement !== contentArea) {
+      const tagName = parentElement.tagName?.toLowerCase();
+      
+      if (['b', 'strong', 'i', 'em', 'u', 'strike', 's', 'del', 'ins', 'sub', 'sup', 'mark', 'small', 'code'].includes(tagName)) {
+        outerMostElement = parentElement;
+        parentElement = parentElement.parentElement;
+      } else {
+        break; // 서식 태그가 아니면 중단
+      }
+    }
+    
+    // 2. 가장 바깥쪽 요소의 nextSibling 확인
+    const nextNode = outerMostElement.nextSibling;
+    
+    errorHandler.colorLog('EMPHASIS', '🔍 붙음 방지 분석', {
+      spanElement: spanElement.tagName,
+      outerMostElement: outerMostElement.tagName,
+      nextNode: nextNode?.nodeType === Node.TEXT_NODE ? 'TEXT_NODE' : nextNode?.tagName || 'null',
+      nextText: nextNode?.textContent?.substring(0, 20) || 'null'
+    }, '#ff9800');
+    
+    // 3. 다음이 텍스트 노드이고 공백 없이 시작하는 경우 <br> 삽입
     if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
       const nextText = nextNode.textContent;
       
-      // 2. 다음 텍스트가 공백 없이 바로 시작하는지 확인
       if (nextText && !nextText.startsWith(' ') && nextText.trim()) {
-        // 3. <br> 태그 삽입으로 다음 텍스트와 붙음 방지
         const br = document.createElement('br');
-        spanElement.parentNode.insertBefore(br, nextNode);
+        outerMostElement.parentNode.insertBefore(br, nextNode);
         
-        errorHandler.colorLog('EMPHASIS', '✅ 자동 줄바꿈 삽입 (텍스트 붙음 방지)', {
-          nextText: nextText.substring(0, 20) + '...',
-          reason: '다음 텍스트와 붙음 방지'
+        errorHandler.colorLog('EMPHASIS', '✅ 서식 태그 뒤 줄바꿈 삽입', {
+          insertedAfter: outerMostElement.tagName,
+          nextText: nextText.substring(0, 20) + '...'
         }, '#4caf50');
         
         return true;
       }
+    }
+    
+    // 4. 이미 <br> 태그가 있는 경우
+    else if (nextNode && nextNode.nodeType === Node.ELEMENT_NODE && nextNode.tagName === 'BR') {
+      errorHandler.colorLog('EMPHASIS', '⏭️ 이미 <br> 태그 존재', {}, '#9e9e9e');
+      return false;
+    }
+    
+    // 5. 다음 노드가 없는 경우
+    else if (!nextNode) {
+      errorHandler.colorLog('EMPHASIS', '⏭️ 마지막 위치', {}, '#9e9e9e');
+      return false;
     }
     
     return false;
