@@ -73,22 +73,19 @@
       errorHandler.colorLog('CODE', '📝 빈 코드 블록 생성', {}, '#9c27b0');
     }
 
-    // ✅ core.css 기본 스타일 + 블록 속성
+    // ✅ core.css 기본 스타일만 사용
     const codeElement = util.dom.createElement('code', {
       'contenteditable': 'true'
     });
     
-    // ✅ 블록 레벨 스타일만 추가 (core.css 기본 활용)
+    // ✅ 빈 코드 블록만 전체 너비로 오버라이드
     codeElement.style.display = 'block';
     codeElement.style.width = '100%';
-    codeElement.style.padding = '5px 10px';
-    codeElement.style.margin = '0';
+    // padding, margin은 core.css 그대로 사용 (제거)
+    
     codeElement.textContent = '\u200B'; // 보이지 않는 문자
 
-    // ✅ 키보드 이벤트 핸들러 추가
     setupCodeBlockKeyboardEvents(codeElement, contentArea);
-
-    // 삽입 및 포커스
     range.insertNode(codeElement);
     
     setTimeout(() => {
@@ -109,6 +106,10 @@
   function wrapSelectedTextWithCode(contentArea, range) {
     // ✅ 오프셋 계산 (복원용)
     const offsets = util.selection.calculateOffsets(contentArea);
+    
+    // ✅ 새로 추가: 원본 range 정보 저장 (다음 텍스트 확인용)
+    const originalEndContainer = range.endContainer;
+    const originalEndOffset = range.endOffset;
     
     // ✅ HTML 구조를 보존하면서 내용 추출
     const selectedContent = range.extractContents();
@@ -167,6 +168,9 @@
       // ✅ 선택 영역에 코드 요소 삽입 (이미 extractContents()로 삭제됨)
       range.insertNode(codeElement);
       
+      // ✅ 수정: 단순화된 줄바꿈 검사
+      insertLineBreakIfNeeded(codeElement);
+      
       // ✅ 커서를 코드 요소 다음으로 이동
       setTimeout(() => {
         const newRange = document.createRange();
@@ -199,6 +203,36 @@
         util.selection.restoreFromOffsets(contentArea, offsets);
       }
     }
+  }
+
+  /**
+   * ✅ 수정: 코드 삽입 후 다음 텍스트 확인 및 줄바꿈 처리
+   */
+  function insertLineBreakIfNeeded(codeElement) {
+    // 1. 코드 요소 바로 다음 노드 확인
+    const nextNode = codeElement.nextSibling;
+    
+    if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
+      const nextText = nextNode.textContent;
+      
+      // 2. 다음 텍스트가 공백 없이 바로 시작하는지 확인
+      if (nextText && !nextText.startsWith(' ') && nextText.trim()) {
+        // 3. <br> 태그 삽입
+        const br = document.createElement('br');
+        codeElement.parentNode.insertBefore(br, nextNode);
+        
+        if (window.errorHandler) {
+          errorHandler.colorLog('CODE', '✅ 자동 줄바꿈 삽입', {
+            nextText: nextText.substring(0, 20) + '...',
+            reason: '다음 텍스트와 붙음 방지'
+          }, '#4caf50');
+        }
+        
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
