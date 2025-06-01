@@ -417,11 +417,13 @@
                         <div class="example">
                             이 함수는 <code>console.log()</code>를 사용합니다.
                         </div>
-                        
+                        <div>
                     function testFunction() {<br>
                       &nbsp;&nbsp;&nbsp;&nbsp;console.log("Hello, LiteEditor!");<br>
                       &nbsp;&nbsp;&nbsp;&nbsp;return true;<br>
-                    }<br>
+}
+                        </div>
+                    <br>
                     <br>
                     const result = testFunction();<br>
                     
@@ -951,7 +953,7 @@
     
     <script>
         // 디버그 모드를 명시적으로 활성화 (loader.js 로드 전에 설정)
-        window.DEBUG_MODE = false;
+        window.DEBUG_MODE = true;
         console.log(`[DEBUG] 디버그 모드 ${window.DEBUG_MODE ? '활성화' : '비활성화'}됨 - index.html에서 설정`);
 
         // 버전 정보 표시 및 클릭 추적 초기화

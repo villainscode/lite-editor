@@ -55,20 +55,57 @@
   });
 
   /**
-   * ✅ 추가: 현재 위치가 code 태그 내부인지 확인
+   * ✅ 디버깅 강화된 code 요소 감지 함수
    */
   function isInsideCodeElement(range, contentArea) {
     let currentElement = range.startContainer;
     
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '🔍 isInsideCodeElement 시작', {
+        startContainer: currentElement.nodeName,
+        nodeType: currentElement.nodeType
+      }, '#ff9800');
+    }
+    
     if (currentElement.nodeType === Node.TEXT_NODE) {
+      if (window.errorHandler) {
+        errorHandler.colorLog('CODE', '📝 텍스트 노드 → 부모로 이동', {
+          textContent: currentElement.textContent?.substring(0, 30),
+          parentTag: currentElement.parentElement?.tagName || 'none'
+        }, '#2196f3');
+      }
       currentElement = currentElement.parentElement;
     }
     
-    while (currentElement && currentElement !== contentArea) {
+    let checkDepth = 0;
+    while (currentElement && currentElement !== contentArea && checkDepth < 10) {
+      if (window.errorHandler) {
+        errorHandler.colorLog('CODE', `🔍 체크 중 (깊이 ${checkDepth})`, {
+          tagName: currentElement.tagName,
+          className: currentElement.className || 'none',
+          isCodeTag: currentElement.tagName === 'CODE'
+        }, currentElement.tagName === 'CODE' ? '#4caf50' : '#9e9e9e');
+      }
+      
       if (currentElement.tagName === 'CODE') {
+        if (window.errorHandler) {
+          errorHandler.colorLog('CODE', '✅ CODE 태그 발견!', {
+            codeElement: currentElement.outerHTML.substring(0, 100) + '...'
+          }, '#4caf50');
+        }
         return currentElement;
       }
+      
       currentElement = currentElement.parentElement;
+      checkDepth++;
+    }
+    
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '❌ CODE 태그 없음', {
+        finalElement: currentElement?.tagName || 'null',
+        reachedContentArea: currentElement === contentArea,
+        maxDepthReached: checkDepth >= 10
+      }, '#f44336');
     }
     
     return null;
@@ -83,43 +120,168 @@
     
     const range = selection.getRangeAt(0);
     
-    // ✅ 추가: 중첩 방지 체크
-    const existingCodeElement = isInsideCodeElement(range, contentArea);
-    if (existingCodeElement) {
-      return; // 중첩 방지 - 아무것도 하지 않고 리턴
+    // ✅ 단계별 상세 분석
+    if (window.errorHandler) {
+      // 1. Range 기본 정보
+      errorHandler.colorLog('CODE', '📍 Range 기본 정보', {
+        collapsed: range.collapsed,
+        startOffset: range.startOffset,
+        endOffset: range.endOffset
+      }, '#ff9800');
+      
+      // 2. StartContainer 상세 분석
+      const startContainer = range.startContainer;
+      errorHandler.colorLog('CODE', '📍 StartContainer 분석', {
+        nodeType: startContainer.nodeType,
+        nodeName: startContainer.nodeName,
+        nodeValue: startContainer.nodeValue?.substring(0, 50) || 'null',
+        textContent: startContainer.textContent?.substring(0, 50) || 'null'
+      }, '#2196f3');
+      
+      // 3. ParentElement 체인 분석
+      let current = startContainer;
+      const parentChain = [];
+      let depth = 0;
+      
+      while (current && current !== contentArea && depth < 10) {
+        if (current.nodeType === Node.ELEMENT_NODE) {
+          parentChain.push({
+            tagName: current.tagName,
+            className: current.className || 'none',
+            id: current.id || 'none',
+            outerHTML: current.outerHTML?.substring(0, 100) + '...'
+          });
+        } else if (current.nodeType === Node.TEXT_NODE) {
+          parentChain.push({
+            nodeType: 'TEXT_NODE',
+            textContent: current.textContent?.substring(0, 30) || 'empty',
+            parentTag: current.parentElement?.tagName || 'none'
+          });
+        }
+        current = current.parentElement || current.parentNode;
+        depth++;
+      }
+      
+      errorHandler.colorLog('CODE', '📍 부모 요소 체인', {
+        chain: parentChain,
+        totalDepth: depth
+      }, '#9c27b0');
+      
+      // 4. 주변 형제 요소들 분석
+      const parent = startContainer.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.childNodes).map((node, index) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            return {
+              index,
+              type: 'ELEMENT',
+              tagName: node.tagName,
+              isCurrentContainer: node === startContainer
+            };
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            return {
+              index,
+              type: 'TEXT',
+              content: node.textContent?.substring(0, 20) || 'empty',
+              isCurrentContainer: node === startContainer
+            };
+          }
+          return { index, type: 'OTHER', isCurrentContainer: node === startContainer };
+        });
+        
+        errorHandler.colorLog('CODE', '📍 형제 노드들', {
+          parentTag: parent.tagName,
+          siblings: siblings
+        }, '#4caf50');
+      }
     }
     
+    // ✅ 기존 중첩 체크
+    const existingCodeElement = isInsideCodeElement(range, contentArea);
+    
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '🔍 중첩 체크 최종 결과', {
+        foundCode: !!existingCodeElement,
+        codeTag: existingCodeElement?.tagName || 'none',
+        shouldReturn: !!existingCodeElement
+      }, existingCodeElement ? '#4caf50' : '#f44336');
+    }
+    
+    if (existingCodeElement) {
+      errorHandler.colorLog('CODE', '⛔ 중첩 방지 - 함수 종료', {}, '#ff5722');
+      return; // 중첩 방지
+    }
+    
+    // 계속 진행...
     if (range.collapsed) {
-      // ✅ 시퀀스 1: 빈 커서 → 100% 블록 코드
       createEmptyCodeBlock(contentArea, range);
     } else {
-      // ✅ 시퀀스 2: 선택 영역 → 정확한 범위만 코드로 감싸기
       wrapSelectedTextWithCode(contentArea, range);
     }
   }
 
   /**
-   * ✅ 빈 커서 → 100% 사이즈 빈 코드 블록 생성
+   * ✅ 수정된 빈 코드 블록 생성 (P 태그 내부에 생성)
    */
   function createEmptyCodeBlock(contentArea, range) {
     if (window.errorHandler) {
-      errorHandler.colorLog('CODE', '📝 빈 코드 블록 생성', {}, '#9c27b0');
+      errorHandler.colorLog('CODE', '�� 빈 코드 블록 생성 시작', {
+        rangeContainer: range.startContainer.nodeName,
+        rangeParent: range.startContainer.parentElement?.tagName || 'none'
+      }, '#9c27b0');
     }
 
-    // ✅ core.css 기본 스타일만 사용
+    // ✅ 수정: 항상 P 태그 내부에 생성하도록 보장
+    let targetParagraph = null;
+    
+    // 현재 위치의 P 태그 찾기
+    let currentNode = range.startContainer;
+    if (currentNode.nodeType === Node.TEXT_NODE) {
+      currentNode = currentNode.parentElement;
+    }
+    
+    while (currentNode && currentNode !== contentArea) {
+      if (currentNode.tagName === 'P') {
+        targetParagraph = currentNode;
+        break;
+      }
+      currentNode = currentNode.parentElement;
+    }
+    
+    // P 태그가 없으면 새로 생성
+    if (!targetParagraph) {
+      targetParagraph = document.createElement('p');
+      targetParagraph.textContent = '\u200B';
+      
+      // 현재 range 위치에 P 태그 삽입
+      range.insertNode(targetParagraph);
+      
+      // range를 새 P 태그 내부로 이동
+      range.selectNodeContents(targetParagraph);
+      range.collapse(true);
+    }
+
+    // ✅ P 태그 내부에 code 생성
     const codeElement = util.dom.createElement('code', {
       'contenteditable': 'true'
     });
     
-    // ✅ 빈 코드 블록만 전체 너비로 오버라이드
     codeElement.style.display = 'block';
     codeElement.style.width = '100%';
-    // padding, margin은 core.css 그대로 사용 (제거)
-    
-    codeElement.textContent = '\u200B'; // 보이지 않는 문자
+    codeElement.textContent = '\u200B';
 
     setupCodeBlockKeyboardEvents(codeElement, contentArea);
-    range.insertNode(codeElement);
+    
+    // P 태그 내용을 code로 교체
+    targetParagraph.innerHTML = '';
+    targetParagraph.appendChild(codeElement);
+    
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '✅ P 태그 내부에 code 생성 완료', {
+        paragraphHTML: targetParagraph.outerHTML,
+        codeHTML: codeElement.outerHTML
+      }, '#4caf50');
+    }
     
     setTimeout(() => {
       const newRange = document.createRange();
@@ -134,15 +296,59 @@
   }
 
   /**
-   * ✅ 수정: 선택 영역 → 정확한 범위만 코드로 감싸기 (HTML 구조 보존)
+   * ✅ 새 함수: 불필요한 <br> 태그 정리
+   */
+  function cleanupUnnecessaryBreaks(codeElement) {
+    const parentElement = codeElement.parentElement;
+    
+    if (!parentElement) return;
+    
+    // ✅ code 요소 다음의 <br> 태그들 확인
+    let nextSibling = codeElement.nextSibling;
+    const brsToRemove = [];
+    
+    while (nextSibling) {
+      if (nextSibling.nodeType === Node.ELEMENT_NODE && nextSibling.tagName === 'BR') {
+        // ✅ 다음 형제가 <br>이고, 그 다음이 없거나 공백 텍스트면 제거 대상
+        const afterBr = nextSibling.nextSibling;
+        
+        if (!afterBr || (afterBr.nodeType === Node.TEXT_NODE && !afterBr.textContent.trim())) {
+          brsToRemove.push(nextSibling);
+          nextSibling = afterBr;
+        } else {
+          break; // 의미있는 내용이 뒤에 있으면 중단
+        }
+      } else if (nextSibling.nodeType === Node.TEXT_NODE && !nextSibling.textContent.trim()) {
+        // ✅ 공백 텍스트 노드는 건너뛰기
+        nextSibling = nextSibling.nextSibling;
+      } else {
+        break; // 다른 요소가 있으면 중단
+      }
+    }
+    
+    // ✅ 불필요한 <br> 태그들 제거
+    brsToRemove.forEach(br => {
+      if (window.errorHandler) {
+        errorHandler.colorLog('CODE', '🧹 불필요한 <br> 제거', {
+          brElement: br.outerHTML
+        }, '#ff5722');
+      }
+      br.parentNode.removeChild(br);
+    });
+    
+    if (window.errorHandler && brsToRemove.length > 0) {
+      errorHandler.colorLog('CODE', '✅ <br> 정리 완료', {
+        removedCount: brsToRemove.length,
+        finalHTML: parentElement.innerHTML
+      }, '#4caf50');
+    }
+  }
+
+  /**
+   * ✅ 수정된 선택 영역 코드 적용 (블록 구조 해체)
    */
   function wrapSelectedTextWithCode(contentArea, range) {
-    // ✅ 오프셋 계산 (복원용)
     const offsets = util.selection.calculateOffsets(contentArea);
-    
-    // ✅ 새로 추가: 원본 range 정보 저장 (다음 텍스트 확인용)
-    const originalEndContainer = range.endContainer;
-    const originalEndOffset = range.endOffset;
     
     // ✅ HTML 구조를 보존하면서 내용 추출
     const selectedContent = range.extractContents();
@@ -151,15 +357,36 @@
     const tempDiv = document.createElement('div');
     tempDiv.appendChild(selectedContent.cloneNode(true));
     
-    // ✅ HTML에서 줄바꿈 보존하면서 텍스트 추출
-    let selectedText = tempDiv.innerHTML
-      .replace(/<br\s*\/?>/gi, '\n')  // <br> → \n 변환
-      .replace(/<[^>]*>/g, '');       // 다른 HTML 태그 제거
-
-    // ✅ security-manager.js의 unescapeHtml 함수 사용
-    selectedText = window.LiteEditorSecurity.unescapeHtml(selectedText);
+    if (window.errorHandler) {
+      errorHandler.colorLog('CODE', '🔍 선택된 원본 HTML', {
+        originalHTML: tempDiv.innerHTML,
+        hasBlockElements: /<(p|div|h[1-6]|li|ul|ol|blockquote)>/i.test(tempDiv.innerHTML)
+      }, '#ff9800');
+    }
     
-    // ✅ emphasis.js와 동일한 trim 처리 (앞뒤 공백 제거)
+    // ✅ 블록 요소들을 텍스트로 변환
+    let processedHTML = tempDiv.innerHTML;
+    
+    // 1. 블록 요소 시작 태그들을 제거
+    processedHTML = processedHTML.replace(/<(p|div|h[1-6]|li|ul|ol|blockquote)[^>]*>/gi, '');
+    
+    // 2. 블록 요소 끝 태그들을 줄바꿈으로 변환
+    processedHTML = processedHTML.replace(/<\/(p|div|h[1-6]|li|ul|ol|blockquote)>/gi, '\n');
+    
+    // 3. &nbsp; 보존
+    processedHTML = processedHTML.replace(/&nbsp;/g, '___NBSP_PLACEHOLDER___');
+    
+    // 4. <br> → \n 변환
+    processedHTML = processedHTML.replace(/<br\s*\/?>/gi, '\n');
+    
+    // 5. 나머지 HTML 태그 제거
+    let selectedText = processedHTML.replace(/<[^>]*>/g, '');
+    
+    // 6. &nbsp; 복원
+    selectedText = selectedText.replace(/___NBSP_PLACEHOLDER___/g, '\u00A0');
+    
+    // 7. 연속된 줄바꿈 정리
+    selectedText = selectedText.replace(/\n{3,}/g, '\n\n');
     selectedText = selectedText.trim();
     
     if (!selectedText) {
@@ -172,40 +399,45 @@
     }
 
     if (window.errorHandler) {
-      errorHandler.colorLog('CODE', '📝 선택 영역 코드 적용 (HTML 구조 보존)', {
-        text: selectedText.substring(0, 50) + '...',
-        hasLineBreaks: selectedText.includes('\n'),
-        length: selectedText.length,
-        originalHTML: tempDiv.innerHTML.substring(0, 100) + '...'
+      errorHandler.colorLog('CODE', '📝 블록 구조 해체 완료', {
+        originalHTML: tempDiv.innerHTML.substring(0, 100) + '...',
+        processedText: selectedText.substring(0, 100) + '...',
+        hasLineBreaks: selectedText.includes('\n')
       }, '#9c27b0');
     }
 
     try {
-      // ✅ security-manager.js의 escapeHtml 함수 사용 + 줄바꿈 → <br> 변환
-      const escapedText = window.LiteEditorSecurity.escapeHtml(selectedText)
-        .replace(/\n/g, '<br>'); // 줄바꿈 → <br>
+      // ✅ 안전한 HTML 생성 (&nbsp; 보존)
+      let finalHTML = selectedText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\u00A0/g, '&nbsp;')  // non-breaking space → &nbsp;
+        .replace(/\n/g, '<br>');       // 줄바꿈 → <br>
 
-      // ✅ 인라인 코드 요소 생성 (core.css 기본 활용)
+      // ✅ 인라인 코드 요소 생성 (블록 요소 없음)
       const codeElement = util.dom.createElement('code');
-      codeElement.innerHTML = escapedText;
+      codeElement.innerHTML = finalHTML;  // 순수 텍스트 + <br> + &nbsp;만 포함
       
-      // ✅ CSS :has(br) 룰 오버라이드 (인라인 유지)
+      // ✅ CSS 설정
       if (selectedText.includes('\n')) {
         codeElement.style.display = 'inline-block';
         codeElement.style.whiteSpace = 'pre-wrap';
       }
 
-      // ✅ 키보드 이벤트 핸들러 추가 (인라인 코드에도)
+      // 키보드 이벤트 핸들러 추가
       setupCodeBlockKeyboardEvents(codeElement, contentArea);
 
-      // ✅ 선택 영역에 코드 요소 삽입 (이미 extractContents()로 삭제됨)
+      // 선택 영역에 코드 요소 삽입
       range.insertNode(codeElement);
       
-      // ✅ 수정: 단순화된 줄바꿈 검사
+      // 다음 텍스트와 붙음 방지
       insertLineBreakIfNeeded(codeElement);
       
-      // ✅ 커서를 코드 요소 다음으로 이동
-    setTimeout(() => {
+      // 커서를 코드 요소 다음으로 이동
+      setTimeout(() => {
         const newRange = document.createRange();
         newRange.setStartAfter(codeElement);
         newRange.collapse(true);
@@ -217,10 +449,10 @@
         contentArea.focus();
         
         if (window.errorHandler) {
-          errorHandler.colorLog('CODE', '✅ 코드 적용 완료 (줄바꿈 보존)', {
+          errorHandler.colorLog('CODE', '✅ 코드 적용 완료 (블록 구조 해체)', {
+            finalHTML: codeElement.outerHTML.substring(0, 200) + '...',
             hasLineBreaks: selectedText.includes('\n'),
-            display: selectedText.includes('\n') ? 'inline-block' : 'inline',
-            finalText: escapedText
+            display: selectedText.includes('\n') ? 'inline-block' : 'inline'
           }, '#4caf50');
         }
       }, 10);
@@ -230,7 +462,7 @@
         errorHandler.logError('CODE', 'WRAP_ERROR', error);
       }
       
-      // ✅ 실패 시 원래 내용 복원
+      // 실패 시 원래 내용 복원
       range.insertNode(selectedContent);
       if (offsets) {
         util.selection.restoreFromOffsets(contentArea, offsets);
@@ -302,24 +534,18 @@
       
         // ✅ 코드 블럭 내부에서만 처리
         if (codeBlock) {
-          if (e.shiftKey) {
-            // ✅ Shift + Enter: 코드 블럭 안에서 줄바꿈
+          if (!e.shiftKey) {
             e.preventDefault();
-            e.stopImmediatePropagation(); // ✅ 다른 핸들러 차단
-            insertLineBreakInCode(codeBlock);
+            e.stopImmediatePropagation();
+            e.stopPropagation();
             
-            if (window.errorHandler) {
-              errorHandler.colorLog('CODE', '📝 코드 블럭 내 줄바꿈', {}, '#2196f3');
+            // ✅ 브라우저 기본 동작 완전 차단
+            if (e.returnValue !== undefined) {
+              e.returnValue = false;
             }
-          } else {
-            // ✅ Enter: 코드 블럭 탈출 → 새로운 P 태그
-            e.preventDefault();
-            e.stopImmediatePropagation(); // ✅ 다른 핸들러 차단
+            
             exitCodeBlockToNewParagraph(codeBlock, contentArea);
-            
-            if (window.errorHandler) {
-              errorHandler.colorLog('CODE', '🚪 코드 블럭 탈출 → 새 문단', {}, '#4caf50');
-            }
+            return false;
           }
         }
       }
@@ -357,47 +583,77 @@
   }
 
   /**
-   * ✅ 수정된 코드 블럭 탈출 함수 (새 블록 위치 문제 해결)
+   * ✅ 완전 수정된 코드 블럭 탈출 함수 (정확한 위치 삽입)
    */
   function exitCodeBlockToNewParagraph(codeElement, contentArea) {
     try {
-      const newParagraph = util.dom.createElement('p');
-      newParagraph.innerHTML = '<br>';
-      
-      // ✅ 안전한 삽입: code 요소의 최상위 블록 찾기
-      let targetBlock = codeElement;
-      while (targetBlock.parentNode && targetBlock.parentNode !== contentArea) {
-        targetBlock = targetBlock.parentNode;
+      if (window.errorHandler) {
+        errorHandler.colorLog('CODE', '🚪 탈출 시작 - 정확한 위치 계산', {
+          codeElement: codeElement.tagName,
+          codeParent: codeElement.parentNode?.tagName || 'none',
+          codeNextSibling: codeElement.nextSibling?.tagName || codeElement.nextSibling?.textContent?.substring(0, 20) || 'none'
+        }, '#ff9800');
       }
-
-      // ✅ 수정: 항상 targetBlock 바로 다음에 삽입 (insertAfter 방식)
-      if (targetBlock && targetBlock.parentNode === contentArea) {
-        if (targetBlock.nextSibling) {
-          // 다음 형제 앞에 삽입
-          contentArea.insertBefore(newParagraph, targetBlock.nextSibling);
+      
+      const newParagraph = document.createElement('p');
+      newParagraph.textContent = '\u200B';
+      
+      // ✅ 핵심 수정: code 요소 바로 다음에 삽입 (래퍼 무시)
+      const codeParent = codeElement.parentNode;
+      
+      if (codeParent) {
+        if (codeElement.nextSibling) {
+          // code 요소 바로 다음에 삽입
+          codeParent.insertBefore(newParagraph, codeElement.nextSibling);
+          
+          if (window.errorHandler) {
+            errorHandler.colorLog('CODE', '📍 삽입 방법: code 다음 형제 앞', {
+              insertedAfter: codeElement.tagName,
+              insertedBefore: codeElement.nextSibling.tagName || 'text',
+              parentTag: codeParent.tagName
+            }, '#4caf50');
+          }
         } else {
-          // ✅ 핵심 수정: nextSibling이 없어도 바로 다음에 삽입
-          targetBlock.parentNode.appendChild(newParagraph);
+          // code 요소가 부모의 마지막 자식인 경우
+          codeParent.appendChild(newParagraph);
+          
+          if (window.errorHandler) {
+            errorHandler.colorLog('CODE', '📍 삽입 방법: 부모에 appendChild', {
+              parentTag: codeParent.tagName,
+              codeWasLastChild: true
+            }, '#4caf50');
+          }
         }
-        
-        // ✅ 디버깅 로그
-        if (window.errorHandler) {
-          errorHandler.colorLog('CODE', '🔍 새 문단 삽입 위치', {
-            targetBlock: targetBlock.tagName,
-            hasNextSibling: !!targetBlock.nextSibling,
-            insertionMethod: targetBlock.nextSibling ? 'insertBefore' : 'appendChild'
-          }, '#ff9800');
-        }
-        
       } else {
-        // 예외 상황: contentArea 끝에 추가
+        // 예외 상황: code 요소에 부모가 없는 경우
         contentArea.appendChild(newParagraph);
+        
+        if (window.errorHandler) {
+          errorHandler.logError('CODE', 'NO_PARENT_ERROR', new Error('code 요소에 부모가 없음'));
+        }
       }
       
-      // 커서 이동
+      if (window.errorHandler) {
+        // 삽입 후 위치 확인
+        const newParagraphParent = newParagraph.parentNode;
+        const parentChildren = Array.from(newParagraphParent.children);
+        const newParagraphIndex = parentChildren.indexOf(newParagraph);
+        const codeIndex = parentChildren.indexOf(codeElement);
+        
+        errorHandler.colorLog('CODE', '📍 P 태그 삽입 완료 (정확한 위치)', {
+          newParagraphHTML: newParagraph.outerHTML,
+          parentTag: newParagraphParent.tagName,
+          newParagraphIndex: newParagraphIndex,
+          codeElementIndex: codeIndex,
+          isImmediatelyAfterCode: newParagraphIndex === codeIndex + 1,
+          totalChildrenInParent: parentChildren.length
+        }, '#4caf50');
+      }
+      
+      // ✅ 커서 이동 (동일)
       setTimeout(() => {
         const newRange = document.createRange();
-        newRange.setStart(newParagraph, 0);
+        newRange.selectNodeContents(newParagraph);
         newRange.collapse(true);
         
         const selection = util.selection.getSafeSelection();
@@ -407,11 +663,13 @@
         contentArea.focus();
         
         if (window.errorHandler) {
-          errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
-            newParagraph: newParagraph.outerHTML,
-            previousSibling: newParagraph.previousSibling?.tagName || 'none'
+          errorHandler.colorLog('CODE', '🎯 커서 이동 완료 (정확한 위치)', {
+            focusNode: selection.focusNode?.nodeName || 'none',
+            focusNodeParent: selection.focusNode?.parentNode?.tagName || 'none',
+            isInNewParagraph: selection.focusNode === newParagraph || selection.focusNode?.parentNode === newParagraph
           }, '#4caf50');
         }
+        
       }, 10);
       
     } catch (error) {
@@ -419,10 +677,10 @@
         errorHandler.logError('CODE', 'EXIT_CODE_BLOCK_ERROR', error);
       }
       
-      // 대체 방법은 동일
+      // 대체 방법: contentArea 끝에 추가
       try {
-        const fallbackP = util.dom.createElement('p');
-        fallbackP.innerHTML = '<br>';
+        const fallbackP = document.createElement('p');
+        fallbackP.textContent = '\u200B';
         contentArea.appendChild(fallbackP);
         
         setTimeout(() => {
@@ -440,5 +698,40 @@
         // 최후의 수단도 실패하면 무시
       }
     }
+  }
+
+  /**
+   * ✅ 새 함수: 서식 상속 완전 차단
+   */
+  function createCleanParagraph() {
+    const p = document.createElement('p');
+    
+    // ✅ 모든 가능한 서식 속성 초기화
+    const cleanStyles = {
+      display: '',
+      whiteSpace: '',
+      width: '',
+      fontFamily: '',
+      fontSize: '',
+      fontWeight: '',
+      fontStyle: '',
+      textDecoration: '',
+      backgroundColor: '',
+      color: '',
+      padding: '',
+      margin: '',
+      border: ''
+    };
+    
+    Object.assign(p.style, cleanStyles);
+    
+    // ✅ 속성들도 제거
+    ['contenteditable', 'class', 'id'].forEach(attr => {
+      p.removeAttribute(attr);
+    });
+    
+    p.textContent = '\u200B';
+    
+    return p;
   }
 })();
