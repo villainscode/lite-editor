@@ -205,7 +205,7 @@
       insertLineBreakIfNeeded(codeElement);
       
       // ✅ 커서를 코드 요소 다음으로 이동
-      setTimeout(() => {
+    setTimeout(() => {
         const newRange = document.createRange();
         newRange.setStartAfter(codeElement);
         newRange.collapse(true);
@@ -288,18 +288,18 @@
         // ✅ 텍스트 노드인 경우 부모 요소로 이동
         if (currentElement.nodeType === Node.TEXT_NODE) {
           currentElement = currentElement.parentElement;
-        }
-        
+      }
+      
         // ✅ 코드 요소 찾기
         let codeBlock = null;
         while (currentElement && currentElement !== contentArea) {
           if (currentElement.tagName === 'CODE') {
             codeBlock = currentElement;
-            break;
-          }
-          currentElement = currentElement.parentElement;
+          break;
         }
-        
+          currentElement = currentElement.parentElement;
+      }
+      
         // ✅ 코드 블럭 내부에서만 처리
         if (codeBlock) {
           if (e.shiftKey) {
@@ -368,8 +368,8 @@
       let targetBlock = codeElement;
       while (targetBlock.parentNode && targetBlock.parentNode !== contentArea) {
         targetBlock = targetBlock.parentNode;
-      }
-      
+  }
+
       // ✅ contentArea의 직접 자식 블록 다음에 삽입
       if (targetBlock && targetBlock.parentNode === contentArea) {
         if (targetBlock.nextSibling) {

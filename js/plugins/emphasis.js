@@ -164,7 +164,10 @@
             // ✅ 7단계: 새 span을 원래 위치에 삽입
             range.insertNode(spanElement);
             
-            // ✅ 8단계: 새로운 범위로 선택 영역 설정
+            // ✅ 8단계: code.js 방식 - 다음 텍스트와 붙음 방지
+            insertLineBreakIfNeeded(spanElement);
+            
+            // ✅ 9단계: 새로운 범위로 선택 영역 설정
             const newRange = document.createRange();
             newRange.selectNodeContents(spanElement);
             selection.removeAllRanges();
@@ -181,7 +184,7 @@
         util.scroll.restorePosition(scrollPosition);
         
       } else {
-        // 커서 위치 모드
+        // 커서 위치 모드 (기존 방식 유지)
         if (document.activeElement !== contentArea) {
           try {
             contentArea.focus({ preventScroll: true });
@@ -228,6 +231,9 @@
           const parentNode = textNode.parentNode;
           parentNode.replaceChild(spanElement, textNode);
           
+          // ✅ 커서 위치에도 다음 텍스트와 붙음 방지 적용
+          insertLineBreakIfNeeded(spanElement);
+          
           // 커서를 span 내부로 이동
           const newRange = document.createRange();
           newRange.selectNodeContents(spanElement);
@@ -246,6 +252,34 @@
     } catch (e) {
       errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, e);
     }
+  }
+  
+  /**
+   * ✅ 완전한 텍스트 붙음 방지 함수 (code.js 방식 적용)
+   */
+  function insertLineBreakIfNeeded(spanElement) {
+    // 1. span 요소 바로 다음 노드 확인
+    const nextNode = spanElement.nextSibling;
+    
+    if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
+      const nextText = nextNode.textContent;
+      
+      // 2. 다음 텍스트가 공백 없이 바로 시작하는지 확인
+      if (nextText && !nextText.startsWith(' ') && nextText.trim()) {
+        // 3. <br> 태그 삽입으로 다음 텍스트와 붙음 방지
+        const br = document.createElement('br');
+        spanElement.parentNode.insertBefore(br, nextNode);
+        
+        errorHandler.colorLog('EMPHASIS', '✅ 자동 줄바꿈 삽입 (텍스트 붙음 방지)', {
+          nextText: nextText.substring(0, 20) + '...',
+          reason: '다음 텍스트와 붙음 방지'
+        }, '#4caf50');
+        
+        return true;
+      }
+    }
+    
+    return false;
   }
   
   
