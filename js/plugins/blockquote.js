@@ -4,6 +4,27 @@
  */
 
 (function() {
+  // PluginUtil 참조 추가
+  const util = window.PluginUtil;
+
+  // ✅ 함수들을 IIFE 최상단에 정의
+  function isInsideCodeElement(range, contentArea) {
+    let currentElement = range.startContainer;
+    
+    if (currentElement.nodeType === Node.TEXT_NODE) {
+      currentElement = currentElement.parentElement;
+    }
+    
+    while (currentElement && currentElement !== contentArea) {
+      if (currentElement.tagName === 'CODE') {
+        return currentElement;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return null;
+  }
+
   // 전역 이벤트 리스너가 등록되었는지 확인하는 플래그
   if (!document.querySelector('[data-blockquote-enter-handler]')) {
     // 문서 레벨에서 한 번만 이벤트 핸들러 등록
@@ -63,11 +84,8 @@
     document.body.appendChild(marker);
   }
   
-  // PluginUtil 참조 추가
-  const util = window.PluginUtil;
-
-  // code 내부인지 확인하는 함수 추가
-  function isInsideCodeElement(range, contentArea) {
+  // code block 내부인지 확인하는 함수 추가
+  function isInsideCodeBlock(range, contentArea) {
     let currentElement = range.startContainer;
     
     if (currentElement.nodeType === Node.TEXT_NODE) {
@@ -75,7 +93,7 @@
     }
     
     while (currentElement && currentElement !== contentArea) {
-      if (currentElement.tagName === 'CODE') {
+      if (currentElement.classList && currentElement.classList.contains('lite-editor-code-block')) {
         return currentElement;
       }
       currentElement = currentElement.parentElement;
@@ -100,10 +118,18 @@
         return;
       }
       
-      // code 내부인지 체크 추가
       const selection = util.selection.getSafeSelection();
       if (selection && selection.rangeCount) {
         const range = selection.getRangeAt(0);
+        
+        // code block 내부인지 체크 추가
+        const insideCodeBlock = isInsideCodeBlock(range, contentArea);
+        if (insideCodeBlock) {
+          errorHandler.showToast('Code Block 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');
+          return;
+        }
+        
+        // code 내부인지 체크 추가
         const insideCode = isInsideCodeElement(range, contentArea);
         if (insideCode) {
           errorHandler.showToast('Code 블록 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');
@@ -135,10 +161,18 @@
             return;
         }
         
-        // code 내부인지 체크 추가
         const selection = util.selection.getSafeSelection();
         if (selection && selection.rangeCount) {
           const range = selection.getRangeAt(0);
+          
+          // code block 내부인지 체크 추가
+          const insideCodeBlock = isInsideCodeBlock(range, contentArea);
+          if (insideCodeBlock) {
+            errorHandler.showToast('Code Block 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');
+            return;
+          }
+          
+          // code 내부인지 체크 추가
           const insideCode = isInsideCodeElement(range, contentArea);
           if (insideCode) {
             errorHandler.showToast('Code 블록 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');

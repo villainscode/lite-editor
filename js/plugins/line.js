@@ -82,9 +82,9 @@
     }
 
     /**
-     * code 내부인지 확인하는 함수 추가
+     * code block 내부인지 확인하는 함수 추가
      */
-    function isInsideCodeElement(range, contentArea) {
+    function isInsideCodeBlock(range, contentArea) {
         let currentElement = range.startContainer;
         
         if (currentElement.nodeType === Node.TEXT_NODE) {
@@ -92,7 +92,7 @@
         }
         
         while (currentElement && currentElement !== contentArea) {
-            if (currentElement.tagName === 'CODE') {
+            if (currentElement.classList && currentElement.classList.contains('lite-editor-code-block')) {
                 return currentElement;
             }
             currentElement = currentElement.parentElement;
@@ -133,13 +133,13 @@
         if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             
-            // code 내부인지 체크 추가
-            const insideCode = isInsideCodeElement(range, contentArea);
-            if (insideCode) {
+            // code block 내부인지 체크 추가
+            const insideCodeBlock = isInsideCodeBlock(range, contentArea);
+            if (insideCodeBlock) {
                 if (window.errorHandler) {
-                    errorHandler.showToast('Code 블록 내부에서는 라인을 삽입할 수 없습니다.', 'warning');
+                    errorHandler.showToast('Code Block 내부에서는 라인을 삽입할 수 없습니다.', 'warning');
                 }
-                return; // hr 삽입 중단
+                return;
             }
             
             // blockquote 내부인지 체크

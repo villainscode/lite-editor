@@ -86,11 +86,34 @@
     return null;
   }
 
+  function isInsideCodeBlock(range, contentArea) {
+    let currentElement = range.startContainer;
+    
+    if (currentElement.nodeType === Node.TEXT_NODE) {
+      currentElement = currentElement.parentElement;
+    }
+    
+    while (currentElement && currentElement !== contentArea) {
+      if (currentElement.classList && currentElement.classList.contains('lite-editor-code-block')) {
+        return currentElement;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return null;
+  }
+
   function applyCodeFormat(contentArea) {
     const selection = util.selection.getSafeSelection();
     if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
+    
+    const insideCodeBlock = isInsideCodeBlock(range, contentArea);
+    if (insideCodeBlock) {
+      errorHandler.showToast('Code Block 내부에서는 Code를 사용할 수 없습니다.', 'warning');
+      return;
+    }
     
     const insideBlockquote = isInsideBlockquote(range, contentArea);
     if (insideBlockquote) {
