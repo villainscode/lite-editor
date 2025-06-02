@@ -121,82 +121,105 @@
         ? range.startContainer.parentElement 
         : range.startContainer;
       
-      const fontElement = currentElement.closest('span[style*="font-family"], font');
+      // 🔧 개선: 더 넓은 범위에서 폰트 요소 검색
+      const fontElement = currentElement.closest('span[style*="font-family"], font[face]');
       
-      // 🔧 핵심 수정: 사용자가 명시적으로 설정한 폰트만 "폰트 영역"으로 인식
-      const isUserSetFont = fontElement && currentFontValue && (
-        // font 태그는 항상 사용자 설정으로 간주
-        fontElement.tagName === 'FONT' ||
-        // span 태그는 currentFontValue와 일치할 때만 사용자 설정으로 간주
-        (fontElement.tagName === 'SPAN' && 
-         fontElement.style.fontFamily && 
-         currentFontValue.includes(getFirstFontName(fontElement.style.fontFamily)))
-      );
+      // 🔧 핵심 수정: 폰트 감지 로직 개선
+      let isUserSetFont = false;
+      let detectedFontFamily = null;
       
-      if (isUserSetFont) {
-        // 사용자가 설정한 폰트 영역 - 활성 상태 설정
+      if (fontElement) {
+        // font 태그 처리
+        if (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) {
+          detectedFontFamily = fontElement.getAttribute('face');
+          isUserSetFont = true;
+        } 
+        // span 태그 처리
+        else if (fontElement.tagName === 'SPAN' && fontElement.style.fontFamily) {
+          detectedFontFamily = fontElement.style.fontFamily;
+          // 🔧 개선: 시스템 폰트가 아닌 경우만 사용자 설정으로 인정
+          isUserSetFont = !isSystemFont(detectedFontFamily);
+        }
+        
+        // 🔧 추가: 현재 요소가 실제로 폰트 요소 내부에 있는지 확인
+        if (isUserSetFont) {
+          const isInside = fontElement.contains(range.startContainer) || 
+                          fontElement === range.startContainer ||
+                          (range.startContainer.nodeType === Node.TEXT_NODE && 
+                           fontElement.contains(range.startContainer.parentElement));
+          
+          if (!isInside) {
+            isUserSetFont = false;
+            detectedFontFamily = null;
+          }
+        }
+      }
+      
+      if (isUserSetFont && detectedFontFamily) {
+        // 🔧 폰트가 적용된 영역 - 활성 상태 및 호버 효과 설정
         fontContainer.classList.add('active');
         fontContainer.style.backgroundColor = '#e9e9e9';
         fontContainer.style.color = '#1a73e8';
         icon.style.color = '#1a73e8';
         
-        // 🔧 3단계 최적화: 폰트 파싱 최적화
-        let currentFontFamily = null;
+        // 🔧 폰트명 파싱 최적화
+        const parsedFontFamily = parseFontFamily(`font-family: ${detectedFontFamily}`);
+        const firstFontName = getFirstFontName(parsedFontFamily || detectedFontFamily);
         
-        // font 태그의 face 속성에서 폰트 추출
-        if (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) {
-          currentFontFamily = fontElement.getAttribute('face');
-        } 
-        // span 태그의 style 속성에서 폰트 추출
-        else {
-          const styleAttr = fontElement.getAttribute('style');
-          currentFontFamily = parseFontFamily(styleAttr);
-        }
-        
-        if (currentFontFamily) {
-          // 🔧 3단계 최적화: 첫 번째 폰트명 추출 최적화
-          const firstFontName = getFirstFontName(currentFontFamily);
-          
-          // 캐시된 데이터 사용
+        if (firstFontName) {
+          // 캐시된 데이터에서 매칭되는 폰트 찾기
           const fonts = getCachedFontData();
-          const matchedFont = fonts.find(f => f.value && f.value.includes(firstFontName));
+          const matchedFont = fonts.find(f => {
+            if (!f.value) return false;
+            
+            // 🔧 개선: 더 정확한 폰트 매칭
+            const fontValueFirstName = getFirstFontName(f.value);
+            return fontValueFirstName.toLowerCase().includes(firstFontName.toLowerCase()) ||
+                   firstFontName.toLowerCase().includes(fontValueFirstName.toLowerCase());
+          });
           
           if (matchedFont) {
             // 폰트명 업데이트
             fontText.textContent = matchedFont.name;
             
-            // 🔧 1단계 최적화: DOM 쿼리 캐싱만 적용
+            // 드롭다운 메뉴의 선택 상태 업데이트
             const dropdownMenu = document.getElementById('font-family-dropdown');
             if (dropdownMenu) {
-              // 기존 선택 해제
-              if (currentSelectedFontItem) {
-                currentSelectedFontItem.style.backgroundColor = '';
-              }
-              
               // 🔧 성능 개선: fontItems 캐싱
               if (!dropdownMenu._cachedFontItems) {
                 dropdownMenu._cachedFontItems = dropdownMenu.querySelectorAll('div[style*="font-family"]');
               }
               const fontItems = dropdownMenu._cachedFontItems;
               
+              // 기존 선택 해제
+              fontItems.forEach(item => item.style.backgroundColor = '');
+              currentSelectedFontItem = null;
+              
+              // 새로운 선택 설정
               fontItems.forEach(item => {
                 const itemFontFamily = item.style.fontFamily;
-                // 🔧 3단계 최적화: 문자열 비교 최적화
-                if (itemFontFamily && itemFontFamily.includes(firstFontName)) {
+                const itemFirstFontName = getFirstFontName(itemFontFamily);
+                
+                if (itemFirstFontName && (
+                  itemFirstFontName.toLowerCase().includes(firstFontName.toLowerCase()) ||
+                  firstFontName.toLowerCase().includes(itemFirstFontName.toLowerCase())
+                )) {
                   item.style.backgroundColor = '#e9e9e9';
                   currentSelectedFontItem = item;
-                } else {
-                  item.style.backgroundColor = '';
                 }
               });
             }
             
             // 전역 상태 업데이트
             currentFontValue = matchedFont.value;
+          } else {
+            // 매칭되는 폰트가 없으면 감지된 폰트명 그대로 표시
+            fontText.textContent = firstFontName;
+            currentFontValue = detectedFontFamily;
           }
         }
       } else {
-        // 🔧 핵심 수정: 시스템 폰트 또는 비폰트 영역 - 기본 상태 유지
+        // 🔧 폰트가 적용되지 않은 영역 - 기본 상태로 복원
         fontContainer.classList.remove('active');
         fontContainer.style.backgroundColor = '';
         fontContainer.style.color = '';
@@ -211,8 +234,9 @@
           });
         }
         
-        // 전역 상태 초기화 (단, 사용자가 설정한 currentFontValue는 유지)
+        // 전역 상태 초기화 (사용자가 설정한 currentFontValue는 유지하지 않음)
         currentSelectedFontItem = null;
+        // currentFontValue는 여기서 초기화하지 않음 (마지막 선택값 유지)
       }
     }
   }
@@ -602,13 +626,51 @@
       if (!contentArea.hasAttribute('data-font-events-setup')) {
         setupFontKeyboardEvents(contentArea, fontContainer, fontText, icon);
         
-        // 🔧 2단계 최적화: 디바운스 적용
+        // 🔧 즉시 상태 업데이트 함수 (디바운스 없음)
+        const immediateUpdateState = () => {
+          updateFontButtonState(fontContainer, fontText, icon);
+        };
+        
+        // 🔧 2단계 최적화: 디바운스 적용 (덜 중요한 이벤트용)
         const debouncedUpdateState = util.events.debounce(() => {
           updateFontButtonState(fontContainer, fontText, icon);
-        }, 150); // 150ms 디바운스
+        }, 100); // 150ms -> 100ms로 단축
+        
+        // 🔧 개선: 다양한 이벤트에 대해 즉시 또는 디바운스 적용
+        // 즉시 업데이트가 필요한 이벤트들
+        contentArea.addEventListener('mouseup', immediateUpdateState);
+        contentArea.addEventListener('focus', immediateUpdateState);
+        
+        // 디바운스 적용 이벤트들
+        contentArea.addEventListener('keyup', debouncedUpdateState);
+        contentArea.addEventListener('keydown', (e) => {
+          // 방향키나 Home/End 키는 즉시 업데이트
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            setTimeout(immediateUpdateState, 10); // 약간의 딜레이로 DOM 업데이트 후 실행
+          }
+        });
+        
+        // 🔧 추가: document의 selectionchange 이벤트로 커서 이동 감지
+        const selectionChangeHandler = (e) => {
+          // contentArea에서 선택이 변경된 경우만 처리
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const element = container.nodeType === Node.TEXT_NODE 
+              ? container.parentElement 
+              : container;
+            
+            // contentArea 내부의 선택 변경인지 확인
+            if (contentArea.contains(element)) {
+              immediateUpdateState();
+            }
+          }
+        };
+        
+        document.addEventListener('selectionchange', selectionChangeHandler);
         
         // 이벤트 핸들러를 변수에 저장하여 재사용
-        const keyupHandler = debouncedUpdateState;
         const clickHandler = (e) => {
           if (isDropdownOpen && !fontContainer.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
@@ -617,12 +679,21 @@
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
           }
-          debouncedUpdateState();
+          // 클릭 후 즉시 상태 업데이트
+          immediateUpdateState();
         };
         
-        contentArea.addEventListener('keyup', keyupHandler);
         contentArea.addEventListener('click', clickHandler);
+        
+        // 🔧 추가: 초기 상태 업데이트 (플러그인 로드 직후)
+        setTimeout(immediateUpdateState, 50);
+        
         contentArea.setAttribute('data-font-events-setup', 'true');
+        
+        // 🔧 정리 함수 등록 (메모리 누수 방지)
+        contentArea._fontEventCleanup = () => {
+          document.removeEventListener('selectionchange', selectionChangeHandler);
+        };
       }
       
       // 키보드 접근성: Enter/Space 키로 드롭다운 열기
@@ -691,11 +762,48 @@
             return; // 브라우저 기본 엔터 동작 허용
           }
           
-          // 이하 기존 폰트 영역 처리 로직...
+          // 폰트 영역에서 엔터키 처리
           if (e.shiftKey) {
-            // ... Shift+Enter 처리 ...
+            // Shift+Enter: 폰트 유지하며 줄바꿈 (br만 삽입)
+            e.preventDefault();
+            document.execCommand('insertLineBreak');
           } else {
-            // ... Enter 처리 ...
+            // Enter: 폰트 밖으로 나가기
+            e.preventDefault();
+            
+            // 🔧 핵심 수정: 상위 블록 요소를 찾아서 올바른 HTML 구조 생성
+            // 폰트 요소가 속한 가장 가까운 블록 요소 찾기
+            const blockElement = fontElement.closest('p, div, h1, h2, h3, h4, h5, h6, article, section, li, blockquote');
+            
+            if (blockElement) {
+              // 🔧 케이스 1: 폰트 요소가 블록 요소 안에 있는 경우
+              // 블록 요소 다음에 새로운 p 태그 생성
+              const newP = document.createElement('p');
+              newP.innerHTML = '<br>';
+              
+              // 블록 요소의 부모에 새로운 p 태그 삽입
+              blockElement.parentNode.insertBefore(newP, blockElement.nextSibling);
+              
+              // 새 p 태그로 커서 이동
+              const newRange = document.createRange();
+              newRange.setStart(newP, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            } else {
+              // 🔧 케이스 2: 폰트 요소가 블록 요소 안에 없는 경우 (fallback)
+              // 폰트 요소 다음에 새로운 p 태그 생성
+              const newP = document.createElement('p');
+              newP.innerHTML = '<br>';
+              fontElement.parentNode.insertBefore(newP, fontElement.nextSibling);
+              
+              // 새 p 태그로 커서 이동
+              const newRange = document.createRange();
+              newRange.setStart(newP, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            }
           }
         }
       }

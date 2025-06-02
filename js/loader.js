@@ -28,8 +28,6 @@
             'css/plugins/media.css',
             'css/plugins/modal.css',
             'css/plugins/codeBlock.css',
-            // ✅ 아이콘 삽입 플러그인 CSS 추가
-            'css/plugins/iconInsert.css'
         ];
         
         cssFiles.forEach(cssFile => {
@@ -99,9 +97,6 @@
             'js/plugins/checkList.js',
             'js/plugins/bulletList.js',
             'js/plugins/numberedList.js',
-            
-            // ✅ 아이콘 삽입 플러그인 추가
-            'js/plugins/iconInsert.js',
             
             // 모달 플러그인
             'js/modal.js'
