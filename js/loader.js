@@ -27,7 +27,9 @@
             'css/plugins/plugins.css',
             'css/plugins/media.css',
             'css/plugins/modal.css',
-            'css/plugins/codeBlock.css'
+            'css/plugins/codeBlock.css',
+            // ✅ 아이콘 삽입 플러그인 CSS 추가
+            'css/plugins/iconInsert.css'
         ];
         
         cssFiles.forEach(cssFile => {
@@ -42,8 +44,11 @@
     function loadJS(version) {
         const scripts = [
             // 데이터 파일
-            'js/data/videoList.js',
             'js/data/codeLanguages.js',
+            'js/data/videoList.js',
+            'js/data/colors.js',
+            'js/data/fontList.js',
+            'js/data/version.js',
             'js/error-handler.js',
             
             // ✅ 새로운 단축키 시스템 (core.js 이전에 로드)
@@ -94,7 +99,10 @@
             'js/plugins/checkList.js',
             'js/plugins/bulletList.js',
             'js/plugins/numberedList.js',
-
+            
+            // ✅ 아이콘 삽입 플러그인 추가
+            'js/plugins/iconInsert.js',
+            
             // 모달 플러그인
             'js/modal.js'
         ];
