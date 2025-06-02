@@ -66,12 +66,30 @@
   // PluginUtil 참조 추가
   const util = window.PluginUtil;
 
+  // code 내부인지 확인하는 함수 추가
+  function isInsideCodeElement(range, contentArea) {
+    let currentElement = range.startContainer;
+    
+    if (currentElement.nodeType === Node.TEXT_NODE) {
+      currentElement = currentElement.parentElement;
+    }
+    
+    while (currentElement && currentElement !== contentArea) {
+      if (currentElement.tagName === 'CODE') {
+        return currentElement;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return null;
+  }
+
   // 플러그인 등록 - 기본 동작만 사용
   LiteEditor.registerPlugin('blockquote', {
     title: 'Blockquote',
     icon: 'format_quote',
     
-    // ✅ 추가: 단축키용 action 함수
+    // ✅ 추가: 단축키용 action 함수 수정
     action: function(contentArea, buttonElement, event) {
       if (event) {
         event.preventDefault();
@@ -80,6 +98,17 @@
       
       if (!util.utils.canExecutePlugin(contentArea)) {
         return;
+      }
+      
+      // code 내부인지 체크 추가
+      const selection = util.selection.getSafeSelection();
+      if (selection && selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+        const insideCode = isInsideCodeElement(range, contentArea);
+        if (insideCode) {
+          errorHandler.showToast('Code 블록 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');
+          return;
+        }
       }
       
       contentArea.focus();
@@ -106,8 +135,18 @@
             return;
         }
         
-        contentArea.focus();
+        // code 내부인지 체크 추가
+        const selection = util.selection.getSafeSelection();
+        if (selection && selection.rangeCount) {
+          const range = selection.getRangeAt(0);
+          const insideCode = isInsideCodeElement(range, contentArea);
+          if (insideCode) {
+            errorHandler.showToast('Code 블록 내부에서는 Blockquote를 사용할 수 없습니다.', 'warning');
+            return;
+          }
+        }
         
+        contentArea.focus();
         document.execCommand('formatBlock', false, 'blockquote');
         
         // ✅ 커서를 텍스트 마지막으로 이동 (code와 일관성)

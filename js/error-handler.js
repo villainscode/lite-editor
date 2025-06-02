@@ -546,7 +546,7 @@
         },
 
         // Toast 컴포넌트 (error-handler.js에 추가 가능)
-        showToast: function(message, type = 'warning', duration = 3000) {
+        showToast: function(message, type = 'warning', duration = 2000) {
             // 기존 토스트 제거
             const existing = document.querySelector('.lite-editor-toast');
             if (existing) existing.remove();
