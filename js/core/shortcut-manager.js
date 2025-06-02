@@ -17,8 +17,6 @@ class ShortcutManager {
       'cmd+a', 'cmd+s', 'cmd+w', 'cmd+r', 'cmd+t',       // 브라우저 기본
       'alt+tab', 'cmd+tab', 'ctrl+alt+del'               // 시스템 기본
     ]);
-    
-    this._logInfo('ShortcutManager 초기화 완료', this.platform);
   }
 
   /**
@@ -57,7 +55,6 @@ class ShortcutManager {
       // 🚫 시스템 예약 키 조합 체크
       const keyCombo = this._getKeyCombo(normalizedShortcut);
       if (this.systemReservedKeys.has(keyCombo)) {
-        this._logWarning(`시스템 예약 키 조합입니다: ${keyCombo}. 등록을 건너뜁니다.`);
         return false;
       }
       
@@ -72,7 +69,6 @@ class ShortcutManager {
       }
       
       this.shortcuts.get(id).push(normalizedShortcut);
-      this._logInfo(`단축키 등록 성공: ${id} → ${this._getDisplayKey(normalizedShortcut)}`);
       
       return true;
     } catch (error) {
@@ -165,8 +161,6 @@ class ShortcutManager {
     
     // 🔥 캡처 단계에서 처리 (우선순위 확보)
     contentArea.addEventListener('keydown', this.activeListener, true);
-    
-    this._logInfo('단축키 리스너 설정 완료');
   }
 
   /**
@@ -194,8 +188,6 @@ class ShortcutManager {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        
-        this._logInfo(`단축키 실행: ${this._getDisplayKey(matchedShortcut)}`);
         
         // ✅ 가상 버튼 요소 생성하여 전달
         const virtualButton = {
@@ -309,7 +301,6 @@ class ShortcutManager {
         area.removeEventListener('keydown', this.activeListener, true);
       });
       this.activeListener = null;
-      this._logInfo('단축키 리스너 제거 완료');
     }
   }
 
@@ -339,7 +330,6 @@ class ShortcutManager {
   unregister(id) {
     if (this.shortcuts.has(id)) {
       this.shortcuts.delete(id);
-      this._logInfo(`단축키 제거: ${id}`);
     }
   }
 
@@ -348,7 +338,6 @@ class ShortcutManager {
    */
   clear() {
     this.shortcuts.clear();
-    this._logInfo('모든 단축키 초기화');
   }
 
   // 🐛 디버깅 메서드들

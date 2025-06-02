@@ -543,10 +543,6 @@
             });
             
             contentArea.setAttribute('data-debug-tracker', 'true');
-            
-            this.colorLog('DEBUG_TRACK', '🎯 클릭 추적 활성화', {
-                target: contentArea.id || contentArea.className
-            }, '#4caf50');
         }
     };
 

@@ -127,20 +127,6 @@
     function createHrElement() {
         const hr = document.createElement('hr');
         hr.className = 'lite-editor-hr';
-        
-        // 🔧 개선: 스타일 객체 재사용
-        if (!createHrElement.styleCache) {
-            createHrElement.styleCache = `
-                display: block !important;
-                height: 2px !important;
-                border: 0 !important;
-                border-top: 2px solid #c9c9c9 !important;
-                margin: 10px 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-            `;
-        }
-        
         hr.style.cssText = createHrElement.styleCache;
         return hr;
     }
