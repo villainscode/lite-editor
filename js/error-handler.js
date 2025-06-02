@@ -543,6 +543,97 @@
             });
             
             contentArea.setAttribute('data-debug-tracker', 'true');
+        },
+
+        // Toast 컴포넌트 (error-handler.js에 추가 가능)
+        showToast: function(message, type = 'warning', duration = 3000) {
+            // 기존 토스트 제거
+            const existing = document.querySelector('.lite-editor-toast');
+            if (existing) existing.remove();
+            
+            // 토스트 생성
+            const toast = document.createElement('div');
+            toast.className = 'lite-editor-toast';
+            toast.textContent = message;
+            
+            // 타입별 색상
+            const colors = {
+                warning: '#ff9800',
+                error: '#f44336',
+                success: '#4caf50',
+                info: '#2196f3'
+            };
+            
+            // 툴바 찾기
+            const toolbar = document.querySelector('.lite-editor-toolbar');
+            let topPosition = '20px'; // 기본값
+            
+            if (toolbar) {
+                const toolbarRect = toolbar.getBoundingClientRect();
+                topPosition = (toolbarRect.bottom + 10) + 'px'; // 툴바 아래 10px 여백
+            }
+            
+            toast.style.cssText = `
+                position: fixed;
+                top: ${topPosition};
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: ${colors[type]};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 4px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-size: 14px;
+                max-width: 300px;
+                cursor: pointer;
+                animation: slideDown 0.3s ease-out;
+            `;
+            
+            // 애니메이션 CSS 추가 (위에서 아래로 슬라이드)
+            if (!document.querySelector('#toast-animations')) {
+                const style = document.createElement('style');
+                style.id = 'toast-animations';
+                style.textContent = `
+                    @keyframes slideDown {
+                        from { 
+                            transform: translate(-50%, -100%); 
+                            opacity: 0; 
+                        }
+                        to { 
+                            transform: translate(-50%, 0); 
+                            opacity: 1; 
+                        }
+                    }
+                    @keyframes slideUp {
+                        from { 
+                            transform: translate(-50%, 0); 
+                            opacity: 1; 
+                        }
+                        to { 
+                            transform: translate(-50%, -100%); 
+                            opacity: 0; 
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // 클릭하면 즉시 사라짐
+            toast.addEventListener('click', () => {
+                toast.style.animation = 'slideUp 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            });
+            
+            // 자동으로 사라짐
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.style.animation = 'slideUp 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, duration);
+            
+            document.body.appendChild(toast);
         }
     };
 

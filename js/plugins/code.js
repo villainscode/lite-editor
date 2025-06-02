@@ -69,11 +69,34 @@
     return null;
   }
 
+  function isInsideBlockquote(range, contentArea) {
+    let currentElement = range.startContainer;
+    
+    if (currentElement.nodeType === Node.TEXT_NODE) {
+      currentElement = currentElement.parentElement;
+    }
+    
+    while (currentElement && currentElement !== contentArea) {
+      if (currentElement.tagName === 'BLOCKQUOTE') {
+        return currentElement;
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return null;
+  }
+
   function applyCodeFormat(contentArea) {
     const selection = util.selection.getSafeSelection();
     if (!selection || !selection.rangeCount) return;
     
     const range = selection.getRangeAt(0);
+    
+    const insideBlockquote = isInsideBlockquote(range, contentArea);
+    if (insideBlockquote) {
+      errorHandler.showToast('Blockquote 내부에서는 Code 블록을 사용할 수 없습니다.', 'warning');
+      return; // 포커스는 그대로 유지됨
+    }
     
     const existingCodeElement = isInsideCodeElement(range, contentArea);
     if (existingCodeElement) {
