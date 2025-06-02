@@ -72,18 +72,25 @@
     });
 
     /**
-     * HR 라인 삽입 함수 (공통 함수 사용)
+     * HR 요소 생성 (스타일 속성 없이)
+     */
+    function createHrElement() {
+        const hr = document.createElement('hr');
+        hr.className = 'lite-editor-hr';
+        // style 속성 설정 제거 - CSS 클래스만 사용
+        return hr;
+    }
+
+    /**
+     * HR 라인 삽입 함수 (개선된 버전)
      */
     function insertLine(contentArea) {
-        // ✅ 한 줄로 모든 체크 완료!
         if (!PluginUtil.utils.canExecutePlugin(contentArea)) {
             return;
         }
         
-        // ✅ 포커스 설정 (이미 체크 완료된 상태)
         contentArea.focus();
         
-        // ✅ 기존 HR 삽입 로직...
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) {
             appendHrToEnd(contentArea);
@@ -103,95 +110,82 @@
         const hr = createHrElement();
         
         try {
+            // 현재 커서가 있는 블록 요소 찾기
+            let currentBlock = range.startContainer;
+            if (currentBlock.nodeType === Node.TEXT_NODE) {
+                currentBlock = currentBlock.parentNode;
+            }
+            
+            // contentArea의 직접 자식이 될 때까지 올라가기
+            while (currentBlock && currentBlock.parentNode !== contentArea) {
+                currentBlock = currentBlock.parentNode;
+            }
+            
+            // 선택 영역에 내용이 있으면 삭제
             if (!range.collapsed) {
                 range.deleteContents();
             }
             
-            range.insertNode(hr);
-            
-            const newRange = document.createRange();
-            newRange.setStartAfter(hr);
-            newRange.collapse(true);
-            
-            selection.removeAllRanges();
-            selection.addRange(newRange);
+            // HR과 새 P를 삽입할 위치 결정
+            if (currentBlock && currentBlock.parentNode === contentArea) {
+                // 현재 블록 다음에 HR 삽입
+                if (currentBlock.nextSibling) {
+                    contentArea.insertBefore(hr, currentBlock.nextSibling);
+                } else {
+                    contentArea.appendChild(hr);
+                }
+                
+                // 공백이 들어간 새 P 생성
+                const newP = document.createElement('p');
+                const spaceNode = document.createTextNode('\u00A0'); // non-breaking space
+                newP.appendChild(spaceNode);
+                
+                // HR 다음에 새 P 삽입
+                if (hr.nextSibling) {
+                    contentArea.insertBefore(newP, hr.nextSibling);
+                } else {
+                    contentArea.appendChild(newP);
+                }
+                
+                // 커서를 새 P의 공백 끝으로 이동
+                // setTimeout으로 DOM 업데이트 후 실행
+                setTimeout(() => {
+                    const newRange = document.createRange();
+                    newRange.setStart(spaceNode, 1); // 공백 뒤
+                    newRange.setEnd(spaceNode, 1);
+                    newRange.collapse(true);
+                    
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(newRange);
+                    
+                    // 포커스 재설정
+                    contentArea.focus();
+                    
+                    if (window.errorHandler) {
+                        errorHandler.colorLog('LINE', '✅ HR 삽입 및 커서 이동 완료', {
+                            hrPosition: Array.from(contentArea.children).indexOf(hr),
+                            newPPosition: Array.from(contentArea.children).indexOf(newP),
+                            cursorInNewP: true
+                        }, '#4caf50');
+                    }
+                }, 10);
+                
+            } else {
+                // Fallback: 현재 위치를 찾을 수 없으면 끝에 추가
+                appendHrToEnd(contentArea);
+            }
             
         } catch (error) {
-            insertHrFallback(range, hr, contentArea);
+            console.error('LINE: HR 삽입 중 오류', error);
+            appendHrToEnd(contentArea);
         }
     }
 
     /**
-     * HR 요소 생성 (메모리 효율적)
-     */
-    function createHrElement() {
-        const hr = document.createElement('hr');
-        hr.className = 'lite-editor-hr';
-        hr.style.cssText = createHrElement.styleCache;
-        return hr;
-    }
-
-    /**
-     * 대안 삽입 방법 (메모리 안전)
-     */
-    function insertHrFallback(range, hr, contentArea) {
-        // 🔧 추가: 매개변수 유효성 검사
-        if (!range || !hr || !contentArea) {
-            console.warn('LINE: insertHrFallback 매개변수 오류');
-            return;
-        }
-        
-        if (range.startContainer === contentArea) {
-            // DIV 레벨 클릭
-            const targetElement = contentArea.children[range.startOffset];
-            if (targetElement) {
-                contentArea.insertBefore(hr, targetElement);
-            } else {
-                contentArea.appendChild(hr);
-            }
-        } else {
-            // 요소 내부 클릭 - 가장 가까운 위치에 삽입
-            let insertPoint = range.startContainer;
-            if (insertPoint.nodeType === Node.TEXT_NODE) {
-                insertPoint = insertPoint.parentNode;
-            }
-            
-            // 🔧 개선: 무한 루프 방지
-            let depth = 0;
-            const maxDepth = 10;
-            
-            while (insertPoint.parentNode !== contentArea && 
-                   insertPoint.parentNode && 
-                   depth < maxDepth) {
-                insertPoint = insertPoint.parentNode;
-                depth++;
-            }
-            
-            if (depth >= maxDepth) {
-                console.warn('LINE: DOM 트리 깊이 초과, 맨 끝에 추가');
-                contentArea.appendChild(hr);
-                return;
-            }
-            
-            if (insertPoint.nextSibling) {
-                contentArea.insertBefore(hr, insertPoint.nextSibling);
-            } else {
-                contentArea.appendChild(hr);
-            }
-        }
-        
-        if (window.errorHandler) {
-            errorHandler.colorLog('LINE', '✅ HR 삽입 성공 (대안)', {
-                위치: 'DOM 직접 삽입'
-            }, '#ff9800');
-        }
-    }
-
-    /**
-     * 맨 끝에 HR 추가 (메모리 안전)
+     * 맨 끝에 HR 추가 (개선된 버전)
      */
     function appendHrToEnd(contentArea) {
-        // 🔧 추가: contentArea 유효성 검사
         if (!contentArea || !contentArea.isConnected) {
             console.warn('LINE: appendHrToEnd contentArea 오류');
             return;
@@ -199,6 +193,26 @@
         
         const hr = createHrElement();
         contentArea.appendChild(hr);
+        
+        // 공백이 들어간 새 P 추가
+        const newP = document.createElement('p');
+        const spaceNode = document.createTextNode('\u00A0');
+        newP.appendChild(spaceNode);
+        contentArea.appendChild(newP);
+        
+        // 커서를 새 P로 이동
+        setTimeout(() => {
+            const range = document.createRange();
+            range.setStart(spaceNode, 1);
+            range.setEnd(spaceNode, 1);
+            range.collapse(true);
+            
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            contentArea.focus();
+        }, 10);
         
         if (window.errorHandler) {
             errorHandler.colorLog('LINE', '✅ HR 삽입 성공 (끝)', {
