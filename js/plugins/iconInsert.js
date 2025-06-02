@@ -8,6 +8,7 @@
   let colonTimer = null;
   let layer = null;
   let selection = 0;
+  let autoCloseTimer = null; // ✅ 자동 닫기 타이머 추가
   
   // ✅ 아이콘 데이터 내부 통합
   const iconData = ['⓵', '⓶', '⓷', '⓸', '⓹', '⓺', '⓻', '⓼', '⓽', '⓾',
@@ -16,7 +17,6 @@
   // 아이콘 데이터 로드 (단순화)
   function loadIconsFromData() {
     icons = iconData.slice(0, 20);
-    console.log('아이콘 데이터 로드됨:', icons.length, '개');
     return true;
   }
   
@@ -26,36 +26,42 @@
     const sel = window.getSelection();
     if (sel.rangeCount > 0) {
       savedCaretRect = sel.getRangeAt(0).getBoundingClientRect();
-      console.log(':: 위치 저장:', savedCaretRect);
     }
   }
   
   // 키 감지
   function handleKey(e) {
-    console.log('키 감지:', e.key, '레이어 상태:', !!layer);
-    
-    // 레이어가 열려있을 때 탐색
+    // 레이어가 열려있을 때만 처리
     if (layer) {
+      // 방향키, Enter, Esc만 처리하고 나머지는 통과
+      if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(e.key)) {
+        return; // ✅ 다른 키는 다른 플러그인이 처리하도록 통과
+      }
+      
       switch(e.key) {
         case 'ArrowRight': 
           e.preventDefault(); 
           selection = Math.min(selection + 1, icons.length - 1); 
           updateGrid();
+          startAutoCloseTimer(); // ✅ 타이머 리셋 추가
           break;
         case 'ArrowLeft': 
           e.preventDefault(); 
           selection = Math.max(selection - 1, 0); 
           updateGrid();
+          startAutoCloseTimer(); // ✅ 타이머 리셋 추가
           break;
         case 'ArrowDown': 
           e.preventDefault(); 
           selection = Math.min(selection + 10, icons.length - 1); 
           updateGrid();
+          startAutoCloseTimer(); // ✅ 타이머 리셋 추가
           break;
         case 'ArrowUp': 
           e.preventDefault(); 
           selection = Math.max(selection - 10, 0); 
           updateGrid();
+          startAutoCloseTimer(); // ✅ 타이머 리셋 추가
           break;
         case 'Enter':
           e.preventDefault();
@@ -66,22 +72,20 @@
           closeLayer();
           break;
       }
+      e.stopPropagation(); // 처리한 키만 차단
       return;
     }
     
     // "::" 감지
     if (e.key === ':') {
       colonCount++;
-      console.log('콜론 카운트:', colonCount);
       
       clearTimeout(colonTimer);
       colonTimer = setTimeout(() => {
-        console.log('타이머 리셋');
         colonCount = 0;
       }, 1000);
       
       if (colonCount === 2) {
-        console.log(':: 감지됨!');
         e.preventDefault();
         e.stopPropagation();
         saveCaretPosition();
@@ -95,7 +99,6 @@
   
   // 레이어 표시
   function showLayer() {
-    console.log('레이어 표시');
     
     if (layer) return;
     
@@ -106,7 +109,6 @@
     
     // ✅ 저장된 :: 위치 사용
     const rect = savedCaretRect || { left: window.innerWidth/2, top: window.innerHeight/2 };
-    console.log('레이어 위치:', rect);
     
     // 레이어 생성 (20px 그리드)
     layer = document.createElement('div');
@@ -114,11 +116,11 @@
     layer.style.cssText = `
       position: fixed !important;
       left: ${rect.left}px;
-      top: ${rect.top - 50}px;
+      top: ${rect.top - 60}px;
       width: 280px !important;
       height: 64px !important;
       background: white !important;
-      border: 1px solid #22a5ff !important;
+      border: 2px solid #22a5ff !important;
       border-radius: 3px;
       padding: 5px;
       display: grid !important;
@@ -130,8 +132,6 @@
       opacity: 1 !important;
       visibility: visible !important;
     `;
-    
-    console.log('사용할 아이콘:', icons);
     
     // 아이콘 생성 (20px 사이즈)
     icons.forEach((icon, i) => {
@@ -161,6 +161,7 @@
       item.addEventListener('mouseenter', () => {
         selection = i;
         updateGrid();
+        startAutoCloseTimer(); // ✅ 타이머 리셋 추가
       });
       
       // 툴크 추가 (데이터 파일에서 설명 가져오기)
@@ -177,7 +178,8 @@
     document.body.appendChild(layer);
     selection = 0;
     
-    console.log('레이어 표시 완료 - 20px 그리드');
+    // ✅ 5초 후 자동 닫기
+    startAutoCloseTimer();
   }
   
   // 선택 업데이트
@@ -198,9 +200,9 @@
   // 아이콘 삽입
   function insertIcon() {
     const icon = icons[selection];
-    console.log('아이콘 삽입:', icon, '선택 인덱스:', selection);
     
-    // 단순하게 execCommand 사용
+    // ✅ 바로 앞 ":" 하나만 삭제 후 아이콘 삽입
+    document.execCommand('delete');  // 앞글자 1개 삭제
     document.execCommand('insertHTML', false, `<span style="font-size: 14px;">${icon}</span>`);
     
     closeLayer();
@@ -212,7 +214,6 @@
       layer.remove();
       layer = null;
       selection = 0;
-      console.log('레이어 닫기 완료');
     }
   }
   
@@ -220,8 +221,19 @@
   function init() {
     loadIconsFromData();
     document.addEventListener('keydown', handleKey, true);
-    console.log(':: 아이콘 삽입 활성화됨');
     window.testIconLayer = showLayer;
+  }
+  
+  // ✅ 자동 닫기 타이머 5초 시작
+  function startAutoCloseTimer() {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = setTimeout(() => {
+      if (layer) {
+        layer.style.opacity = '0';
+        layer.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => closeLayer(), 500);
+      }
+    }, 5000);
   }
   
   setTimeout(init, 1000);
