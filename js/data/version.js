@@ -6,7 +6,7 @@
 
 window.LiteEditorVersion = {
   // 현재 버전
-  version: 'v1.0.32',
+  version: 'v1.0.33',
   
   // 개발자 정보
   developer: 'Code Villain',
