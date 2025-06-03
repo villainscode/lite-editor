@@ -865,7 +865,7 @@
             separatedMode: true,                    // 분리 모드 활성화
             toolbarTarget: '#lite-editor-toolbar', // 툴바 대상 지정
             plugins: [
-                'fontFamily', 'heading', 'fontColor', 'emphasis',
+                'fontFamily', 'heading', 'fontColor', 'highlight',
                 'bold', 'italic', 'underline', 'strike',
                 'link', 'imageUpload', 'table', 'media',
                 'line','blockquote', 'code', 'codeBlock',
@@ -917,7 +917,7 @@
     document.addEventListener('lite-editor-loaded', function() {
         // separatedMode: false (기본값이므로 생략 가능)
         plugins: [
-            'fontFamily', 'heading', 'fontColor', 'emphasis',
+            'fontFamily', 'heading', 'fontColor', 'highlight',
             'bold', 'italic', 'underline', 'strike',
             'link', 'imageUpload', 'table', 'media',
             'line','blockquote', 'code', 'codeBlock',
@@ -981,13 +981,13 @@
                 separatedMode: true,
                 toolbarTarget: '#lite-editor-toolbar',
                 plugins: [
-                    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
-                    'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
-                    'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
-                    'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
-                    'unorderedList', 'orderedList', 'checkList',              // 목록 
-                    'align', 'formatIndent',                                  // 정렬과 인덴트
-                    'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+                    'fontFamily', 'heading', 'fontColor', 'highlight',
+                    'bold', 'italic', 'underline', 'strike',
+                    'link', 'imageUpload', 'table', 'media',
+                    'line','blockquote', 'code', 'codeBlock',
+                    'unorderedList', 'orderedList', 'checkList',
+                    'align', 'formatIndent',
+                    'historyInit', 'undo', 'redo', 'reset'
                 ],
                 dividers: [4, 8, 12, 16, 19, 22],
                 dimensions: {

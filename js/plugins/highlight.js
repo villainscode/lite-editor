@@ -1,5 +1,5 @@
 /**
- * LiteEditor Emphasis Plugin
+ * LiteEditor Highlight Plugin
  * 텍스트 배경색(하이라이트) 플러그인
  * 수정: 선택 블록 유지 기능 추가 + Enter/Shift+Enter 처리
  */
@@ -8,7 +8,7 @@
   const util = window.PluginUtil || {};
 
   if (!util.selection) {
-    console.error('EmphasisPlugin: PluginUtil.selection이 필요합니다.');
+    console.error('HighlightPlugin: PluginUtil.selection이 필요합니다.');
   }
   
   // 전역 상태 변수
@@ -32,44 +32,88 @@
   }
   
   function setupEnterKeyHandling(contentArea) {
+    // ✅ 중복 등록 방지
+    if (contentArea.hasAttribute('data-highlight-events-setup')) {
+      return;
+    }
+    
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const selection = util.selection.getSafeSelection();
-        if (!selection || !selection.rangeCount) return;
-        
-        const range = selection.getRangeAt(0);
-        const startContainer = range.startContainer;
-        
-        let emphasisSpan = null;
-        if (startContainer.nodeType === Node.TEXT_NODE) {
-          emphasisSpan = startContainer.parentElement;
-        } else {
-          emphasisSpan = startContainer;
-        }
-        
-        while (emphasisSpan && emphasisSpan !== contentArea) {
-          if (emphasisSpan.tagName === 'SPAN' && 
-              emphasisSpan.style.backgroundColor) {
-            break;
-          }
-          emphasisSpan = emphasisSpan.parentElement;
-        }
-        
-        if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
-          if (e.shiftKey) {
-            // 🔧 Shift + Enter: emphasis 유지 (기본 동작)
-            return;  // fontColor.js와 동일하게 단순화
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // ✅ fontFamily.js와 동일한 안전한 currentElement 처리
+          let currentElement;
+          if (range.startContainer.nodeType === Node.TEXT_NODE) {
+            currentElement = range.startContainer.parentElement;
+          } else if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+            currentElement = range.startContainer;
           } else {
-            // Enter: emphasis 영역 밖으로 나가기
+            return;
+          }
+          
+          if (!currentElement || typeof currentElement.closest !== 'function') {
+            return;
+          }
+          
+          // ✅ fontFamily.js와 동일한 방식으로 highlight 요소 찾기
+          const highlightElement = currentElement.closest('span[style*="background-color"]');
+          
+          // ✅ 더 엄격한 highlight 영역 감지 (fontFamily.js 방식)
+          let isInHighlightArea = false;
+          
+          if (highlightElement) {
+            if (highlightElement.tagName === 'SPAN' && highlightElement.style.backgroundColor) {
+              isInHighlightArea = true;
+            }
+            
+            // 추가 검증: 현재 위치가 실제로 highlight 요소 내부인지 확인
+            if (isInHighlightArea) {
+              isInHighlightArea = highlightElement.contains(range.startContainer) || 
+                                highlightElement === range.startContainer ||
+                                (range.startContainer.nodeType === Node.TEXT_NODE && 
+                                 highlightElement.contains(range.startContainer.parentElement));
+            }
+          }
+          
+          // ✅ highlight 영역이 아닌 경우 기본 동작 허용
+          if (!isInHighlightArea) {
+            return; // 브라우저 기본 엔터 동작 허용
+          }
+          
+          // highlight 영역에서 엔터키 처리
+          if (e.shiftKey) {
+            // Shift+Enter: highlight 유지하며 줄바꿈 (br만 삽입)
+            e.preventDefault();
+            document.execCommand('insertLineBreak');
+          } else {
+            // Enter: highlight 밖으로 나가기
             e.preventDefault();
             
-            const newP = util.dom.createElement('p');
-            newP.appendChild(document.createTextNode('\u00A0'));
+            // fontFamily.js와 동일한 방식: 상위 블록 요소 찾기
+            const blockElement = highlightElement.closest('p, div, h1, h2, h3, h4, h5, h6, article, section, li, blockquote');
             
-            const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
-            if (parentBlock && parentBlock.parentNode) {
-              parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
-              util.selection.moveCursorTo(newP.firstChild, 0);
+            if (blockElement) {
+              const newP = document.createElement('p');
+              newP.innerHTML = '<br>';
+              blockElement.parentNode.insertBefore(newP, blockElement.nextSibling);
+              
+              const newRange = document.createRange();
+              newRange.setStart(newP, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            } else {
+              const newP = document.createElement('p');
+              newP.innerHTML = '<br>';
+              highlightElement.parentNode.insertBefore(newP, highlightElement.nextSibling);
+              
+              const newRange = document.createRange();
+              newRange.setStart(newP, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
             }
             
             util.editor.dispatchEditorEvent(contentArea);
@@ -77,6 +121,9 @@
         }
       }
     });
+    
+    // ✅ 중복 방지 플래그 설정
+    contentArea.setAttribute('data-highlight-events-setup', 'true');
   }
   
   /**
@@ -101,7 +148,7 @@
         
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
-          errorHandler.logError('EmphasisPlugin', 'P303', '선택 영역 복원 실패');  // ✅ 수정
+          errorHandler.logError('HighlightPlugin', 'P303', '선택 영역 복원 실패');
           return;
         }
         
@@ -140,7 +187,7 @@
             
 
             // ✅ 4단계: 선택 범위 상세 분석 (디버깅)
-            errorHandler.colorLog('EMPHASIS', '🔍 선택 범위 분석', {
+            errorHandler.colorLog('HIGHLIGHT', '🔍 선택 범위 분석', {
               selectedText: range.toString(),
               startContainer: range.startContainer.nodeName,
               startOffset: range.startOffset,
@@ -155,7 +202,7 @@
             range.deleteContents();
 
             // ✅ 디버깅: 삭제 후 DOM 상태
-            errorHandler.colorLog('EMPHASIS', '🔍 삭제 후 DOM 상태', {
+            errorHandler.colorLog('HIGHLIGHT', '🔍 삭제 후 DOM 상태', {
               afterDelete: range.startContainer.parentNode.innerHTML.substring(0, 200)
             }, '#ff5722');
 
@@ -192,7 +239,7 @@
             // ✅ 커서 위치에도 다음 텍스트와 붙음 방지 적용
             insertLineBreakIfNeeded(spanElement, contentArea);
             
-            errorHandler.colorLog('EMPHASIS', '✅ 서식 보존 하이라이트 완료', {
+            errorHandler.colorLog('HIGHLIGHT', '✅ 서식 보존 하이라이트 완료', {
               finalHTML: spanElement.outerHTML.substring(0, 200),
               preservedFormats: formatTags.map(f => f.tagName),
               color: color
@@ -228,30 +275,25 @@
               sel.addRange(range);
             }
           } catch (e) {
-            errorHandler.colorLog('EMPHASIS', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
+            errorHandler.colorLog('HIGHLIGHT', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
           }
         }
         
-        // 🔧 커서 위치에 하이라이트 span 생성 (execCommand 제거)
+        // 🔧 커서 위치에 하이라이트 span 생성 (수정된 버전)
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           
-          // 임시 텍스트 노드 삽입
-          const textNode = document.createTextNode('\u00A0');
-          range.insertNode(textNode);
-          
-          // span으로 감싸기
+          // ✅ 수정: span을 먼저 생성하고 직접 삽입 (replaceChild 사용 안 함)
           const spanElement = document.createElement('span');
           spanElement.style.backgroundColor = color;
-          spanElement.appendChild(textNode);
+          spanElement.appendChild(document.createTextNode('\u00A0'));
           
-          // 원래 위치에 span 삽입
-          const parentNode = textNode.parentNode;
-          parentNode.replaceChild(spanElement, textNode);
+          // ✅ 수정: 직접 range에 삽입
+          range.insertNode(spanElement);
           
           // ✅ 커서 위치에도 다음 텍스트와 붙음 방지 적용
-          insertLineBreakIfNeeded(spanElement);
+          insertLineBreakIfNeeded(spanElement, contentArea);
           
           // 커서를 span 내부로 이동
           const newRange = document.createRange();
@@ -260,7 +302,7 @@
           selection.removeAllRanges();
           selection.addRange(newRange);
           
-          errorHandler.colorLog('EMPHASIS', '✅ 커서 하이라이트 생성 완료', {
+          errorHandler.colorLog('HIGHLIGHT', '✅ 커서 하이라이트 생성 완료', {
             color: color
           }, '#4caf50');
         }
@@ -269,7 +311,7 @@
       util.editor.dispatchEditorEvent(contentArea);
       
     } catch (e) {
-      errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, e);
+      errorHandler.logError('HighlightPlugin', 'HIGHLIGHT_APPLY_ERROR', e);
     }
   }
   
@@ -296,7 +338,7 @@
     // 2. 가장 바깥쪽 요소의 nextSibling 확인
     const nextNode = outerMostElement.nextSibling;
     
-    errorHandler.colorLog('EMPHASIS', '🔍 붙음 방지 분석', {
+    errorHandler.colorLog('HIGHLIGHT', '🔍 붙음 방지 분석', {
       spanElement: spanElement.tagName,
       outerMostElement: outerMostElement.tagName,
       nextNode: nextNode?.nodeType === Node.TEXT_NODE ? 'TEXT_NODE' : nextNode?.tagName || 'null',
@@ -311,7 +353,7 @@
         const br = document.createElement('br');
         outerMostElement.parentNode.insertBefore(br, nextNode);
         
-        errorHandler.colorLog('EMPHASIS', '✅ 서식 태그 뒤 줄바꿈 삽입', {
+        errorHandler.colorLog('HIGHLIGHT', '✅ 서식 태그 뒤 줄바꿈 삽입', {
           insertedAfter: outerMostElement.tagName,
           nextText: nextText.substring(0, 20) + '...'
         }, '#4caf50');
@@ -322,13 +364,13 @@
     
     // 4. 이미 <br> 태그가 있는 경우
     else if (nextNode && nextNode.nodeType === Node.ELEMENT_NODE && nextNode.tagName === 'BR') {
-      errorHandler.colorLog('EMPHASIS', '⏭️ 이미 <br> 태그 존재', {}, '#9e9e9e');
+      errorHandler.colorLog('HIGHLIGHT', '⏭️ 이미 <br> 태그 존재', {}, '#9e9e9e');
       return false;
     }
     
     // 5. 다음 노드가 없는 경우
     else if (!nextNode) {
-      errorHandler.colorLog('EMPHASIS', '⏭️ 마지막 위치', {}, '#9e9e9e');
+      errorHandler.colorLog('HIGHLIGHT', '⏭️ 마지막 위치', {}, '#9e9e9e');
       return false;
     }
     
@@ -336,13 +378,14 @@
   }
   
   
-  LiteEditor.registerPlugin('emphasis', {
+  LiteEditor.registerPlugin('highlight', {
     customRender: function(toolbar, contentArea) {
+      // ✅ 수정: fontColor.js와 동일하게 즉시 등록
       setupEnterKeyHandling(contentArea);
       
       const highlightContainer = util.dom.createElement('div', {
         className: 'lite-editor-button',
-        title: 'Emphasis'
+        title: 'Highlight'
       });
       
       const icon = util.dom.createElement('i', {
@@ -394,7 +437,7 @@
             e.stopPropagation();
             
             // 🔧 디버깅: 색상 셀 클릭
-            errorHandler.colorLog('EMPHASIS', '🎨 색상 셀 클릭', {
+            errorHandler.colorLog('HIGHLIGHT', '🎨 색상 셀 클릭', {
               color: color,
               hasSelection: !!savedRange,
               hasCursorPosition: !!savedCursorPosition
@@ -419,7 +462,7 @@
       
       highlightContainer.addEventListener('mousedown', (e) => {
         // 🔧 디버깅: mousedown 시점 상태
-        errorHandler.colorLog('EMPHASIS', '🖱️ mousedown 이벤트', {
+        errorHandler.colorLog('HIGHLIGHT', '🖱️ mousedown 이벤트', {
           activeElement: document.activeElement?.tagName,
           contentAreaFocused: document.activeElement === contentArea,
           hasFocus: document.hasFocus()
@@ -433,7 +476,7 @@
           if (selectedText) {
             savedRange = util.selection.saveSelection();
             savedCursorPosition = null; // 선택 영역이 있으면 커서 위치는 저장하지 않음
-            errorHandler.colorLog('EMPHASIS', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
+            errorHandler.colorLog('HIGHLIGHT', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
           } else {
             savedRange = null;
             
@@ -445,7 +488,7 @@
               endOffset: range.endOffset
             };
             
-            errorHandler.colorLog('EMPHASIS', '✅ 커서 위치 저장됨', {
+            errorHandler.colorLog('HIGHLIGHT', '✅ 커서 위치 저장됨', {
               startContainer: range.startContainer?.nodeName,
               startOffset: range.startOffset,
               collapsed: range.collapsed
@@ -454,7 +497,7 @@
         } else {
           savedRange = null;
           savedCursorPosition = null;
-          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
+          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
         }
       });
       
@@ -463,7 +506,7 @@
         e.stopPropagation();
         
         // 🔧 디버깅: click 이벤트 시점 상태
-        errorHandler.colorLog('EMPHASIS', '🖱️ click 이벤트', {
+        errorHandler.colorLog('HIGHLIGHT', '🖱️ click 이벤트', {
           hasSelection: !!savedRange,
           hasCursorPosition: !!savedCursorPosition,
           activeElement: document.activeElement?.tagName,
@@ -473,7 +516,7 @@
         
         // 🔧 선택 영역이 없어도 커서 위치가 있으면 드롭다운 열기
         if (!savedRange && !savedCursorPosition) {
-          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
+          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
           return;
         }
         
@@ -534,7 +577,7 @@
         }
         
         // 🔧 디버깅: click 이벤트 완료 후 상태
-        errorHandler.colorLog('EMPHASIS', '✅ click 이벤트 완료', {
+        errorHandler.colorLog('HIGHLIGHT', '✅ click 이벤트 완료', {
           dropdownVisible: !isVisible,
           activeElement: document.activeElement?.tagName,
           contentAreaFocused: document.activeElement === contentArea,

@@ -148,7 +148,7 @@ import './js/plugins/codeBlock.js';
 // 폰트 및 색상 관련 플러그인
 import './js/plugins/fontFamily.js';
 import './js/plugins/fontColor.js';
-import './js/plugins/emphasis.js';
+import './js/plugins/highlight.js';
 import './js/plugins/heading.js';
 
 // 구조 및 정렬 관련 플러그인
@@ -283,7 +283,7 @@ https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor
         document.addEventListener('lite-editor-loaded', function() {
             const editor = LiteEditor.init('#lite-editor', {
                 plugins: [
-                    'fontFamily', 'heading', 'fontColor', 'emphasis',
+                    'fontFamily', 'heading', 'fontColor', 'highlight',
                     'bold', 'italic', 'underline', 'strike',
                     'link', 'imageUpload', 'table', 'media',
                     'line', 'blockquote', 'code', 'codeBlock',
