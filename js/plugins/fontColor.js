@@ -200,14 +200,16 @@
   }
   
   /**
-   * 6단계: 버튼 활성화 상태 관리 (FR7, FR11)
-   * 커서가 색상 span 내부에 있으면 .active 클래스 추가
+   * 6단계: 버튼 활성화 상태 관리 (FR7, FR11) - 개선됨
+   * 모든 조건에 따른 .active 상태 관리
    */
   function updateFontColorButtonState(container) {
     try {
       const selection = window.getSelection();
       if (!selection.rangeCount) {
         container.classList.remove('active');
+        container.style.backgroundColor = '';
+        container.style.color = '';
         return;
       }
       
@@ -244,7 +246,28 @@
     } catch (e) {
       console.error('FontColorPlugin: 버튼 상태 업데이트 실패', e);
       container.classList.remove('active');
+      container.style.backgroundColor = '';
+      container.style.color = '';
     }
+  }
+  
+  /**
+   * ✅ 다른 툴바 아이콘 클릭 감지 함수 (새로 추가)
+   */
+  function setupGlobalToolbarClickHandler(colorContainer) {
+    document.addEventListener('click', (e) => {
+      const clickedButton = e.target.closest('.lite-editor-button');
+      
+      // 다른 툴바 버튼 클릭 시 font color .active 해제
+      if (clickedButton && 
+          clickedButton !== colorContainer && 
+          !clickedButton.closest('.lite-editor-dropdown-menu')) {
+        
+        colorContainer.classList.remove('active');
+        colorContainer.style.backgroundColor = '';
+        colorContainer.style.color = '';
+      }
+    });
   }
   
   /**
@@ -263,7 +286,7 @@
     return util.dataLoader.loadColorData('font', defaultColors);
   }
   
-  // 8단계: 플러그인 등록 및 통합
+  // 8단계: 플러그인 등록 및 통합 - 수정됨
   LiteEditor.registerPlugin('fontColor', {
     customRender: function(toolbar, contentArea) {
       // IME 및 Enter 키 처리 설정
@@ -288,7 +311,10 @@
       });
       colorContainer.appendChild(colorIndicator);
       
-      // 7단계: 드롭다운 메뉴 생성
+      // ✅ 다른 툴바 버튼 클릭 감지 설정
+      setupGlobalToolbarClickHandler(colorContainer);
+      
+      // 드롭다운 메뉴 생성 (기존과 동일)
       const dropdownMenu = util.dom.createElement('div', {
         className: 'lite-editor-dropdown-menu',
         id: 'font-color-dropdown-' + Math.random().toString(36).substr(2, 9)
@@ -327,13 +353,17 @@
             // 드롭다운 닫기
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
-            colorContainer.classList.remove('active');
             isDropdownOpen = false;
             
             util.activeModalManager.unregister(dropdownMenu);
             
             // 색상 적용
             applyFontColor(color, contentArea, colorIndicator);
+            
+            // ✅ 색상 적용 후 즉시 상태 업데이트 (약간의 지연으로 DOM 반영 대기)
+            setTimeout(() => {
+              updateFontColorButtonState(colorContainer);
+            }, 50);
           });
           
           colorGrid.appendChild(colorCell);
@@ -342,7 +372,7 @@
       
       document.body.appendChild(dropdownMenu);
       
-      // 선택 영역/커서 위치 저장 (mousedown 이벤트)
+      // 선택 영역/커서 위치 저장 (기존과 동일)
       colorContainer.addEventListener('mousedown', (e) => {
         if (isComposing) {
           savedRange = null;
@@ -356,11 +386,9 @@
           const selectedText = range.toString().trim();
           
           if (selectedText) {
-            // 선택된 텍스트가 있는 경우
             savedRange = util.selection.saveSelection();
             savedCursorPosition = null;
           } else {
-            // 커서만 있는 경우
             savedRange = null;
             savedCursorPosition = {
               startContainer: range.startContainer,
@@ -375,7 +403,7 @@
         }
       });
       
-      // 클릭 이벤트 - 드롭다운 토글
+      // ✅ 클릭 이벤트 - 드롭다운 토글 (개선됨)
       colorContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -396,14 +424,21 @@
           // 드롭다운 닫기
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
-          colorContainer.classList.remove('active');
           isDropdownOpen = false;
           util.activeModalManager.unregister(dropdownMenu);
+          
+          // ✅ 드롭다운 닫을 때 상태 업데이트 (색상 span 내부인지 확인)
+          setTimeout(() => {
+            updateFontColorButtonState(colorContainer);
+          }, 10);
+          
         } else {
-          // 드롭다운 열기
+          // ✅ 드롭다운 열기 - .active 상태 설정
           dropdownMenu.classList.add('show');
           dropdownMenu.style.display = 'block';
           colorContainer.classList.add('active');
+          colorContainer.style.backgroundColor = '#e9e9e9';
+          colorContainer.style.color = '#1a73e8';
           isDropdownOpen = true;
           
           util.layer.setLayerPosition(dropdownMenu, colorContainer);
@@ -411,8 +446,12 @@
           dropdownMenu.closeCallback = () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
-            colorContainer.classList.remove('active');
             isDropdownOpen = false;
+            
+            // ✅ 드롭다운 닫힐 때 상태 업데이트
+            setTimeout(() => {
+              updateFontColorButtonState(colorContainer);
+            }, 10);
           };
           
           util.activeModalManager.register(dropdownMenu);
@@ -420,9 +459,13 @@
           util.setupOutsideClickHandler(dropdownMenu, () => {
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
-            colorContainer.classList.remove('active');
             isDropdownOpen = false;
             util.activeModalManager.unregister(dropdownMenu);
+            
+            // ✅ 외부 클릭으로 닫힐 때도 상태 업데이트
+            setTimeout(() => {
+              updateFontColorButtonState(colorContainer);
+            }, 10);
             
             if (document.activeElement !== contentArea) {
               contentArea.focus({ preventScroll: true });
@@ -431,14 +474,21 @@
         }
       });
       
-      // 버튼 상태 이벤트 설정 (중복 방지)
+      // 버튼 상태 이벤트 설정 (기존 + 개선됨)
       if (!contentArea.hasAttribute('data-font-color-events-setup')) {
         const debouncedUpdateState = util.events.debounce(() => {
           updateFontColorButtonState(colorContainer);
         }, 150);
         
+        // ✅ 이벤트 리스너 추가
         contentArea.addEventListener('keyup', debouncedUpdateState);
         contentArea.addEventListener('click', debouncedUpdateState);
+        contentArea.addEventListener('keydown', (e) => {
+          // ✅ Enter로 새 P 생성 시 즉시 상태 업데이트
+          if (e.key === 'Enter' && !e.shiftKey) {
+            setTimeout(debouncedUpdateState, 10);
+          }
+        });
         
         // 초기 상태 업데이트
         setTimeout(() => updateFontColorButtonState(colorContainer), 50);
