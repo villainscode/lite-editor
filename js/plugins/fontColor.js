@@ -38,7 +38,7 @@
   /**
    * Enter 키 처리 함수 - font color 블럭에서 나가기
    */
-  function setupEnterKeyHandling(contentArea) {
+  function setupEnterKeyHandling(contentArea, container) {
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const selection = util.selection.getSafeSelection();
@@ -76,6 +76,13 @@
             if (parentBlock && parentBlock.parentNode) {
               parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
               util.selection.moveCursorTo(newP.firstChild, 0);
+              
+              // 🔧 추가: 폰트 컬러 탈출 후 버튼 상태 업데이트
+              setTimeout(() => {
+                if (container && container.classList) {
+                  updateFontColorButtonState(container);
+                }
+              }, 10);
             }
           }
         }
@@ -258,15 +265,77 @@
     }
   }
   
+  /**
+   * 🔧 폰트 컬러 버튼 상태 업데이트 함수 (fontFamily.js 방식)
+   */
+  function updateFontColorButtonState(container) {
+    try {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) {
+        container.classList.remove('active');
+        container.style.backgroundColor = '';
+        container.style.color = '';
+        return;
+      }
+      
+      const range = selection.getRangeAt(0);
+      const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+        ? range.startContainer.parentElement 
+        : range.startContainer;
+      
+      // font 태그로 색상이 설정된 요소 찾기
+      const fontElement = currentElement.closest('font[color]');
+      
+      if (fontElement) {
+        // 활성 상태 + 스타일 적용
+        container.classList.add('active');
+        container.style.backgroundColor = '#e9e9e9';
+        container.style.color = '#1a73e8';
+      } else {
+        // 기본 상태 + 스타일 제거  
+        container.classList.remove('active');
+        container.style.backgroundColor = '';
+        container.style.color = '';
+      }
+      
+    } catch (e) {
+      console.error('FontColorPlugin: 버튼 상태 업데이트 중 오류', e);
+      container.classList.remove('active');
+    }
+  }
+  
+  /**
+   * 🔧 이벤트 리스너 설정 (fontFamily.js 방식으로 단순화)
+   */
+  function setupFontColorButtonStateEvents(container, contentArea) {
+    // 🔧 디바운스 적용 (fontFamily.js와 동일)
+    const debouncedUpdateState = util.events.debounce(() => {
+      updateFontColorButtonState(container);
+    }, 150);
+    
+    // ✅ fontFamily.js와 동일한 이벤트만
+    contentArea.addEventListener('keyup', debouncedUpdateState);
+    contentArea.addEventListener('click', debouncedUpdateState);
+    
+    // 초기 상태 업데이트
+    setTimeout(() => updateFontColorButtonState(container), 50);
+    
+    // 정리 함수 반환
+    return () => {
+      contentArea.removeEventListener('keyup', debouncedUpdateState);
+      contentArea.removeEventListener('click', debouncedUpdateState);
+    };
+  }
+  
   // 글자 색상 플러그인 등록
   LiteEditor.registerPlugin('fontColor', {
     customRender: function(toolbar, contentArea) {
-      setupEnterKeyHandling(contentArea);
-      
       const colorContainer = util.dom.createElement('div', {
         className: 'lite-editor-button',
         title: 'Font Color'
       });
+      
+      setupEnterKeyHandling(contentArea, colorContainer);
       
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
@@ -315,21 +384,13 @@
             e.preventDefault();
             e.stopPropagation();
             
-            // 🔧 디버깅: 색상 셀 클릭
-            errorHandler.colorLog('FONT_COLOR', '🎨 색상 셀 클릭', {
-              color: color,
-              activeElement: document.activeElement?.tagName,
-              contentAreaFocused: document.activeElement === contentArea
-            }, '#9c27b0');
-            
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
-            colorContainer.classList.remove('active');
             isDropdownOpen = false;
             
             util.activeModalManager.unregister(dropdownMenu);
             
-            // 🔧 즉시 폰트 컬러 적용 (스크롤 복원 없이)
+            // 폰트 컬러 적용
             applyFontColor(color, contentArea, colorIndicator);
           });
           
@@ -478,6 +539,12 @@
           hasFocus: document.hasFocus()
         }, '#4caf50');
       });
+      
+      // 🔧 이벤트 설정 추가 (한 번만 실행되도록)
+      if (!contentArea.hasAttribute('data-font-color-events-setup')) {
+        setupFontColorButtonStateEvents(colorContainer, contentArea);
+        contentArea.setAttribute('data-font-color-events-setup', 'true');
+      }
       
       return colorContainer;
     }
