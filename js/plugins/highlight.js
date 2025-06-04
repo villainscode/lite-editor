@@ -57,45 +57,55 @@
     
     
   /**
-   * 🔧 Enter/Shift+Enter 키 처리 (highlight-bak.js + demo 방식)
+   * 🔧 Enter/Shift+Enter 키 처리 (fontColor.js 방식 적용)
    */
-  function setupEnterKeyHandling(contentArea, container) {  // ✅ container 매개변수 추가
+  function setupEnterKeyHandling(contentArea, container) {
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const selection = window.getSelection();
         if (!selection || !selection.rangeCount) return;
         
         const range = selection.getRangeAt(0);
-        const startContainer = range.startContainer;
+        let parent = range.startContainer;
         
-        let highlightSpan = null;
-        if (startContainer.nodeType === Node.TEXT_NODE) {
-          highlightSpan = startContainer.parentElement;
-        } else {
-          highlightSpan = startContainer;
-        }
-        
-        // 하이라이트 요소 찾기
-        while (highlightSpan && highlightSpan !== contentArea) {
-          if (isHighlightElement(highlightSpan)) {
+        // 현재 위치가 하이라이트 span 내부인지 확인
+        while (parent && parent !== contentArea) {
+          if (parent.nodeType === Node.ELEMENT_NODE &&
+              parent.tagName === 'SPAN' &&
+              parent.style.backgroundColor) { // ✅ backgroundColor로 확인
             break;
           }
-          highlightSpan = highlightSpan.parentElement;
+          parent = parent.parentElement;
         }
         
-        // ✅ 하이라이트 내부에서만 처리 (demo 방식)
-        if (highlightSpan && isHighlightElement(highlightSpan)) {
+        // ✅ 하이라이트 span 내부에서의 Enter/Shift+Enter 처리
+        if (parent && parent.tagName === 'SPAN' && parent.style.backgroundColor) {
+          e.preventDefault(); // ✅ 모든 Enter 처리를 직접 제어
+          
           if (e.shiftKey) {
-            // ✅ Shift+Enter: 기본 동작 허용 (highlight-bak.js 방식)
-            return; // 브라우저가 <br> 삽입하도록 허용
-          } else {
-            // ✅ Enter: 하이라이트에서 탈출 (demo 방식)
-            e.preventDefault();
+            // ✅ Shift+Enter: 하이라이트 span 내부에 <br> + 임시 텍스트 삽입
+            const br = document.createElement('br');
+            const textNode = document.createTextNode('\u00A0'); // 임시 문자
             
+            range.deleteContents();
+            range.insertNode(br);
+            
+            // ✅ <br> 다음에 임시 텍스트 노드 삽입 (span 내부 보장)
+            range.setStartAfter(br);
+            range.insertNode(textNode);
+            
+            // ✅ 커서를 임시 텍스트 위치에 배치
+            range.setStart(textNode, 0);
+            range.setEnd(textNode, 1);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+          } else {
+            // ✅ Enter: 하이라이트 블록 탈출
             const newP = document.createElement('p');
             newP.appendChild(document.createTextNode('\u00A0'));
             
-            const parentBlock = highlightSpan.closest('p, div, h1, h2, h3, h4, h5, h6, li') || highlightSpan;
+            const parentBlock = parent.closest('p, div, h1, h2, h3, h4, h5, h6, li') || parent;
             if (parentBlock && parentBlock.parentNode) {
               parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
               
@@ -107,18 +117,34 @@
               selection.addRange(newRange);
             }
             
-            util.editor?.dispatchEditorEvent?.(contentArea);
-            
-            // 🔧 추가: 하이라이트 탈출 후 버튼 상태 업데이트
+            // 🔧 하이라이트 탈출 후 버튼 상태 업데이트
             setTimeout(() => {
               if (container && container.classList) {
-                console.log('🚪 하이라이트 탈출 → active 제거');
                 updateHighlightButtonState(container);
               }
             }, 10);
           }
+          
+          util.editor?.dispatchEditorEvent?.(contentArea);
+          
+        } else if (!e.shiftKey) {
+          // ✅ 하이라이트 밖에서의 순수 Enter만 처리
+          e.preventDefault();
+          
+          const newP = document.createElement('p');
+          newP.appendChild(document.createTextNode('\u00A0'));
+          range.deleteContents();
+          range.insertNode(newP);
+          
+          const newRange = document.createRange();
+          newRange.setStart(newP.firstChild, 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          util.editor?.dispatchEditorEvent?.(contentArea);
         }
-        // ✅ 하이라이트 밖에서는 아무것도 하지 않음
+        // ✅ 하이라이트 밖에서의 Shift+Enter는 브라우저 기본 동작
       }
     });
   }
