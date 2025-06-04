@@ -4,69 +4,6 @@
  */
 
 (function() {
-  // PluginUtil의 selection 유틸리티 사용
-  const getSafeSelection = () => {
-    if (window.PluginUtil && window.PluginUtil.selection) {
-      return window.PluginUtil.selection.getSafeSelection();
-    }
-    // 폴백: 기존 방식
-    try {
-      return window.getSelection();
-    } catch (error) {
-      if (window.errorHandler) {
-        errorHandler.logError('FormatUtils', errorHandler.codes.COMMON.SELECTION_GET, error);
-      }
-      return null;
-    }
-  };
-
-  // 선택 영역 저장/복원 헬퍼 함수들 (상단으로 이동)
-  const saveSelection = () => {
-    // 1순위: PluginUtil 사용
-    if (window.PluginUtil && window.PluginUtil.selection) {
-      return window.PluginUtil.selection.saveSelection();
-    }
-    // 2순위: 기존 liteEditorSelection 사용
-    else if (window.liteEditorSelection) {
-      window.liteEditorSelection.save();
-      return window.liteEditorSelection.get();
-    }
-    // 3순위: 직접 구현
-    else {
-      const sel = getSafeSelection();
-      if (sel && sel.rangeCount > 0) {
-        return sel.getRangeAt(0).cloneRange();
-      }
-    }
-    return null;
-  };
-
-  const restoreSelection = (savedRange) => {
-    // 1순위: PluginUtil 사용
-    if (window.PluginUtil && window.PluginUtil.selection && savedRange) {
-      return window.PluginUtil.selection.restoreSelection(savedRange);
-    }
-    // 2순위: 기존 liteEditorSelection 사용
-    else if (window.liteEditorSelection) {
-      window.liteEditorSelection.restore();
-      return true;
-    }
-    // 3순위: 직접 구현
-    else if (savedRange) {
-      try {
-        const sel = getSafeSelection();
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(savedRange);
-          return true;
-        }
-      } catch (e) {
-        console.warn('선택 영역 복원 실패:', e);
-      }
-    }
-    return false;
-  };
-
   // 전역 네임스페이스 생성
   window.LiteEditorUtils = window.LiteEditorUtils || {};
   
@@ -102,8 +39,8 @@
     }
     if (buttonElement) buttonElement.setAttribute('data-processing', 'true');
     
-    // 현재 선택 영역 저장 (헬퍼 함수 사용)
-    const savedRange = saveSelection();
+    // 현재 선택 영역 저장
+    const savedRange = PluginUtil.selection.saveSelection();
 
     // 포커스 확인
     if (document.activeElement !== contentArea) {
@@ -113,8 +50,8 @@
     // 안정적인 실행을 위한 적절한 지연 시간 설정
     setTimeout(function executeCommand() {
       try {
-        // 선택 영역 복원 (헬퍼 함수 사용)
-        restoreSelection(savedRange);
+        // 선택 영역 복원
+        PluginUtil.selection.restoreSelection(savedRange);
         
         // 포커스 유지 및 명령 실행
         contentArea.focus();
@@ -164,8 +101,8 @@
     }
     if (buttonElement) buttonElement.setAttribute('data-processing', 'true');
     
-    // 3. 현재 선택 영역 저장 (헬퍼 함수 사용)
-    const savedRange = saveSelection();
+    // 3. 현재 선택 영역 저장
+    const savedRange = PluginUtil.selection.saveSelection();
 
     // 4. 포커스 확인
     if (document.activeElement !== contentArea) {
@@ -174,13 +111,13 @@
     
     // 5. 선택이 유효한지 확인하는 함수
     function isSelectionValid() {
-      const sel = getSafeSelection();
+      const sel = PluginUtil.selection.getSafeSelection();
       return sel && sel.rangeCount > 0 && !sel.isCollapsed;
     }
     
     // 6. 현재 선택이 code 태그 내에 있는지 확인하는 함수
     function isSelectionInCode() {
-      const sel = getSafeSelection();
+      const sel = PluginUtil.selection.getSafeSelection();
       if (!sel || sel.rangeCount === 0) return false;
       
       let node = sel.anchorNode;
@@ -195,7 +132,7 @@
     
     // 7. 선택된 HTML 가져오기
     function getSelectedHtml() {
-      const sel = getSafeSelection();
+      const sel = PluginUtil.selection.getSafeSelection();
       if (!sel || sel.rangeCount === 0) return '';
       
       const range = sel.getRangeAt(0);
@@ -212,8 +149,8 @@
     // 8. 안정적인 실행을 위한 적절한 지연 시간 설정
     setTimeout(function executeCommand() {
       try {
-        // 9. 선택 영역 복원 (헬퍼 함수 사용)
-        restoreSelection(savedRange);
+        // 9. 선택 영역 복원
+        PluginUtil.selection.restoreSelection(savedRange);
           
           // 10. 안정적인 명령 실행 순서 보장
           setTimeout(function() {
@@ -221,7 +158,7 @@
               // 11. 모바일 브라우저에서도 작동하도록 Range 확인
               if (!isSelectionValid()) {
                 // 선택이 유효하지 않으면 다시 복원 시도
-                restoreSelection(savedRange);
+                PluginUtil.selection.restoreSelection(savedRange);
               }
               
               // 12. 추가 포커스 유지(일부 브라우저에서 필요)
@@ -233,7 +170,7 @@
               if (isInCode) {
                 // 이미 code 태그 내부에 있다면 서식 제거
                 // 부모 code 태그를 찾아 내용만 유지하고 태그는 제거
-                const sel = getSafeSelection();
+                const sel = PluginUtil.selection.getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   const range = sel.getRangeAt(0);
                   
@@ -265,7 +202,7 @@
                 const selectedHtml = getSelectedHtml();
                 
                 // 선택 영역 제거 후 새 내용 삽입 (공백 문제 방지)
-                const sel = getSafeSelection();
+                const sel = PluginUtil.selection.getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   const range = sel.getRangeAt(0);
                   range.deleteContents();
@@ -288,7 +225,7 @@
               // 14. 선택 영역 유지를 위한 추가 작업
               setTimeout(function() {
                 // 15. Selection.anchorNode와 focusNode 상태 확인
-                const sel = getSafeSelection();
+                const sel = PluginUtil.selection.getSafeSelection();
                 if (sel && sel.rangeCount > 0) {
                   // 16. 선택이 유효한지 확인
                   if (sel.anchorNode && sel.focusNode) {
@@ -296,7 +233,7 @@
                     contentArea.focus();
                   } else {
                     // 선택이 유효하지 않으면 다시 복원 시도
-                    restoreSelection(savedRange);
+                    PluginUtil.selection.restoreSelection(savedRange);
                   }
                 }
                 
@@ -389,11 +326,11 @@
       contentArea.focus();
     }
     
-    // 현재 선택 영역 저장 (헬퍼 함수 사용)
-    const savedRange = saveSelection();
+    // 현재 선택 영역 저장
+    const savedRange = PluginUtil.selection.saveSelection();
     
     // 선택 영역 확인
-    const selection = getSafeSelection();
+    const selection = PluginUtil.selection.getSafeSelection();
     if (!selection || selection.rangeCount === 0) {
       if (window.errorHandler) {
         errorHandler.logError('FormatUtils', errorHandler.codes.PLUGINS.FORMAT.NO_SELECTION, e);
@@ -404,8 +341,8 @@
     // 지연 시간 조정 (100ms -> 10ms)
     setTimeout(() => {
       try {
-        // 선택 영역 복원 (헬퍼 함수 사용)
-        restoreSelection(savedRange);
+        // 선택 영역 복원
+        PluginUtil.selection.restoreSelection(savedRange);
         
         // 팀막처럼 선택 영역이 유지되는지 확인
         // 포커스 유지를 위해 다시 한 번 포커스
@@ -416,7 +353,7 @@
         
         // 지연 후 선택 영역 재복원 (중요!)
         setTimeout(() => {
-          restoreSelection(savedRange);
+          PluginUtil.selection.restoreSelection(savedRange);
           
           // 포커스 유지
           contentArea.focus();
@@ -431,7 +368,7 @@
   
   // 선택 영역 관리를 위한 문서 레벨 이벤트 수신기
   document.addEventListener('click', function(e) {
-    const sel = getSafeSelection();
+    const sel = PluginUtil.selection.getSafeSelection();
     
     // LiteEditor 에디터 컨텐츠 영역 찾기
     const editorContainers = document.querySelectorAll('.lite-editor-content');

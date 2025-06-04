@@ -20,9 +20,9 @@ alwaysApply: true
 ### 1.1 JavaScript 파일
 - `js/core.js`: 에디터 코어 기능
 - `js/loader.js`: 모든 JS 파일을 로드하는 로더
-- `js/error-handler.js`: 오류 처리 모듈
-- `js/modal.js`: 모달 관련 기능
-- `js/security-manager.js`: 보안 관련 기능
+- `js/utils/error-handler.js`: 오류 처리 모듈
+- `js/utils/modal.js`: 모달 관련 기능
+- `js/utils/security-manager.js`: 보안 관련 기능
 - `js/data/`: 버전, 폰트, 색상 등의 데이터
 - `js/plugins/`: 다양한 에디터 플러그인들
 
@@ -131,7 +131,7 @@ import './js/plugins/plugin-util.js';
 
 // 유틸리티 및 기본 기능
 import './js/plugins/history.js';
-import './js/plugins/format-util.js';
+import './js/plugins/formatHelper.js';
 import './js/plugins/reset.js';
 
 // 텍스트 서식 관련 플러그인
@@ -246,103 +246,4 @@ npm run build
 ### 5.2 GitHub Releases 설정
 1. 새 릴리즈 생성(예: v1.0.0)
 2. 빌드된 파일 업로드:
-   - `dist/lite-editor.min.js`
-   - `dist/lite-editor.min.css`
-
-### 5.3 jsDelivr CDN 사용
-GitHub 릴리즈가 완료되면 jsDelivr CDN URL을 통해 접근할 수 있습니다:
-
-https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.js
-https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.css
-
-## 6. 사용 방법
-
-### 6.1 HTML에 추가
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>LiteEditor 예제</title>
-    
-    <!-- 필수 스타일시트 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.css">
-    
-    <!-- Material Icons (필수) -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-</head>
-<body>
-    <!-- 중요: contenteditable="true" 속성은 필수입니다 -->
-    <div id="lite-editor" contenteditable="true"></div>
-    
-    <!-- 스크립트 로드 -->
-    <script src="https://cdn.jsdelivr.net/gh/{사용자명}/lite-editor@{버전}/dist/lite-editor.min.js"></script>
-    
-    <!-- 초기화 코드 -->
-    <script>
-        document.addEventListener('lite-editor-loaded', function() {
-            const editor = LiteEditor.init('#lite-editor', {
-                plugins: [
-                    'fontFamily', 'heading', 'fontColor', 'highlight',
-                    'bold', 'italic', 'underline', 'strike',
-                    'link', 'imageUpload', 'table', 'media',
-                    'line', 'blockquote', 'code', 'codeBlock',
-                    'unorderedList', 'orderedList', 'checkList',
-                    'align', 'formatIndent',
-                    'historyInit', 'undo', 'redo', 'reset'
-                ],
-                dividers: [4, 8, 12, 16, 19, 22],
-                dimensions: {
-                    editor: {
-                        width: '100%',
-                        maxWidth: '1020px',
-                        height: '650px'
-                    },
-                    toolbar: {
-                        height: '42px'
-                    },
-                    content: {
-                        height: '608px',
-                        minHeight: '608px'
-                    }
-                }
-            });
-        });
-    </script>
-</body>
-</html>
-```
-
-### 6.2 중요 사항
-- `contenteditable="true"` 속성은 반드시 포함되어야 합니다.
-- Material Icons는 버튼 아이콘에 필요합니다.
-- 에디터 초기화는 `lite-editor-loaded` 이벤트 발생 후에 진행해야 합니다.
-
-## 7. 버전 관리
-
-### 7.1 버전 업데이트
-1. `js/data/version.js` 파일의 버전 정보 업데이트
-2. `package.json`의 버전 정보 업데이트
-3. GitHub에 새 릴리즈 생성
-
-### 7.2 버전 형식
-- 메이저.마이너.패치 (예: 1.0.0)
-  - 메이저: 호환되지 않는 API 변경
-  - 마이너: 이전 버전과 호환되는 기능 추가
-  - 패치: 버그 수정
-
-## 8. 추가 참고사항
-
-### 8.1 의존성 및 호환성
-- 현재 LiteEditor는 별도의 외부 라이브러리 의존성이 없지만, Material Icons는 필수입니다.
-- 모던 브라우저(Chrome, Firefox, Safari, Edge)와 호환됩니다.
-
-### 8.2 향후 개선사항
-- 초기화 시 `contenteditable="true"` 속성 자동 추가 기능
-- 모듈 번들링 향상
-- 테스트 코드 추가
-- TypeScript 마이그레이션 고려
-
-
-
-
+   - `

@@ -1,4 +1,4 @@
- /**
+/**
  * LiteEditor 통합 로더
  * CSS와 JS를 모두 동적으로 로드
  */
@@ -63,7 +63,7 @@
             
             // 유틸리티 및 기본 기능
             'js/plugins/history.js',
-            'js/plugins/format-util.js',
+            'js/plugins/formatHelper.js',
             'js/plugins/reset.js',
             
             // 텍스트 서식 관련 플러그인
