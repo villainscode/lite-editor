@@ -83,11 +83,11 @@ insertTable	@	table.js:584
 ### 리팩토링 항목
 - [ ] 플러그인 코드 중복 제거
   - [ ] 각 플러그인 파일에서 중복된 selection 관련 함수 제거 (saveSelection/restoreSelection 등)
-  - [ ] plugin-util.js의 기능 직접 사용하도록 통일
+  - [ ] pluginHelper.js의 기능 직접 사용하도록 통일
   - [ ] 선택 관련 로직을 중앙화하여 일관성 유지
 
 - [ ] 폴백 로직 중앙화
-  - [ ] 개별 플러그인에서 구현된 폴백 로직을 plugin-util.js로 이동
+  - [ ] 개별 플러그인에서 구현된 폴백 로직을 pluginHelper.js로 이동
   - [ ] 공통 폴백 메커니즘 구현으로 코드 중복 제거
   - [ ] 일관된 에러 처리 패턴 적용
 
