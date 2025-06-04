@@ -1,4 +1,4 @@
-/**
+ /**
  * LiteEditor 통합 로더
  * CSS와 JS를 모두 동적으로 로드
  */
@@ -47,17 +47,16 @@
             'js/data/colors.js',
             'js/data/fontList.js',
             'js/data/version.js',
-            'js/error-handler.js',
             
-            // ✅ 키보드 이벤트 매니저 추가 (플러그인들보다 먼저)
+            
+            // ✅ 유틸리티 파일들
+            'js/utils/error-handler.js',
             'js/utils/keyboardEventManager.js',
-            
-            // ✅ 새로운 단축키 시스템 (core.js 이전에 로드)
-            'js/core/shortcut-definitions.js',
-            'js/core/shortcut-manager.js',
+            'js/utils/shortcut-definitions.js',
+            'js/utils/shortcut-manager.js',
+            'js/utils/security-manager.js',  // ✅ 경로 수정
             
             'js/core.js',
-            'js/security-manager.js',
             
             // 먼저 플러그인 유틸리티를 로드
             'js/plugins/plugin-util.js',
@@ -102,7 +101,7 @@
             'js/plugins/numberedList.js',
             
             // 모달 플러그인
-            'js/modal.js'
+            'js/utils/modal.js'
         ];
         
         function loadScript(index) {
