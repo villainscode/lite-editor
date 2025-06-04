@@ -17,7 +17,7 @@ window.LiteEditorVersion = {
     history: ['historyInit', 'undo', 'redo', 'reset'],
     
     // 폰트 서식
-    fonts: ['fontFamily', 'heading', 'fontColor', 'emphasis'],
+    fonts: ['fontFamily', 'heading', 'fontColor', 'highlight'],
     
     // 텍스트 서식
     formatting: ['bold', 'italic', 'underline', 'strike'],

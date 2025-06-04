@@ -17,7 +17,7 @@ lite-editor/
 │ │ ├── bulletList.js # 불릿 목록 생성/편집
 │ │ ├── checkList.js # 체크리스트 생성/편집
 │ │ ├── codeBlock.js # 코드 블록 삽입/하이라이팅
-│ │ ├── emphasis.js # 텍스트 강조 (굵게/기울임/밑줄)
+│ │ ├── highlight.js # 텍스트 강조 하일라이팅 
 │ │ ├── fontColor.js # 폰트 색상 선택
 │ │ ├── fontFamily.js # 폰트 패밀리 선택
 │ │ ├── heading.js # 제목 스타일 (H1-H6)
@@ -39,7 +39,6 @@ lite-editor/
 │ ├── bulletList.css # 불릿 목록 스타일
 │ ├── checkList.css # 체크박스 스타일
 │ ├── codeBlock.css # 코드 블록 스타일/하이라이팅
-│ ├── emphasis.css # 강조 버튼 스타일
 │ ├── fontColor.css # 색상 팔레트 스타일
 │ ├── fontFamily.css # 폰트 드롭다운 스타일
 │ ├── heading.css # 제목 드롭다운 스타일
@@ -329,7 +328,7 @@ util.activeModalManager.closeAll()
 - 색상 칩 스타일
 - 그룹 헤더 스타일
 
-### 3. js/plugins/emphasis.js
+### 3. js/plugins/format.js
 **역할**: 텍스트 강조 (굵게, 기울임, 밑줄)  
 **기능**:
 - 굵게 (`execCommand('bold')`)
@@ -532,8 +531,7 @@ graph TD
 - `css/plugins/align.css` - 정렬 플러그인
 - `css/plugins/bulletList.css` - 불릿 목록
 - `css/plugins/checkList.css` - 체크리스트
-- `css/plugins/codeBlock.css` - 코드 블록
-- `css/plugins/emphasis.css` - 텍스트 강조
+- `css/plugins/codeBlock.css` - 코드 블록조
 - `css/plugins/fontColor.css` - 폰트 색상
 - `css/plugins/fontFamily.css` - 폰트 패밀리
 - `css/plugins/heading.css` - 제목 스타일

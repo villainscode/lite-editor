@@ -75,7 +75,7 @@
             // 폰트 및 색상 관련 플러그인
             'js/plugins/fontFamily.js',
             'js/plugins/fontColor.js',
-            'js/plugins/emphasis.js',
+            'js/plugins/highlight.js',
             'js/plugins/heading.js',
             
             // 구조 및 정렬 관련 플러그인
