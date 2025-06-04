@@ -42,8 +42,11 @@
     function loadJS(version) {
         const scripts = [
             // 데이터 파일
-            'js/data/videoList.js',
             'js/data/codeLanguages.js',
+            'js/data/colors.js',
+            'js/data/fontList.js',
+            'js/data/version.js',
+            'js/data/videoList.js',
             'js/error-handler.js',
             
             // ✅ 새로운 단축키 시스템 (core.js 이전에 로드)
