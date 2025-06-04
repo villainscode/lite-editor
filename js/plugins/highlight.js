@@ -1,5 +1,5 @@
 /**
- * LiteEditor Highlight Plugin - 키보드 이벤트 수정 버전
+ * LiteEditor Highlight Plugin - highlight-bak.js 방식 적용
  */
 
 (function() {
@@ -10,11 +10,11 @@
     return;
   }
   
-  // 인스턴스별 상태 관리
-  const createState = () => ({
+  // 상태 관리
+  const state = {
     savedRange: null,
     savedCursorPosition: null
-  });
+  };
   
   /**
    * 기본 색상 데이터 로드
@@ -30,37 +30,24 @@
   }
   
   /**
-   * 안전한 포커스 처리
+   * 🔧 하이라이트 요소 감지 함수 (highlight-bak.js 방식)
    */
-  function ensureFocus(contentArea) {
-    if (document.activeElement !== contentArea) {
-      contentArea.focus({ preventScroll: true });
-    }
+  function isHighlightElement(element) {
+    return element && element.tagName === 'SPAN' && element.style.backgroundColor;
   }
   
   /**
-   * HTML 구조 보존 처리
+   * 🔧 줄바꿈 처리 함수 (code.js 방식 적용)
    */
-  function preserveHtmlStructure(htmlContent) {
-    if (!htmlContent) return htmlContent;
-    return htmlContent.replace(/<br\s*\/?>/gi, '<br>');
-  }
-  
-  /**
-   * 자동 줄바꿈 삽입 - 중복 방지
-   */
-  function insertLineBreakIfNeeded(spanElement) {
-    const nextSibling = spanElement.nextSibling;
+  function insertLineBreakIfNeeded(highlightElement) {
+    const nextNode = highlightElement.nextSibling;
     
-    if (nextSibling?.nodeType === Node.ELEMENT_NODE && nextSibling.tagName === 'BR') {
-      return false;
-    }
-    
-    if (nextSibling?.nodeType === Node.TEXT_NODE) {
-      const nextText = nextSibling.textContent;
+    if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
+      const nextText = nextNode.textContent;
+      
       if (nextText && !nextText.startsWith(' ') && nextText.trim()) {
         const br = document.createElement('br');
-        spanElement.parentNode.insertBefore(br, nextSibling);
+        highlightElement.parentNode.insertBefore(br, nextNode);
         return true;
       }
     }
@@ -69,212 +56,209 @@
   }
   
   /**
-   * 정확한 하이라이트 감지
+   * 🔧 Enter/Shift+Enter 키 처리 (highlight-bak.js + demo 방식)
    */
-  function isHighlightElement(element) {
-    if (!element || element.tagName !== 'SPAN') return false;
-    
-    const bgColor = element.style.backgroundColor;
-    if (!bgColor) return false;
-    
-    const highlightColors = loadHighlightColors();
-    const rgb = window.getComputedStyle(element).backgroundColor;
-    
-    return bgColor && (
-      highlightColors.some(color => 
-        bgColor.includes(color.replace('#', '')) ||
-        rgb === `rgb(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)})`
-      )
-    );
-  }
-  
-  /**
-   * 🔧 수정: highlight 내에서 줄바꿈 - code.js 방식 적용
-   */
-  function insertLineBreakInHighlight(highlightSpan) {
-    const selection = util.selection.getSafeSelection();
-    if (!selection || !selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    
-    // 현재 위치에 <br> 직접 삽입
-    const br = document.createElement('br');
-    range.deleteContents();
-    range.insertNode(br);
-    
-    // 커서를 <br> 다음으로 이동
-    range.setStartAfter(br);
-    range.collapse(true);
-    
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-  
-  /**
-   * 🔧 수정: highlight 블록에서 탈출 - fontColor.js 방식 참고
-   */
-  function exitHighlightBlock(highlightSpan, selection, contentArea) {
-    try {
-      // fontColor.js 방식: 상위 블록 찾기
-      const parentBlock = util.dom?.findClosestBlock ? 
-                         util.dom.findClosestBlock(highlightSpan, contentArea) :
-                         highlightSpan.closest('p, div, h1, h2, h3, h4, h5, h6, li');
-      
-      const newP = document.createElement('p');
-      newP.appendChild(document.createTextNode('\u00A0'));
-      
-      if (parentBlock && parentBlock.parentNode) {
-        parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+  function setupEnterKeyHandling(contentArea) {
+    contentArea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
         
-        // fontColor.js 방식: util.selection.moveCursorTo 사용
-        if (util.selection?.moveCursorTo) {
-          util.selection.moveCursorTo(newP.firstChild, 0);
+        const range = selection.getRangeAt(0);
+        const startContainer = range.startContainer;
+        
+        let highlightSpan = null;
+        if (startContainer.nodeType === Node.TEXT_NODE) {
+          highlightSpan = startContainer.parentElement;
         } else {
-          // fallback: 직접 커서 이동
-          const newRange = document.createRange();
-          newRange.setStart(newP.firstChild, 0);
-          newRange.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          highlightSpan = startContainer;
         }
-      } else {
-        // fallback: 기존 방식
-        highlightSpan.parentNode.insertBefore(newP, highlightSpan.nextSibling);
         
-        const newRange = document.createRange();
-        newRange.setStart(newP.firstChild, 0);
-        newRange.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
+        // 하이라이트 요소 찾기
+        while (highlightSpan && highlightSpan !== contentArea) {
+          if (isHighlightElement(highlightSpan)) {
+            break;
+          }
+          highlightSpan = highlightSpan.parentElement;
+        }
+        
+        // ✅ 하이라이트 내부에서만 처리 (demo 방식)
+        if (highlightSpan && isHighlightElement(highlightSpan)) {
+          if (e.shiftKey) {
+            // ✅ Shift+Enter: 기본 동작 허용 (highlight-bak.js 방식)
+            return; // 브라우저가 <br> 삽입하도록 허용
+          } else {
+            // ✅ Enter: 하이라이트에서 탈출 (demo 방식)
+            e.preventDefault();
+            
+            const newP = document.createElement('p');
+            newP.appendChild(document.createTextNode('\u00A0'));
+            
+            const parentBlock = highlightSpan.closest('p, div, h1, h2, h3, h4, h5, h6, li') || highlightSpan;
+            if (parentBlock && parentBlock.parentNode) {
+              parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+              
+              const newRange = document.createRange();
+              newRange.setStart(newP.firstChild, 0);
+              newRange.collapse(true);
+              
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            }
+            
+            util.editor?.dispatchEditorEvent?.(contentArea);
+          }
+        }
+        // ✅ 하이라이트 밖에서는 아무것도 하지 않음
       }
-    } catch (e) {
-      console.error('HighlightPlugin: exitHighlightBlock 오류', e);
-    }
+    });
   }
   
   /**
-   * 하이라이트 적용 함수들 (기존과 동일)
+   * 🔧 하이라이트 적용 함수 (execCommand 사용)
    */
-  function applyHighlight(color, contentArea, colorIndicator, state) {
+  function applyHighlightColor(color, contentArea, colorIndicator) {
     try {
       if (colorIndicator) {
         colorIndicator.style.backgroundColor = color;
         colorIndicator.style.border = 'none';
       }
       
-      ensureFocus(contentArea);
-      
       if (state.savedRange) {
-        return applyHighlightToSelection(color, contentArea, state);
-      } else if (state.savedCursorPosition) {
-        return applyHighlightAtCursor(color, contentArea, state);
-      }
-      
-      return false;
-      
-    } catch (e) {
-      errorHandler.logError('HighlightPlugin', 'APPLY_ERROR', e);
-      return false;
-    }
-  }
-  
-  function applyHighlightToSelection(color, contentArea, state) {
-    const restored = util.selection.restoreSelection(state.savedRange);
-    if (!restored) {
-      console.warn('HighlightPlugin: 선택 영역 복원 실패');
-      return false;
-    }
-    
-    const selection = window.getSelection();
-    if (!selection?.rangeCount) {
-      console.warn('HighlightPlugin: 선택 영역이 없습니다');
-      return false;
-    }
-    
-    const range = selection.getRangeAt(0);
-    if (range.collapsed) {
-      console.warn('HighlightPlugin: 선택된 텍스트가 없습니다');
-      return false;
-    }
-    
-    try {
-      const fragment = range.extractContents();
-      const tempDiv = document.createElement('div');
-      tempDiv.appendChild(fragment);
-      
-      const preservedContent = preserveHtmlStructure(tempDiv.innerHTML);
-      
-      const spanElement = document.createElement('span');
-      spanElement.style.backgroundColor = color;
-      spanElement.innerHTML = preservedContent;
-      
-      range.insertNode(spanElement);
-      insertLineBreakIfNeeded(spanElement);
-      
-      const newRange = document.createRange();
-      newRange.setStartAfter(spanElement);
-      newRange.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      
-      util.editor?.dispatchEditorEvent?.(contentArea);
-      return true;
-      
-    } catch (e) {
-      console.error('HighlightPlugin: 선택 영역 처리 중 오류', e);
-      return false;
-    }
-  }
-  
-  function applyHighlightAtCursor(color, contentArea, state) {
-    try {
-      let range;
-      const selection = window.getSelection();
-      
-      if (state.savedCursorPosition && 
-          state.savedCursorPosition.startContainer &&
-          contentArea.contains(state.savedCursorPosition.startContainer)) {
+        // 선택 영역 복원
+        const restored = util.selection.restoreSelection(state.savedRange);
+        if (!restored) {
+          console.warn('하이라이트: 선택 영역 복원 실패');
+          return;
+        }
         
-        range = document.createRange();
+        // ✅ execCommand 사용 - 구조 자동 보존
+        document.execCommand('hiliteColor', false, color);
+        
+        // 🔧 추가: 하이라이트 후 줄바꿈 처리
+        setTimeout(() => {
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            let highlightElement = range.startContainer;
+            
+            if (highlightElement.nodeType === Node.TEXT_NODE) {
+              highlightElement = highlightElement.parentElement;
+            }
+            
+            // 새로 생성된 하이라이트 요소 찾기
+            while (highlightElement && highlightElement !== contentArea) {
+              if (isHighlightElement(highlightElement)) {
+                insertLineBreakIfNeeded(highlightElement);
+                break;
+              }
+              highlightElement = highlightElement.parentElement;
+            }
+          }
+        }, 10);
+        
+      } else if (state.savedCursorPosition) {
+        // 커서 위치 복원
+        const range = document.createRange();
+        const sel = window.getSelection();
+        
         range.setStart(state.savedCursorPosition.startContainer, state.savedCursorPosition.startOffset);
         range.setEnd(state.savedCursorPosition.endContainer, state.savedCursorPosition.endOffset);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } else if (selection.rangeCount > 0) {
-        range = selection.getRangeAt(0);
-      } else {
-        console.warn('HighlightPlugin: 유효한 커서 위치를 찾을 수 없습니다');
-        return false;
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        // ✅ execCommand 사용 - 커서 위치에서도 정상 작동
+        document.execCommand('hiliteColor', false, color);
+        
+        // 🔧 추가: 커서 모드에서도 줄바꿈 처리
+        setTimeout(() => {
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            let highlightElement = range.startContainer;
+            
+            if (highlightElement.nodeType === Node.TEXT_NODE) {
+              highlightElement = highlightElement.parentElement;
+            }
+            
+            if (isHighlightElement(highlightElement)) {
+              insertLineBreakIfNeeded(highlightElement);
+            }
+          }
+        }, 10);
       }
       
-      // 빈 하이라이트 span 생성
-      const spanElement = document.createElement('span');
-      spanElement.style.backgroundColor = color;
-      
-      range.insertNode(spanElement);
-      
-      // 커서를 span 안쪽으로 이동
-      const newRange = document.createRange();
-      newRange.setStart(spanElement, 0);
-      newRange.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      
       util.editor?.dispatchEditorEvent?.(contentArea);
-      return true;
       
     } catch (e) {
-      console.error('HighlightPlugin: 커서 위치 처리 중 오류', e);
-      return false;
+      console.error('하이라이트 적용 중 오류:', e);
     }
   }
   
   /**
-   * 플러그인 등록 (UI 생성 부분은 기존과 동일)
+   * 🔧 Phase 2: 버튼 상태 업데이트 함수
+   */
+  function updateHighlightButtonState(container) {
+    try {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) {
+        container.classList.remove('active');
+        return;
+      }
+      
+      const range = selection.getRangeAt(0);
+      const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+        ? range.startContainer.parentElement 
+        : range.startContainer;
+      
+      // 📋 PRD 요구사항: 하이라이트 영역에서 버튼 active 표시
+      const highlightElement = currentElement.closest('span');
+      
+      if (highlightElement && isHighlightElement(highlightElement)) {
+        // 활성 상태 적용
+        container.classList.add('active');
+      } else {
+        // 기본 상태 복원
+        container.classList.remove('active');
+      }
+      
+    } catch (e) {
+      console.error('HighlightPlugin: 버튼 상태 업데이트 중 오류', e);
+      container.classList.remove('active');
+    }
+  }
+  
+  /**
+   * 🔧 Phase 2: 이벤트 리스너 설정 (최소화된 버전)
+   */
+  function setupButtonStateEvents(container, contentArea) {
+    // 즉시 업데이트 함수
+    const immediateUpdate = () => updateHighlightButtonState(container);
+    
+    // ❌ keyup 이벤트 제거 - 한글 입력 방해 방지
+    // ❌ selectionchange 이벤트 제거 - 한글 조합 방해 방지
+    
+    // ✅ 마우스 이벤트만 유지 (demo 방식)
+    contentArea.addEventListener('mouseup', immediateUpdate);
+    contentArea.addEventListener('click', immediateUpdate);
+    
+    // 초기 상태 업데이트
+    setTimeout(immediateUpdate, 50);
+    
+    // 정리 함수 반환
+    return () => {
+      contentArea.removeEventListener('mouseup', immediateUpdate);
+      contentArea.removeEventListener('click', immediateUpdate);
+    };
+  }
+
+  /**
+   * 플러그인 등록 - 단순화된 버전
    */
   LiteEditor.registerPlugin('highlight', {
     customRender: function(toolbar, contentArea) {
-      const state = createState();
+      // ✅ Enter 키 처리 설정 (highlight-bak.js 방식)
+      setupEnterKeyHandling(contentArea);
       
       const container = util.dom.createElement('div', {
         className: 'lite-editor-button',
@@ -295,6 +279,7 @@
       });
       container.appendChild(colorIndicator);
       
+      // 드롭다운 레이어 생성
       const dropdown = util.dom.createElement('div', {
         className: 'lite-editor-dropdown-menu',
         id: 'highlight-dropdown-' + Math.random().toString(36).substr(2, 9)
@@ -314,6 +299,7 @@
       });
       dropdown.appendChild(colorGrid);
       
+      // 색상 셀들 생성
       const colors = loadHighlightColors();
       colors.forEach(color => {
         const colorCell = util.dom.createElement('div', {
@@ -323,6 +309,7 @@
           backgroundColor: color
         });
         
+        // 색상 선택 시 하이라이트 적용
         colorCell.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -332,10 +319,8 @@
           container.classList.remove('active');
           util.activeModalManager?.unregister?.(dropdown);
           
-          const success = applyHighlight(color, contentArea, colorIndicator, state);
-          if (!success) {
-            console.warn('HighlightPlugin: 하이라이트 적용 실패');
-          }
+          // 하이라이트 적용
+          applyHighlightColor(color, contentArea, colorIndicator);
         });
         
         colorGrid.appendChild(colorCell);
@@ -343,7 +328,7 @@
       
       document.body.appendChild(dropdown);
       
-      // 이벤트 리스너 (기존과 동일)
+      // 마우스 다운 시 선택 영역/커서 위치 저장
       container.addEventListener('mousedown', (e) => {
         const selection = util.selection.getSafeSelection();
         if (!selection?.rangeCount) return;
@@ -352,9 +337,11 @@
         const selectedText = range.toString().trim();
         
         if (selectedText) {
+          // 선택 영역 모드
           state.savedRange = util.selection.saveSelection();
           state.savedCursorPosition = null;
         } else {
+          // 커서 모드
           state.savedRange = null;
           state.savedCursorPosition = {
             startContainer: range.startContainer,
@@ -365,13 +352,12 @@
         }
       });
       
+      // 아이콘 클릭 이벤트
       container.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
         if (!state.savedRange && !state.savedCursorPosition) return;
-        
-        ensureFocus(contentArea);
         
         const isVisible = dropdown.classList.contains('show');
         
@@ -397,78 +383,14 @@
             dropdown.style.display = 'none';
             container.classList.remove('active');
             util.activeModalManager?.unregister?.(dropdown);
-            ensureFocus(contentArea);
           }, [container]);
         }
       });
       
-      // 버튼 상태 업데이트 함수 (간소화 버전)
-      function updateHighlightButtonState() {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
-            ? range.startContainer.parentElement 
-            : range.startContainer;
-          
-          // 하이라이트 span 태그 감지
-          const highlightElement = currentElement.closest('span');
-          
-          if (highlightElement && isHighlightElement(highlightElement)) {
-            // 활성 상태 적용
-            container.classList.add('active');
-          } else {
-            // 기본 상태 복원
-            container.classList.remove('active');
-          }
-        }
-      }
-
-      // 이벤트 리스너 등록 (한 번만)
+      // ✅ 최소화된 이벤트 설정
       if (!contentArea.hasAttribute('data-highlight-events-setup')) {
-        // 즉시 업데이트 함수
-        const immediateUpdate = () => updateHighlightButtonState();
-        
-        // 디바운스 함수
-        const debouncedUpdate = util.events?.debounce ? 
-          util.events.debounce(immediateUpdate, 100) : immediateUpdate;
-        
-        // 이벤트 리스너 등록
-        contentArea.addEventListener('mouseup', immediateUpdate);
-        contentArea.addEventListener('click', immediateUpdate);
-        contentArea.addEventListener('keyup', debouncedUpdate);
-        contentArea.addEventListener('keydown', (e) => {
-          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
-            setTimeout(immediateUpdate, 10);
-          }
-        });
-        
-        // 선택 변경 감지
-        const selectionChangeHandler = () => {
-          const selection = window.getSelection();
-          if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const container = range.commonAncestorContainer;
-            const element = container.nodeType === Node.TEXT_NODE 
-              ? container.parentElement : container;
-            
-            if (contentArea.contains(element)) {
-              immediateUpdate();
-            }
-          }
-        };
-        
-        document.addEventListener('selectionchange', selectionChangeHandler);
-        
-        // 초기 상태 업데이트
-        setTimeout(immediateUpdate, 50);
-        
+        setupButtonStateEvents(container, contentArea);
         contentArea.setAttribute('data-highlight-events-setup', 'true');
-        
-        // 정리 함수
-        contentArea._highlightEventCleanup = () => {
-          document.removeEventListener('selectionchange', selectionChangeHandler);
-        };
       }
       
       return container;

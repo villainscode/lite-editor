@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## 원인 분석
 1. **이벤트 충돌**: 드롭다운 닫기 이벤트와 새 드롭다운 열기 이벤트가 동시에 발생하여 충돌
-2. **비일관적인 구현**: `emphasis.js`와 `imageUpload.js`는 정상 작동하지만, 다른 플러그인(`fontFamily.js`, `fontColor.js`, `heading.js`)은 문제 발생
+2. **비일관적인 구현**: `highlight.js`와 `imageUpload.js`는 정상 작동하지만, 다른 플러그인(`fontFamily.js`, `fontColor.js`, `heading.js`)은 문제 발생
 3. **이벤트 버블링 처리**: 일부 플러그인에서 이벤트 버블링 처리가 올바르게 되지 않음
 4. **전역 상태 관리 부재**: 활성화된 드롭다운 상태를 전역적으로 관리하는 메커니즘이 없음
 

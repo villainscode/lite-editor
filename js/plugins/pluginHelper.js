@@ -551,6 +551,65 @@ const PluginUtil = (function() {
                     }
                 }, delay);
             });
+        },
+
+        /**
+         * 선택 영역을 텍스트 기반으로 정규화
+         * @param {Range} range - 정규화할 선택 범위
+         * @returns {Object|null} 정규화된 선택 정보
+         */
+        normalizeTextSelection(range) {
+            if (!range || range.collapsed) return null;
+            
+            const text = range.toString().trim();
+            if (!text) return null;
+            
+            // 블록 경계 감지
+            const startContainer = range.startContainer;
+            const endContainer = range.endContainer;
+            const crossesBlocks = this.detectBlockBoundary(startContainer, endContainer);
+            
+            return {
+                text: text,
+                crossesBlocks: crossesBlocks,
+                range: range.cloneRange(),
+                startOffset: range.startOffset,
+                endOffset: range.endOffset
+            };
+        },
+        
+        /**
+         * 블록 경계 감지
+         * @param {Node} startNode - 시작 노드
+         * @param {Node} endNode - 끝 노드  
+         * @returns {boolean} 블록 경계를 넘나드는지 여부
+         */
+        detectBlockBoundary(startNode, endNode) {
+            const blockTags = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE'];
+            
+            const startBlock = this.findParentBlock(startNode, blockTags);
+            const endBlock = this.findParentBlock(endNode, blockTags);
+            
+            return startBlock !== endBlock;
+        },
+        
+        /**
+         * 부모 블록 요소 찾기
+         * @param {Node} node - 시작 노드
+         * @param {Array} blockTags - 블록 태그 목록
+         * @returns {Element|null} 찾은 블록 요소
+         */
+        findParentBlock(node, blockTags) {
+            let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+            
+            while (current && current !== document.body) {
+                if (blockTags.includes(current.tagName)) {
+                    return current;
+                }
+                current = current.parentElement;
+            }
+            
+            return null;
         }
     };
 

@@ -51,7 +51,6 @@
             
             // ✅ 유틸리티 파일들
             'js/utils/error-handler.js',
-            'js/utils/keyboardEventManager.js',
             'js/utils/shortcut-definitions.js',
             'js/utils/shortcut-manager.js',
             'js/utils/security-manager.js',  // ✅ 경로 수정

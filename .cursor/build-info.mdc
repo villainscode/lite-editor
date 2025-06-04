@@ -127,7 +127,7 @@ import './js/core.js';
 import './js/security-manager.js';
 
 // 플러그인 유틸리티
-import './js/plugins/plugin-util.js';
+import './js/plugins/pluginHelper.js';
 
 // 유틸리티 및 기본 기능
 import './js/plugins/history.js';

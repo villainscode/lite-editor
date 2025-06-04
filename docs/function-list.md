@@ -26,7 +26,7 @@ lite-editor/
 │ │ ├── link.js # 하이퍼링크 생성/편집
 │ │ ├── media.js # 동영상 삽입/리사이즈
 │ │ ├── numberedList.js # 번호 목록 생성/편집
-│ │ ├── plugin-util.js # 플러그인 공통 유틸리티
+│ │ ├── pluginHelper.js # 플러그인 공통 유틸리티
 │ │ └── table.js # 테이블 생성/편집
 │ ├── core.js # 핵심 엔진 (에디터 초기화/이벤트)
 │ ├── error-handler.js # 오류 처리/로깅 시스템
@@ -157,7 +157,7 @@ lite-editor/
 'js/modal.js',
 
 // 3. 플러그인 유틸리티
-'js/plugins/plugin-util.js',
+'js/plugins/pluginHelper.js',
 
 // 4. 개별 플러그인들
 'js/plugins/align.js',
@@ -262,7 +262,7 @@ LiteEditorVideoData = {
 
 ## 🔌 Plugin 시스템
 
-### js/plugins/plugin-util.js
+### js/plugins/pluginHelper.js
 **역할**: 플러그인 공통 유틸리티  
 **기능**:
 - DOM 조작 유틸리티 (`util.dom`)
@@ -494,7 +494,7 @@ util.activeModalManager.closeAll()
 
 ```mermaid
 graph TD
-    A[core.js] --> B[plugin-util.js]
+    A[core.js] --> B[pluginHelper.js]
     B --> C[error-handler.js]
     B --> D[security-manager.js]
     B --> E[modal.js]
@@ -542,7 +542,7 @@ graph TD
 
 1. **데이터 파일 로드**: colors.js, fontList.js, videoList.js
 2. **시스템 파일 로드**: error-handler.js, security-manager.js, modal.js
-3. **유틸리티 로드**: plugin-util.js
+3. **유틸리티 로드**: pluginHelper.js
 4. **플러그인 로드**: 모든 플러그인 파일들
 5. **핵심 엔진 로드**: core.js (마지막)
 6. **CSS 로드**: 각 플러그인별 CSS 동적 로드
