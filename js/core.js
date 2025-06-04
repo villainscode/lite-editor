@@ -16,7 +16,7 @@ const LiteEditor = (function() {
   // 플러그인 순서 - 한 곳에서만 정의 (중복 제거)
   const PLUGIN_ORDER = [
     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
-    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
+    'fontFamily', 'heading', 'fontColor', 'highlight',         // 폰트서식 
     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
     'line', 'blockquote', 'code', 'codeBlock',                // 인용 및 코드 
@@ -405,7 +405,7 @@ const LiteEditor = (function() {
         else if (pluginName === 'fontFamily') { defaultIcon = 'font_download'; defaultTitle = 'Font'; }
         else if (pluginName === 'fontSize') { defaultIcon = 'format_size'; defaultTitle = 'Font Size'; }
         else if (pluginName === 'fontColor') { defaultIcon = 'format_color_text'; defaultTitle = 'Font Color'; }
-        else if (pluginName === 'emphasis') { defaultIcon = 'emphasis'; defaultTitle = 'Emphasis'; }
+        else if (pluginName === 'highlight') { defaultIcon = 'highlight'; defaultTitle = 'Highlight'; }
         else if (pluginName === 'bold') { defaultIcon = 'format_bold'; defaultTitle = 'Bold'; }
         else if (pluginName === 'italic') { defaultIcon = 'format_italic'; defaultTitle = 'Italic'; }
         else if (pluginName === 'underline') { defaultIcon = 'format_underlined'; defaultTitle = 'Underline'; }

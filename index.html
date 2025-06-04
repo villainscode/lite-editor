@@ -75,7 +75,7 @@
 
     /* ✅ 에디터 콘텐츠 내 헤딩 스타일 */
     #lite-editor-content h1 {
-      font-size: 2rem;
+      font-size: 28px;
       font-weight: bold;
       margin: 0.5em 0;
       color: #333;
@@ -83,7 +83,7 @@
     }
 
     #lite-editor-content h2 {
-      font-size: 1.75rem;
+      font-size: 22px;
       font-weight: bold;
       margin: 0.4em 0;
       color: #333;
@@ -91,7 +91,7 @@
     }
 
     #lite-editor-content h3 {
-      font-size: 1.5rem;
+      font-size: 16px;
       font-weight: bold;
       margin: 0.3em 0;
       color: #333;
@@ -633,11 +633,11 @@
                     </div>
                 </div>
 
-                <!-- 형광펜 (Emphasis) -->
+                <!-- 형광펜 (Highlight) -->
                 <div class="feature-item">
                     <h3>
                         <span class="material-symbols-outlined">format_color_fill</span>
-                        형광펜 (Emphasis)
+                        형광펜 (Highlight)
                     </h3>
                     <p>중요한 내용에 배경색을 추가하여 강조할 수 있습니다.</p>
                     <div class="example lite-editor-content">
@@ -865,7 +865,7 @@
             separatedMode: true,                    // 분리 모드 활성화
             toolbarTarget: '#lite-editor-toolbar', // 툴바 대상 지정
             plugins: [
-                'fontFamily', 'heading', 'fontColor', 'emphasis',
+                'fontFamily', 'heading', 'fontColor', 'highlight',
                 'bold', 'italic', 'underline', 'strike',
                 'link', 'imageUpload', 'table', 'media',
                 'line','blockquote', 'code', 'codeBlock',
@@ -917,7 +917,7 @@
     document.addEventListener('lite-editor-loaded', function() {
         // separatedMode: false (기본값이므로 생략 가능)
         plugins: [
-            'fontFamily', 'heading', 'fontColor', 'emphasis',
+            'fontFamily', 'heading', 'fontColor', 'highlight',
             'bold', 'italic', 'underline', 'strike',
             'link', 'imageUpload', 'table', 'media',
             'line','blockquote', 'code', 'codeBlock',
@@ -981,7 +981,7 @@
                 separatedMode: true,
                 toolbarTarget: '#lite-editor-toolbar',
                 plugins: [
-                    'fontFamily', 'heading', 'fontColor', 'emphasis',         // 폰트서식 
+                    'fontFamily', 'heading', 'fontColor', 'highlight',         // 폰트서식 
                     'bold', 'italic', 'underline', 'strike',                  // 폰트포맷 
                     'link', 'imageUpload', 'table', 'media',                  // 오브젝트 삽입 
                     'line','blockquote', 'code', 'codeBlock',                 // 인용 및 코드 
