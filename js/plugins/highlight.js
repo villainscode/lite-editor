@@ -153,48 +153,6 @@
   }
   
   /**
-   * 🔧 수정: 키보드 이벤트 처리 - code.js와 fontColor.js 방식 결합
-   */
-  function setupKeyboardEvents(contentArea) {
-    if (contentArea.hasAttribute('data-highlight-keyboard-setup')) return;
-    
-    contentArea.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-      
-      const range = selection.getRangeAt(0);
-      const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
-        ? range.startContainer.parentElement 
-        : range.startContainer;
-        
-      // 정확한 하이라이트 감지
-      const highlightSpan = currentElement?.closest('span');
-      if (!highlightSpan || !isHighlightElement(highlightSpan)) return;
-      
-      // 실제로 하이라이트 영역 내부인지 확인
-      const isInHighlight = highlightSpan.contains(range.startContainer) || 
-                           highlightSpan === range.startContainer;
-      if (!isInHighlight) return;
-      
-      e.preventDefault();
-      
-      if (e.shiftKey) {
-        // 🔧 Shift+Enter: code.js 방식으로 highlight 내에서 줄바꿈
-        insertLineBreakInHighlight(highlightSpan);
-      } else {
-        // 🔧 Enter: fontColor.js 방식으로 highlight에서 탈출
-        exitHighlightBlock(highlightSpan, selection, contentArea);
-      }
-      
-      util.editor?.dispatchEditorEvent?.(contentArea);
-    });
-    
-    contentArea.setAttribute('data-highlight-keyboard-setup', 'true');
-  }
-  
-  /**
    * 하이라이트 적용 함수들 (기존과 동일)
    */
   function applyHighlight(color, contentArea, colorIndicator, state) {
@@ -289,15 +247,16 @@
         return false;
       }
       
+      // 빈 하이라이트 span 생성
       const spanElement = document.createElement('span');
       spanElement.style.backgroundColor = color;
-      spanElement.appendChild(document.createTextNode('\u00A0'));
       
       range.insertNode(spanElement);
       
+      // 커서를 span 안쪽으로 이동
       const newRange = document.createRange();
-      newRange.selectNodeContents(spanElement);
-      newRange.collapse(false);
+      newRange.setStart(spanElement, 0);
+      newRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(newRange);
       
@@ -316,8 +275,6 @@
   LiteEditor.registerPlugin('highlight', {
     customRender: function(toolbar, contentArea) {
       const state = createState();
-      
-      setupKeyboardEvents(contentArea);
       
       const container = util.dom.createElement('div', {
         className: 'lite-editor-button',
@@ -444,6 +401,75 @@
           }, [container]);
         }
       });
+      
+      // 버튼 상태 업데이트 함수 (간소화 버전)
+      function updateHighlightButtonState() {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+            ? range.startContainer.parentElement 
+            : range.startContainer;
+          
+          // 하이라이트 span 태그 감지
+          const highlightElement = currentElement.closest('span');
+          
+          if (highlightElement && isHighlightElement(highlightElement)) {
+            // 활성 상태 적용
+            container.classList.add('active');
+          } else {
+            // 기본 상태 복원
+            container.classList.remove('active');
+          }
+        }
+      }
+
+      // 이벤트 리스너 등록 (한 번만)
+      if (!contentArea.hasAttribute('data-highlight-events-setup')) {
+        // 즉시 업데이트 함수
+        const immediateUpdate = () => updateHighlightButtonState();
+        
+        // 디바운스 함수
+        const debouncedUpdate = util.events?.debounce ? 
+          util.events.debounce(immediateUpdate, 100) : immediateUpdate;
+        
+        // 이벤트 리스너 등록
+        contentArea.addEventListener('mouseup', immediateUpdate);
+        contentArea.addEventListener('click', immediateUpdate);
+        contentArea.addEventListener('keyup', debouncedUpdate);
+        contentArea.addEventListener('keydown', (e) => {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            setTimeout(immediateUpdate, 10);
+          }
+        });
+        
+        // 선택 변경 감지
+        const selectionChangeHandler = () => {
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const element = container.nodeType === Node.TEXT_NODE 
+              ? container.parentElement : container;
+            
+            if (contentArea.contains(element)) {
+              immediateUpdate();
+            }
+          }
+        };
+        
+        document.addEventListener('selectionchange', selectionChangeHandler);
+        
+        // 초기 상태 업데이트
+        setTimeout(immediateUpdate, 50);
+        
+        contentArea.setAttribute('data-highlight-events-setup', 'true');
+        
+        // 정리 함수
+        contentArea._highlightEventCleanup = () => {
+          document.removeEventListener('selectionchange', selectionChangeHandler);
+        };
+      }
       
       return container;
     }

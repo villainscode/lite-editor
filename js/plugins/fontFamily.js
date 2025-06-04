@@ -624,8 +624,6 @@
       
       // 🔴 중요: 이벤트 리스너를 한 번만 등록하도록 수정
       if (!contentArea.hasAttribute('data-font-events-setup')) {
-        setupFontKeyboardEvents(contentArea, fontContainer, fontText, icon);
-        
         // 🔧 즉시 상태 업데이트 함수 (디바운스 없음)
         const immediateUpdateState = () => {
           updateFontButtonState(fontContainer, fontText, icon);
@@ -707,106 +705,4 @@
       return fontContainer;
     }
   });
-
-  // 🔴 중요: 키보드 이벤트 리스너 - Enter/Shift+Enter 핵심 로직
-  function setupFontKeyboardEvents(contentArea, fontContainer, fontText, icon) {
-    contentArea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          
-          // ✅ 안전한 currentElement 처리
-          let currentElement;
-          if (range.startContainer.nodeType === Node.TEXT_NODE) {
-            currentElement = range.startContainer.parentElement;
-          } else if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
-            currentElement = range.startContainer;
-          } else {
-            return;
-          }
-          
-          if (!currentElement || typeof currentElement.closest !== 'function') {
-            return;
-          }
-          
-          // ✅ 핵심 수정: 명시적으로 설정된 폰트 영역만 감지
-          const fontElement = currentElement.closest('span[style*="font-family"], font');
-          
-          // ✅ 더 엄격한 폰트 영역 감지
-          let isInFontArea = false;
-          
-          if (fontElement) {
-            // font 태그는 항상 사용자 설정으로 간주
-            if (fontElement.tagName === 'FONT') {
-              isInFontArea = true;
-            } 
-            // span 태그는 명시적으로 설정된 폰트만 인정
-            else if (fontElement.tagName === 'SPAN') {
-              const fontFamily = fontElement.style.fontFamily;
-              // 시스템 폰트가 아니고, 실제로 폰트가 설정된 경우만
-              isInFontArea = fontFamily && !isSystemFont(fontFamily);
-            }
-            
-            // 추가 검증: 현재 위치가 실제로 폰트 요소 내부인지 확인
-            if (isInFontArea) {
-              isInFontArea = fontElement.contains(range.startContainer) || 
-                            fontElement === range.startContainer ||
-                            (range.startContainer.nodeType === Node.TEXT_NODE && 
-                             fontElement.contains(range.startContainer.parentElement));
-            }
-          }
-          
-          // ✅ 폰트 영역이 아닌 경우 기본 동작 허용
-          if (!isInFontArea) {
-            return; // 브라우저 기본 엔터 동작 허용
-          }
-          
-          // 폰트 영역에서 엔터키 처리
-          if (e.shiftKey) {
-            // Shift+Enter: 폰트 유지하며 줄바꿈 (br만 삽입)
-            e.preventDefault();
-            document.execCommand('insertLineBreak');
-          } else {
-            // Enter: 폰트 밖으로 나가기
-            e.preventDefault();
-            
-            // 🔧 핵심 수정: 상위 블록 요소를 찾아서 올바른 HTML 구조 생성
-            // 폰트 요소가 속한 가장 가까운 블록 요소 찾기
-            const blockElement = fontElement.closest('p, div, h1, h2, h3, h4, h5, h6, article, section, li, blockquote');
-            
-            if (blockElement) {
-              // 🔧 케이스 1: 폰트 요소가 블록 요소 안에 있는 경우
-              // 블록 요소 다음에 새로운 p 태그 생성
-              const newP = document.createElement('p');
-              newP.innerHTML = '<br>';
-              
-              // 블록 요소의 부모에 새로운 p 태그 삽입
-              blockElement.parentNode.insertBefore(newP, blockElement.nextSibling);
-              
-              // 새 p 태그로 커서 이동
-              const newRange = document.createRange();
-              newRange.setStart(newP, 0);
-              newRange.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(newRange);
-            } else {
-              // 🔧 케이스 2: 폰트 요소가 블록 요소 안에 없는 경우 (fallback)
-              // 폰트 요소 다음에 새로운 p 태그 생성
-              const newP = document.createElement('p');
-              newP.innerHTML = '<br>';
-              fontElement.parentNode.insertBefore(newP, fontElement.nextSibling);
-              
-              // 새 p 태그로 커서 이동
-              const newRange = document.createRange();
-              newRange.setStart(newP, 0);
-              newRange.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(newRange);
-            }
-          }
-        }
-      }
-    });
-  }
 })();

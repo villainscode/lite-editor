@@ -303,6 +303,75 @@
         util.activeModalManager.unregister(dropdownMenu);
       }
 
+      // 버튼 상태 업데이트 함수 (간소화 버전)
+      function updateHeadingButtonState() {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+            ? range.startContainer.parentElement 
+            : range.startContainer;
+          
+          // H1, H2, H3 태그 감지
+          const headingElement = currentElement.closest('h1, h2, h3');
+          
+          if (headingElement) {
+            // 활성 상태 적용
+            headingButton.classList.add('active');
+          } else {
+            // 기본 상태 복원
+            headingButton.classList.remove('active');
+          }
+        }
+      }
+
+      // 이벤트 리스너 등록 (한 번만)
+      if (!contentArea.hasAttribute('data-heading-events-setup')) {
+        // 즉시 업데이트 함수
+        const immediateUpdate = () => updateHeadingButtonState();
+        
+        // 디바운스 함수
+        const debouncedUpdate = util.events?.debounce ? 
+          util.events.debounce(immediateUpdate, 100) : immediateUpdate;
+        
+        // 이벤트 리스너 등록
+        contentArea.addEventListener('mouseup', immediateUpdate);
+        contentArea.addEventListener('click', immediateUpdate);
+        contentArea.addEventListener('keyup', debouncedUpdate);
+        contentArea.addEventListener('keydown', (e) => {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+            setTimeout(immediateUpdate, 10);
+          }
+        });
+        
+        // 선택 변경 감지
+        const selectionChangeHandler = () => {
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const element = container.nodeType === Node.TEXT_NODE 
+              ? container.parentElement : container;
+            
+            if (contentArea.contains(element)) {
+              immediateUpdate();
+            }
+          }
+        };
+        
+        document.addEventListener('selectionchange', selectionChangeHandler);
+        
+        // 초기 상태 업데이트
+        setTimeout(immediateUpdate, 50);
+        
+        contentArea.setAttribute('data-heading-events-setup', 'true');
+        
+        // 정리 함수
+        contentArea._headingEventCleanup = () => {
+          document.removeEventListener('selectionchange', selectionChangeHandler);
+        };
+      }
+
       return headingButton;
     },
     
