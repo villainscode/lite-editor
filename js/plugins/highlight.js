@@ -296,23 +296,6 @@
     }
   }
   
-  // 🔧 헬퍼 함수: 마지막 텍스트 노드 찾기
-  function getLastTextNode(element) {
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    
-    let lastNode = null;
-    while (walker.nextNode()) {
-      lastNode = walker.currentNode;
-    }
-    
-    return lastNode;
-  }
-  
   LiteEditor.registerPlugin('highlight', {
     customRender: function(toolbar, contentArea) {
       setupEnterKeyHandling(contentArea);
