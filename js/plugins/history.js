@@ -1,7 +1,7 @@
 /**
- * LiteEditor History Plugin (개선된 버전)
+ * LiteEditor History Plugin (메모리 안전 개선 버전)
  * UL/OL 히스토리 문제 해결
- * Version 4.0.0
+ * Version 4.1.0
  */
 
 (function() {
@@ -190,8 +190,15 @@
     }
   }
   
+  // WeakMap으로 메모리 누수 방지
+  const editorHistories = new WeakMap();
+  const editorElements = new Set(); // DOM 요소 추적용
+  
+  // 전역 키보드 핸들러 참조 저장 (정리용)
+  let globalKeyboardHandler = null;
+  
   /**
-   * 개선된 에디터 히스토리 관리 (단순화)
+   * 개선된 에디터 히스토리 관리 (메모리 안전)
    */
   class EnhancedEditorHistoryManager {
     constructor(contentArea) {
@@ -202,6 +209,9 @@
       // 디바운싱 관련
       this.inputTimer = null;
       this.inputDelay = 800;
+      
+      // 이벤트 리스너 정리용 배열
+      this.eventCleanupFunctions = [];
       
       this.initializeState();
     }
@@ -431,43 +441,55 @@
     }
     
     /**
-     * 개선된 이벤트 리스너 설정
+     * 메모리 안전한 이벤트 리스너 설정
      */
     setupEventListeners() {
       // 입력 이벤트 (디바운싱)
-      this.contentArea.addEventListener('input', () => {
+      const inputHandler = () => {
         this.recordInputChange();
+      };
+      this.contentArea.addEventListener('input', inputHandler);
+      this.eventCleanupFunctions.push(() => {
+        this.contentArea.removeEventListener('input', inputHandler);
       });
       
-      // 특수 키 이벤트 - 더 적극적으로 기록
-      this.contentArea.addEventListener('keydown', (e) => {
+      // 특수 키 이벤트
+      const keydownHandler = (e) => {
         if (this.historyManager.isApplyingState) return;
         
         if (['Enter', 'Delete', 'Backspace'].includes(e.key)) {
-          // 즉시 기록 (디바운싱 없이)
           clearTimeout(this.inputTimer);
           this.recordState(`Key: ${e.key}`);
         }
+      };
+      this.contentArea.addEventListener('keydown', keydownHandler);
+      this.eventCleanupFunctions.push(() => {
+        this.contentArea.removeEventListener('keydown', keydownHandler);
       });
       
       // 포커스 잃을 때
-      this.contentArea.addEventListener('blur', () => {
+      const blurHandler = () => {
         if (this.inputTimer) {
           clearTimeout(this.inputTimer);
           this.recordState('Blur');
         }
+      };
+      this.contentArea.addEventListener('blur', blurHandler);
+      this.eventCleanupFunctions.push(() => {
+        this.contentArea.removeEventListener('blur', blurHandler);
       });
       
-      // 붙여넣기 - 개선된 단일 기록 방식
-      this.contentArea.addEventListener('paste', () => {
+      // 붙여넣기
+      const pasteHandler = () => {
         this.forceRecordState('Before Paste');
-        
-        // ✅ input 이벤트 대신 즉시 기록 (디바운싱 없이)
         setTimeout(() => {
-          // 디바운싱 타이머 무시하고 즉시 기록
           clearTimeout(this.inputTimer);
           this.recordState('Paste Complete');
-        }, 100); // 짧은 딜레이로 붙여넣기 완료 후 기록
+        }, 100);
+      };
+      this.contentArea.addEventListener('paste', pasteHandler);
+      this.eventCleanupFunctions.push(() => {
+        this.contentArea.removeEventListener('paste', pasteHandler);
       });
     }
     
@@ -492,102 +514,51 @@
     }
     
     /**
-     * 정리
+     * 메모리 정리
      */
     cleanup() {
+      // 타이머 정리
       clearTimeout(this.inputTimer);
+      
+      // 이벤트 리스너 정리
+      this.eventCleanupFunctions.forEach(cleanupFn => {
+        try {
+          cleanupFn();
+        } catch (e) {
+          console.warn('히스토리 이벤트 리스너 정리 중 오류:', e);
+        }
+      });
+      this.eventCleanupFunctions = [];
+      
+      // DOM 요소 추적에서 제거
+      const container = this.contentArea.closest('.lite-editor');
+      if (container) {
+        editorElements.delete(container);
+      }
     }
   }
   
-  // 에디터별 히스토리 관리자 저장
-  const editorHistories = new Map();
-  
   /**
-   * 히스토리 관리자 가져오기
+   * 메모리 안전한 히스토리 관리자 가져오기
    */
   function getHistoryManager(contentArea) {
     const container = contentArea.closest('.lite-editor');
-    const editorId = container?.id;
+    if (!container) return null;
     
-    if (!editorId) {
-      return null;
-    }
-    
-    return editorHistories.get(editorId);
+    return editorHistories.get(container);
   }
   
-  // ==================== 플러그인 등록 ====================
-  
   /**
-   * 히스토리 초기화 플러그인
-   */
-  LiteEditor.registerPlugin('historyInit', {
-    title: 'History Initialize',
-    icon: 'history',
-    hidden: true,
-    customRender: function(toolbar, contentArea) {
-      const container = contentArea.closest('.lite-editor');
-      if (!container) return null;
-      
-      const editorId = container.id || 'editor-' + Math.random().toString(36).substr(2, 9);
-      container.id = editorId;
-      
-      // 개선된 히스토리 관리자 생성
-      const historyManager = new EnhancedEditorHistoryManager(contentArea);
-      editorHistories.set(editorId, historyManager);
-      
-      // 이벤트 리스너 설정
-      historyManager.setupEventListeners();
-      
-      // 초기 버튼 상태 업데이트
-      setTimeout(() => {
-        historyManager.updateButtonStates();
-      }, 100);
-      
-      return null;
-    }
-  });
-  
-  /**
-   * Undo 플러그인
-   */
-  LiteEditor.registerPlugin('undo', {
-    title: 'Undo (Ctrl+Z)',
-    icon: 'undo',
-    action: function(contentArea) {
-      const historyManager = getHistoryManager(contentArea);
-      if (historyManager) {
-        historyManager.undo();
-      }
-    }
-  });
-  
-  /**
-   * Redo 플러그인
-   */
-  LiteEditor.registerPlugin('redo', {
-    title: 'Redo (Ctrl+Shift+Z)',
-    icon: 'redo',
-    action: function(contentArea) {
-      const historyManager = getHistoryManager(contentArea);
-      if (historyManager) {
-        historyManager.redo();
-      }
-    }
-  });
-  
-  // ==================== 직접 키보드 이벤트 처리 (개선됨) ====================
-  
-  /**
-   * 직접 키보드 이벤트 처리 - core.js의 단축키 시스템 우회
+   * 메모리 안전한 직접 키보드 이벤트 처리
    */
   function setupDirectKeyboardHandling() {
-    // 키보드 핸들러가 이미 등록되었는지 확인
+    // 이미 등록되었으면 스킵
     if (window.LiteEditorHistoryKeyboardHandlerRegistered) {
       return;
     }
     
-    document.addEventListener('keydown', function(event) {
+    // 핸들러 함수를 변수에 저장 (정리용)
+    globalKeyboardHandler = function(event) {
       // contenteditable 영역에서만 작동
       const contentArea = event.target.closest('[contenteditable="true"]');
       if (!contentArea) return;
@@ -603,7 +574,6 @@
         const historyManager = getHistoryManager(contentArea);
         if (historyManager) {
           const status = historyManager.getStatus();
-          
           if (status.canUndo) {
             historyManager.undo();
           }
@@ -662,14 +632,120 @@
         return false;
       }
       
-    }, true);
+    };
     
-    // 중복 등록 방지 플래그 설정
+    document.addEventListener('keydown', globalKeyboardHandler, true);
     window.LiteEditorHistoryKeyboardHandlerRegistered = true;
   }
   
-  // 직접 키보드 처리 시작
+  /**
+   * 전역 키보드 핸들러 정리
+   */
+  function cleanupGlobalKeyboardHandler() {
+    if (globalKeyboardHandler) {
+      document.removeEventListener('keydown', globalKeyboardHandler, true);
+      globalKeyboardHandler = null;
+      window.LiteEditorHistoryKeyboardHandlerRegistered = false;
+    }
+  }
+  
+  // MutationObserver로 DOM 제거 감지
+  const domObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.removedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // 제거된 에디터 요소 확인
+          const removedEditor = node.classList?.contains('lite-editor') ? node : 
+                               node.querySelector?.('.lite-editor');
+          
+          if (removedEditor && editorElements.has(removedEditor)) {
+            // 히스토리 관리자 정리
+            const manager = editorHistories.get(removedEditor);
+            if (manager) {
+              manager.cleanup();
+              editorHistories.delete(removedEditor);
+            }
+            editorElements.delete(removedEditor);
+          }
+        }
+      });
+    });
+  });
+  
+  // DOM 변화 감시 시작
+  domObserver.observe(document.body, { childList: true, subtree: true });
+  
+  /**
+   * 히스토리 초기화 플러그인 (메모리 안전)
+   */
+  LiteEditor.registerPlugin('historyInit', {
+    title: 'History Initialize',
+    icon: 'history',
+    hidden: true,
+    customRender: function(toolbar, contentArea) {
+      const container = contentArea.closest('.lite-editor');
+      if (!container) return null;
+      
+      const editorId = container.id || 'editor-' + Math.random().toString(36).substr(2, 9);
+      container.id = editorId;
+      
+      // 개선된 히스토리 관리자 생성
+      const historyManager = new EnhancedEditorHistoryManager(contentArea);
+      
+      // WeakMap에 저장 (가비지 컬렉션 가능)
+      editorHistories.set(container, historyManager);
+      editorElements.add(container);
+      
+      // 이벤트 리스너 설정
+      historyManager.setupEventListeners();
+      
+      // 초기 버튼 상태 업데이트
+      setTimeout(() => {
+        historyManager.updateButtonStates();
+      }, 100);
+      
+      return null;
+    }
+  });
+  
+  // 키보드 처리 시작
   setupDirectKeyboardHandling();
+  
+  // 페이지 언로드 시 정리
+  window.addEventListener('beforeunload', () => {
+    cleanupGlobalKeyboardHandler();
+    domObserver.disconnect();
+  });
+  
+  // ==================== 플러그인 등록 ====================
+  
+  /**
+   * Undo 플러그인
+   */
+  LiteEditor.registerPlugin('undo', {
+    title: 'Undo',
+    icon: 'undo',
+    action: function(contentArea) {
+      const historyManager = getHistoryManager(contentArea);
+      if (historyManager) {
+        historyManager.undo();
+      }
+    }
+  });
+  
+  /**
+   * Redo 플러그인
+   */
+  LiteEditor.registerPlugin('redo', {
+    title: 'Redo',
+    icon: 'redo',
+    action: function(contentArea) {
+      const historyManager = getHistoryManager(contentArea);
+      if (historyManager) {
+        historyManager.redo();
+      }
+    }
+  });
   
   // ==================== 전역 API 노출 ====================
   
