@@ -34,11 +34,24 @@
   function setupEnterKeyHandling(contentArea) {
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
+        console.log('🔍 Enter 키 감지:', e.shiftKey ? 'Shift+Enter' : 'Enter');
+        
         const selection = util.selection.getSafeSelection();
-        if (!selection || !selection.rangeCount) return;
+        if (!selection || !selection.rangeCount) {
+          console.log('❌ 선택 영역 없음');
+          return;
+        }
         
         const range = selection.getRangeAt(0);
         const startContainer = range.startContainer;
+        
+        console.log('📍 현재 위치:', {
+          startContainer: startContainer,
+          nodeType: startContainer.nodeType,
+          nodeName: startContainer.nodeName,
+          textContent: startContainer.textContent?.substring(0, 20) + '...',
+          parentElement: startContainer.parentElement
+        });
         
         let emphasisSpan = null;
         if (startContainer.nodeType === Node.TEXT_NODE) {
@@ -47,20 +60,48 @@
           emphasisSpan = startContainer;
         }
         
+        console.log('🎯 첫 번째 후보 요소:', emphasisSpan);
+        
         while (emphasisSpan && emphasisSpan !== contentArea) {
-          if (emphasisSpan.tagName === 'SPAN' && 
-              emphasisSpan.style.backgroundColor) {
+          console.log('🔍 검사 중인 요소:', {
+            tagName: emphasisSpan.tagName,
+            hasBackgroundColor: !!emphasisSpan.style.backgroundColor,
+            backgroundColor: emphasisSpan.style.backgroundColor,
+            outerHTML: emphasisSpan.outerHTML?.substring(0, 50) + '...'
+          });
+          
+          if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+            console.log('✅ SPAN 탐지 성공!');
             break;
           }
           emphasisSpan = emphasisSpan.parentElement;
         }
         
         if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+          console.log('🎯 SPAN 내부에서 Enter 처리');
           if (e.shiftKey) {
-            // 🔧 Shift + Enter: emphasis 유지 (기본 동작)
-            return;  // fontColor.js와 동일하게 단순화
+            console.log('🔧 Shift+Enter - 직접 BR 삽입으로 커서 제어');
+            e.preventDefault(); // ✅ 기본 동작 차단
+            
+            // ✅ 직접 BR 삽입 + 커서를 span 안에 유지
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            
+            const br = document.createElement('br');
+            range.deleteContents();
+            range.insertNode(br);
+            
+            // ✅ 핵심: 커서를 BR 다음으로 이동 (span 안에서)
+            range.setStartAfter(br);
+            range.collapse(true);
+            
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            util.editor.dispatchEditorEvent(contentArea);
+            return;
           } else {
-            // Enter: emphasis 영역 밖으로 나가기
+            console.log('🚪 Enter - span 밖으로 나가기');
             e.preventDefault();
             
             const newP = util.dom.createElement('p');
@@ -74,6 +115,8 @@
             
             util.editor.dispatchEditorEvent(contentArea);
           }
+        } else {
+          console.log('❌ SPAN을 찾지 못함 - 기본 동작');
         }
       }
     });
@@ -99,9 +142,26 @@
         }
         
         const restored = util.selection.restoreSelection(savedRange);
-        if (!restored) {
-          console.error('❌ 선택 영역 복원 실패');
-          return;
+        if (!restored) return;
+        
+        // ✅ BR 분리 로직 (span 태그 특성상 필요)
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        const fragment = range.cloneContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(fragment);
+        
+        // BR로 끝나는 경우 BR을 선택 영역에서 제외
+        if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
+          const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ALL);
+          while (walker.nextNode()) {
+            if (walker.currentNode.nodeName === 'BR' && range.intersectsNode(walker.currentNode)) {
+              range.setEndBefore(walker.currentNode);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              break;
+            }
+          }
         }
         
         // ✅ execCommand 전 상태 기록
@@ -114,30 +174,6 @@
         console.log('\n4️⃣ execCommand 실행 전:');
         console.log('  - 복원된 선택 영역 HTML:', beforeDiv.innerHTML);
         console.log('  - BR 포함 여부:', beforeDiv.innerHTML.includes('<br>'));
-        
-        // 🔧 BR 포함 시에만 range 조정
-        if (beforeDiv.innerHTML.includes('<br>')) {
-          console.log('🛠️ BR 감지 - range 조정 실행');
-          
-          // BR을 선택 영역에서 제외
-          const walker = document.createTreeWalker(
-            beforeRange.commonAncestorContainer,
-            NodeFilter.SHOW_ALL,
-            null,
-            false
-          );
-          
-          while (walker.nextNode()) {
-            const node = walker.currentNode;
-            if (beforeRange.intersectsNode(node) && node.nodeName === 'BR') {
-              beforeRange.setEndBefore(node);
-              beforeSelection.removeAllRanges();
-              beforeSelection.addRange(beforeRange);
-              console.log('✅ BR 제외하고 range 재설정 완료');
-              break;
-            }
-          }
-        }
         
         // 🔧 execCommand 실행 (조정된 range로)
         document.execCommand('hiliteColor', false, color);
