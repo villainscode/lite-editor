@@ -12,9 +12,10 @@
   }
   
   // 전역 상태 변수
-  let savedRange = null;          // 임시로 저장된 선택 영역
-  let savedCursorPosition = null;  // 커서 위치 저장용
-  let isDropdownOpen = false;     // 드롭다운 열림 상태
+  let savedRange = null;
+  let savedCursorPosition = null;
+  let isDropdownOpen = false;
+  let currentCaseType = null; // 'cursor', 'drag', 'doubleclick'
   
   /**
    * 색상 데이터 스크립트 로드 함수
@@ -31,100 +32,247 @@
     return util.dataLoader.loadColorData('highlight', defaultColors);
   }
   
+  // ✅ 케이스 1: 커서 전용 키 핸들러 (기존 정상 동작 보존)
+  function handleCursorCaseEnter(e, contentArea) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let emphasisSpan = range.startContainer.nodeType === Node.TEXT_NODE 
+      ? range.startContainer.parentElement 
+      : range.startContainer;
+    
+    while (emphasisSpan && emphasisSpan !== contentArea) {
+      if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+        break;
+      }
+      emphasisSpan = emphasisSpan.parentElement;
+    }
+    
+    if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+      if (e.shiftKey) {
+        return; // 기본 동작 (정상 작동)
+      } else {
+        e.preventDefault();
+        const newP = util.dom.createElement('p');
+        newP.appendChild(document.createTextNode('\u00A0'));
+        const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
+        if (parentBlock && parentBlock.parentNode) {
+          parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+          util.selection.moveCursorTo(newP.firstChild, 0);
+        }
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+    }
+  }
+
+  // ✅ 케이스 2: 드래그 전용 키 핸들러 (기존 정상 동작 보존)
+  function handleDragCaseEnter(e, contentArea) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let emphasisSpan = range.startContainer.nodeType === Node.TEXT_NODE 
+      ? range.startContainer.parentElement 
+      : range.startContainer;
+    
+    while (emphasisSpan && emphasisSpan !== contentArea) {
+      if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+        break;
+      }
+      emphasisSpan = emphasisSpan.parentElement;
+    }
+    
+    if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+      if (e.shiftKey) {
+        return; // 기본 동작 (정상 작동)
+      } else {
+        e.preventDefault();
+        const newP = util.dom.createElement('p');
+        newP.appendChild(document.createTextNode('\u00A0'));
+        const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
+        if (parentBlock && parentBlock.parentNode) {
+          parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+          util.selection.moveCursorTo(newP.firstChild, 0);
+        }
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+    }
+  }
+
+  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (code.js 방식 적용)
+  function handleDoubleClickCaseEnter(e, contentArea) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let emphasisSpan = range.startContainer.nodeType === Node.TEXT_NODE 
+      ? range.startContainer.parentElement 
+      : range.startContainer;
+    
+    while (emphasisSpan && emphasisSpan !== contentArea) {
+      if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+        break;
+      }
+      emphasisSpan = emphasisSpan.parentElement;
+    }
+    
+    if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+      if (e.shiftKey) {
+        // 🔍 더블클릭 케이스 Shift+Enter 커서 위치 디버깅 로그 (간소화)
+        console.log('🟡 [더블클릭 케이스] Shift+Enter - code.js 방식 적용');
+        
+        // ✅ code.js 방식: preventDefault + 직접 BR 삽입
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        // 현재 커서 위치에 <br> 태그 삽입
+        const br = document.createElement('br');
+        range.deleteContents();
+        range.insertNode(br);
+        
+        // 커서를 <br> 다음으로 이동
+        range.setStartAfter(br);
+        range.collapse(true);
+        
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        console.log('✅ span 내부에 BR 직접 삽입 완료');
+        
+        return;
+      } else {
+        e.preventDefault();
+        const newP = util.dom.createElement('p');
+        newP.appendChild(document.createTextNode('\u00A0'));
+        const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
+        if (parentBlock && parentBlock.parentNode) {
+          parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+          util.selection.moveCursorTo(newP.firstChild, 0);
+        }
+        util.editor.dispatchEditorEvent(contentArea);
+      }
+    } else {
+      // 하이라이트 span 밖에 있는 경우 (간소화)
+      if (e.shiftKey) {
+        console.log('🔴 [더블클릭 케이스] span 밖에 있음 - 기본 동작');
+      }
+    }
+  }
+
+  // ✅ 통합 키 핸들러 (케이스별 완전 분리)
   function setupEnterKeyHandling(contentArea) {
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        console.log('🔍 Enter 키 감지:', e.shiftKey ? 'Shift+Enter' : 'Enter');
-        
-        const selection = util.selection.getSafeSelection();
-        if (!selection || !selection.rangeCount) {
-          console.log('❌ 선택 영역 없음');
-          return;
+        // 케이스별 완전 분리 실행
+        if (currentCaseType === 'cursor') {
+          handleCursorCaseEnter(e, contentArea);
+        } else if (currentCaseType === 'drag') {
+          handleDragCaseEnter(e, contentArea);
+        } else if (currentCaseType === 'doubleclick') {
+          handleDoubleClickCaseEnter(e, contentArea);
         }
-        
-        const range = selection.getRangeAt(0);
-        const startContainer = range.startContainer;
-        
-        console.log('📍 현재 위치:', {
-          startContainer: startContainer,
-          nodeType: startContainer.nodeType,
-          nodeName: startContainer.nodeName,
-          textContent: startContainer.textContent?.substring(0, 20) + '...',
-          parentElement: startContainer.parentElement
-        });
-        
-        let emphasisSpan = null;
-        if (startContainer.nodeType === Node.TEXT_NODE) {
-          emphasisSpan = startContainer.parentElement;
-        } else {
-          emphasisSpan = startContainer;
-        }
-        
-        console.log('🎯 첫 번째 후보 요소:', emphasisSpan);
-        
-        while (emphasisSpan && emphasisSpan !== contentArea) {
-          console.log('🔍 검사 중인 요소:', {
-            tagName: emphasisSpan.tagName,
-            hasBackgroundColor: !!emphasisSpan.style.backgroundColor,
-            backgroundColor: emphasisSpan.style.backgroundColor,
-            outerHTML: emphasisSpan.outerHTML?.substring(0, 50) + '...'
-          });
-          
-          if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
-            console.log('✅ SPAN 탐지 성공!');
-            break;
-          }
-          emphasisSpan = emphasisSpan.parentElement;
-        }
-        
-        if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
-          console.log('🎯 SPAN 내부에서 Enter 처리');
-          if (e.shiftKey) {
-            console.log('🔧 Shift+Enter - 직접 BR 삽입으로 커서 제어');
-            e.preventDefault(); // ✅ 기본 동작 차단
-            
-            // ✅ 직접 BR 삽입 + 커서를 span 안에 유지
-            const selection = window.getSelection();
-            const range = selection.getRangeAt(0);
-            
-            const br = document.createElement('br');
-            range.deleteContents();
-            range.insertNode(br);
-            
-            // ✅ 핵심: 커서를 BR 다음으로 이동 (span 안에서)
-            range.setStartAfter(br);
-            range.collapse(true);
-            
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            util.editor.dispatchEditorEvent(contentArea);
-            return;
-          } else {
-            console.log('🚪 Enter - span 밖으로 나가기');
-            e.preventDefault();
-            
-            const newP = util.dom.createElement('p');
-            newP.appendChild(document.createTextNode('\u00A0'));
-            
-            const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
-            if (parentBlock && parentBlock.parentNode) {
-              parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
-              util.selection.moveCursorTo(newP.firstChild, 0);
-            }
-            
-            util.editor.dispatchEditorEvent(contentArea);
-          }
-        } else {
-          console.log('❌ SPAN을 찾지 못함 - 기본 동작');
-        }
+        // currentCaseType이 null이면 기본 동작
       }
     });
   }
-  
-  /**
-   * 배경색(하이라이트) 적용 함수
-   */
+
+  // ✅ 케이스 1: 커서 전용 적용 함수 (기존 보존)
+  function applyCursorHighlight(color, contentArea, colorIndicator) {
+    if (document.activeElement !== contentArea) {
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
+    }
+    
+    if (savedCursorPosition) {
+      try {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        
+        if (savedCursorPosition.startContainer && 
+            savedCursorPosition.startContainer.parentNode &&
+            contentArea.contains(savedCursorPosition.startContainer)) {
+          
+          range.setStart(savedCursorPosition.startContainer, savedCursorPosition.startOffset);
+          range.setEnd(savedCursorPosition.endContainer, savedCursorPosition.endOffset);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch (e) {
+        console.error('❌ 커서 위치 복원 실패:', e.message);
+      }
+    }
+    
+    document.execCommand('hiliteColor', false, color);
+  }
+
+  // ✅ 케이스 2: 드래그 전용 적용 함수 (기존 보존)
+  function applyDragHighlight(color, contentArea, colorIndicator) {
+    const scrollPosition = util.scroll.savePosition();
+    
+    try {
+      contentArea.focus({ preventScroll: true });
+    } catch (e) {
+      contentArea.focus();
+    }
+    
+    const restored = util.selection.restoreSelection(savedRange);
+    if (!restored) return;
+    
+    document.execCommand('hiliteColor', false, color);
+    util.scroll.restorePosition(scrollPosition);
+  }
+
+  // ✅ 케이스 3: 더블클릭 전용 적용 함수 (새로 구현)
+  function applyDoubleClickHighlight(color, contentArea, colorIndicator) {
+    const scrollPosition = util.scroll.savePosition();
+    
+    try {
+      contentArea.focus({ preventScroll: true });
+    } catch (e) {
+      contentArea.focus();
+    }
+    
+    const restored = util.selection.restoreSelection(savedRange);
+    if (!restored) return;
+    
+    // BR 분리 로직 (더블클릭 케이스만)
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const fragment = range.cloneContents();
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment);
+    
+    if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
+      const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ALL);
+      while (walker.nextNode()) {
+        if (walker.currentNode.nodeName === 'BR' && range.intersectsNode(walker.currentNode)) {
+          range.setEndBefore(walker.currentNode);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          break;
+        }
+      }
+    }
+    
+    document.execCommand('hiliteColor', false, color);
+    
+    // 더블클릭 마커 추가
+    setTimeout(() => {
+      const spans = contentArea.querySelectorAll('span[style*="background-color"]');
+      const lastSpan = spans[spans.length - 1];
+      if (lastSpan) {
+        lastSpan.setAttribute('data-highlight-doubleclick', 'true');
+      }
+    }, 10);
+    
+    util.scroll.restorePosition(scrollPosition);
+  }
+
+  // ✅ 통합 적용 함수 (케이스별 완전 분리)
   function applyHighlightColor(color, contentArea, colorIndicator) {
     try {
       if (colorIndicator) {
@@ -132,109 +280,13 @@
         colorIndicator.style.border = 'none';
       }
       
-      if (savedRange) {
-        const scrollPosition = util.scroll.savePosition();
-        
-        try {
-          contentArea.focus({ preventScroll: true });
-        } catch (e) {
-          contentArea.focus();
-        }
-        
-        const restored = util.selection.restoreSelection(savedRange);
-        if (!restored) return;
-        
-        // ✅ BR 분리 로직 (span 태그 특성상 필요)
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        const fragment = range.cloneContents();
-        const tempDiv = document.createElement('div');
-        tempDiv.appendChild(fragment);
-        
-        // BR로 끝나는 경우 BR을 선택 영역에서 제외
-        if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
-          const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ALL);
-          while (walker.nextNode()) {
-            if (walker.currentNode.nodeName === 'BR' && range.intersectsNode(walker.currentNode)) {
-              range.setEndBefore(walker.currentNode);
-              selection.removeAllRanges();
-              selection.addRange(range);
-              break;
-            }
-          }
-        }
-        
-        // ✅ execCommand 전 상태 기록
-        const beforeSelection = window.getSelection();
-        const beforeRange = beforeSelection.getRangeAt(0);
-        const beforeFragment = beforeRange.cloneContents();
-        const beforeDiv = document.createElement('div');
-        beforeDiv.appendChild(beforeFragment);
-        
-        console.log('\n4️⃣ execCommand 실행 전:');
-        console.log('  - 복원된 선택 영역 HTML:', beforeDiv.innerHTML);
-        console.log('  - BR 포함 여부:', beforeDiv.innerHTML.includes('<br>'));
-        
-        // 🔧 execCommand 실행 (조정된 range로)
-        document.execCommand('hiliteColor', false, color);
-        
-        // ✅ execCommand 후 결과 확인
-        setTimeout(() => {
-          console.log('\n5️⃣ execCommand 실행 후:');
-          
-          // 생성된 span 요소 찾기
-          const spans = contentArea.querySelectorAll('span[style*="background-color"]');
-          const lastSpan = spans[spans.length - 1]; // 방금 생성된 span
-          
-          if (lastSpan) {
-            console.log('  - 생성된 span HTML:', lastSpan.outerHTML);
-            console.log('  - span 내부 BR 여부:', lastSpan.innerHTML.includes('<br>'));
-            console.log('  - span 다음 형제:', lastSpan.nextSibling?.nodeName || 'null');
-            
-            if (lastSpan.innerHTML.includes('<br>')) {
-              console.log('🚨 문제 확인: BR이 span 안에 포함됨!');
-              console.log('  해결 필요: BR을 span 밖으로 이동');
-            } else {
-              console.log('✅ 정상: BR이 span 밖에 있음');
-            }
-          }
-          
-          console.log('=== 선택 방식별 디버깅 완료 ===\n');
-        }, 10);
-        
-        util.scroll.restorePosition(scrollPosition);
-        
-      } else {
-        // 기존 커서 위치 모드 로직 유지
-        if (document.activeElement !== contentArea) {
-          try {
-            contentArea.focus({ preventScroll: true });
-          } catch (e) {
-            contentArea.focus();
-          }
-        }
-        
-        if (savedCursorPosition) {
-          try {
-            const range = document.createRange();
-            const sel = window.getSelection();
-            
-            if (savedCursorPosition.startContainer && 
-                savedCursorPosition.startContainer.parentNode &&
-                contentArea.contains(savedCursorPosition.startContainer)) {
-              
-              range.setStart(savedCursorPosition.startContainer, savedCursorPosition.startOffset);
-              range.setEnd(savedCursorPosition.endContainer, savedCursorPosition.endOffset);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-          } catch (e) {
-            console.error('❌ 커서 위치 복원 실패:', e.message);
-          }
-        }
-        
-        const success = document.execCommand('hiliteColor', false, color);
-        console.log('📝 execCommand 결과:', success);
+      // 케이스별 완전 분리 실행
+      if (currentCaseType === 'cursor') {
+        applyCursorHighlight(color, contentArea, colorIndicator);
+      } else if (currentCaseType === 'drag') {
+        applyDragHighlight(color, contentArea, colorIndicator);
+      } else if (currentCaseType === 'doubleclick') {
+        applyDoubleClickHighlight(color, contentArea, colorIndicator);
       }
       
       util.editor.dispatchEditorEvent(contentArea);
@@ -318,13 +370,6 @@
             e.preventDefault();
             e.stopPropagation();
             
-            // 🔧 디버깅: 색상 셀 클릭
-            errorHandler.colorLog('HIGHLIGHT', '🎨 색상 셀 클릭', {
-              color: color,
-              hasSelection: !!savedRange,
-              hasCursorPosition: !!savedCursorPosition
-            }, '#9c27b0');
-            
             dropdownMenu.classList.remove('show');
             dropdownMenu.style.display = 'none';
             highlightContainer.classList.remove('active');
@@ -332,7 +377,6 @@
             
             util.activeModalManager.unregister(dropdownMenu);
             
-            // 🔧 하이라이트 적용 (스크롤 복원 없이)
             applyHighlightColor(color, contentArea, colorIndicator);
           });
           
@@ -342,90 +386,54 @@
       
       document.body.appendChild(dropdownMenu);
       
+      // ✅ 케이스 타입 결정 로직 (mousedown에서)
       highlightContainer.addEventListener('mousedown', (e) => {
-        // 🔧 디버깅: mousedown 시점 상태
-        errorHandler.colorLog('HIGHLIGHT', '🖱️ mousedown 이벤트', {
-          activeElement: document.activeElement?.tagName,
-          contentAreaFocused: document.activeElement === contentArea,
-          hasFocus: document.hasFocus()
-        }, '#ff9800');
-        
         const selection = util.selection.getSafeSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const selectedText = range.toString().trim();
           
-          // ✅ 핵심 디버깅: 선택 영역의 HTML 구조 분석
-          const fragment = range.cloneContents();
-          const tempDiv = document.createElement('div');
-          tempDiv.appendChild(fragment);
-          
-          console.log('1️⃣ 선택 영역 기본 정보:');
-          console.log('  - 선택된 텍스트:', `"${selectedText}"`);
-          console.log('  - 선택 영역 HTML:', tempDiv.innerHTML);
-          console.log('  - BR 포함 여부:', tempDiv.innerHTML.includes('<br>'));
-          
-          console.log('2️⃣ Range 상세 정보:');
-          console.log('  - startContainer:', range.startContainer);
-          console.log('  - startContainer.nodeType:', range.startContainer.nodeType);
-          console.log('  - startOffset:', range.startOffset);
-          console.log('  - endContainer:', range.endContainer);
-          console.log('  - endContainer.nodeType:', range.endContainer.nodeType);
-          console.log('  - endOffset:', range.endOffset);
-          
-          // ✅ 핵심: BR 노드가 선택 영역에 포함되었는지 확인
-          if (tempDiv.innerHTML.includes('<br>')) {
-            console.log('🚨 BR이 선택 영역에 포함됨!');
-          }
-          
           if (selectedText) {
-            savedRange = util.selection.saveSelection();
-            savedCursorPosition = null; // 선택 영역이 있으면 커서 위치는 저장하지 않음
-            errorHandler.colorLog('HIGHLIGHT', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
-          } else {
-            savedRange = null;
+            // 선택 영역 있음 - BR 확인해서 케이스 결정
+            const fragment = range.cloneContents();
+            const tempDiv = document.createElement('div');
+            tempDiv.appendChild(fragment);
             
-            // 🔧 현재 커서 위치 정확히 저장
+            if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
+              currentCaseType = 'doubleclick';
+            } else {
+              currentCaseType = 'drag';
+            }
+            
+            savedRange = util.selection.saveSelection();
+            savedCursorPosition = null;
+          } else {
+            // 선택 영역 없음 - 커서 케이스
+            currentCaseType = 'cursor';
+            savedRange = null;
             savedCursorPosition = {
               startContainer: range.startContainer,
               startOffset: range.startOffset,
               endContainer: range.endContainer,
               endOffset: range.endOffset
             };
-            
-            errorHandler.colorLog('HIGHLIGHT', '✅ 커서 위치 저장됨', {
-              startContainer: range.startContainer?.nodeName,
-              startOffset: range.startOffset,
-              collapsed: range.collapsed
-            }, '#9c27b0');
           }
         } else {
+          currentCaseType = null;
           savedRange = null;
           savedCursorPosition = null;
-          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
         }
       });
       
+      // ✅ 기존 click 로직 완전히 그대로 유지
       highlightContainer.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // 🔧 디버깅: click 이벤트 시점 상태
-        errorHandler.colorLog('HIGHLIGHT', '🖱️ click 이벤트', {
-          hasSelection: !!savedRange,
-          hasCursorPosition: !!savedCursorPosition,
-          activeElement: document.activeElement?.tagName,
-          contentAreaFocused: document.activeElement === contentArea,
-          hasFocus: document.hasFocus()
-        }, '#ff9800');
-        
-        // 🔧 선택 영역이 없어도 커서 위치가 있으면 드롭다운 열기
         if (!savedRange && !savedCursorPosition) {
-          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
           return;
         }
         
-        // 🔧 포커스 강제 복원
         if (document.activeElement !== contentArea) {
           try {
             contentArea.focus({ preventScroll: true });
@@ -436,20 +444,17 @@
         
         const isVisible = dropdownMenu.classList.contains('show');
         
-        // ✅ 다른 모달 닫기를 조건부로 처리
         if (!isVisible && util.activeModalManager) {
           util.activeModalManager.closeAll();
         }
         
         if (isVisible) {
-          // 닫기
           dropdownMenu.classList.remove('show');
           dropdownMenu.style.display = 'none';
           highlightContainer.classList.remove('active');
           isDropdownOpen = false;
           util.activeModalManager.unregister(dropdownMenu);
         } else {
-          // ✅ 열기 로직을 setTimeout으로 지연 처리
           setTimeout(() => {
             dropdownMenu.classList.add('show');
             dropdownMenu.style.display = 'block';
@@ -478,16 +483,8 @@
                 contentArea.focus({ preventScroll: true });
               }
             }, [highlightContainer]);
-          }, 10); // ✅ 10ms 지연으로 타이밍 이슈 해결
+          }, 10);
         }
-        
-        // 🔧 디버깅: click 이벤트 완료 후 상태
-        errorHandler.colorLog('HIGHLIGHT', '✅ click 이벤트 완료', {
-          dropdownVisible: !isVisible,
-          activeElement: document.activeElement?.tagName,
-          contentAreaFocused: document.activeElement === contentArea,
-          hasFocus: document.hasFocus()
-        }, '#4caf50');
       });
       
       return highlightContainer;
