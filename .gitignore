@@ -11,6 +11,11 @@ public/images/
 dist/
 build/
 coverage/
+.cursor/
+.github/
+.cursor/rules/
+.cursor/rules/_*.mdc
+.cursor/mcp.json
 
 # Environment variables
 .env

@@ -90,28 +90,86 @@
       }
       
       if (savedRange) {
-        // 선택 영역이 있는 경우
         const scrollPosition = util.scroll.savePosition();
         
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
-      
+        try {
+          contentArea.focus({ preventScroll: true });
+        } catch (e) {
+          contentArea.focus();
+        }
+        
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
-          errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, '선택 영역 복원 실패');
+          console.error('❌ 선택 영역 복원 실패');
           return;
         }
         
-        // 🔧 execCommand 사용 (fontColor.js와 동일한 방식)
+        // ✅ execCommand 전 상태 기록
+        const beforeSelection = window.getSelection();
+        const beforeRange = beforeSelection.getRangeAt(0);
+        const beforeFragment = beforeRange.cloneContents();
+        const beforeDiv = document.createElement('div');
+        beforeDiv.appendChild(beforeFragment);
+        
+        console.log('\n4️⃣ execCommand 실행 전:');
+        console.log('  - 복원된 선택 영역 HTML:', beforeDiv.innerHTML);
+        console.log('  - BR 포함 여부:', beforeDiv.innerHTML.includes('<br>'));
+        
+        // 🔧 BR 포함 시에만 range 조정
+        if (beforeDiv.innerHTML.includes('<br>')) {
+          console.log('🛠️ BR 감지 - range 조정 실행');
+          
+          // BR을 선택 영역에서 제외
+          const walker = document.createTreeWalker(
+            beforeRange.commonAncestorContainer,
+            NodeFilter.SHOW_ALL,
+            null,
+            false
+          );
+          
+          while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (beforeRange.intersectsNode(node) && node.nodeName === 'BR') {
+              beforeRange.setEndBefore(node);
+              beforeSelection.removeAllRanges();
+              beforeSelection.addRange(beforeRange);
+              console.log('✅ BR 제외하고 range 재설정 완료');
+              break;
+            }
+          }
+        }
+        
+        // 🔧 execCommand 실행 (조정된 range로)
         document.execCommand('hiliteColor', false, color);
+        
+        // ✅ execCommand 후 결과 확인
+        setTimeout(() => {
+          console.log('\n5️⃣ execCommand 실행 후:');
+          
+          // 생성된 span 요소 찾기
+          const spans = contentArea.querySelectorAll('span[style*="background-color"]');
+          const lastSpan = spans[spans.length - 1]; // 방금 생성된 span
+          
+          if (lastSpan) {
+            console.log('  - 생성된 span HTML:', lastSpan.outerHTML);
+            console.log('  - span 내부 BR 여부:', lastSpan.innerHTML.includes('<br>'));
+            console.log('  - span 다음 형제:', lastSpan.nextSibling?.nodeName || 'null');
+            
+            if (lastSpan.innerHTML.includes('<br>')) {
+              console.log('🚨 문제 확인: BR이 span 안에 포함됨!');
+              console.log('  해결 필요: BR을 span 밖으로 이동');
+            } else {
+              console.log('✅ 정상: BR이 span 밖에 있음');
+            }
+          }
+          
+          console.log('=== 선택 방식별 디버깅 완료 ===\n');
+        }, 10);
         
         util.scroll.restorePosition(scrollPosition);
         
       } else {
-        // 커서 위치 모드
+        // 기존 커서 위치 모드 로직 유지
         if (document.activeElement !== contentArea) {
           try {
             contentArea.focus({ preventScroll: true });
@@ -120,7 +178,6 @@
           }
         }
         
-        // 저장된 커서 위치로 복원
         if (savedCursorPosition) {
           try {
             const range = document.createRange();
@@ -136,22 +193,18 @@
               sel.addRange(range);
             }
           } catch (e) {
-            errorHandler.colorLog('EMPHASIS', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
+            console.error('❌ 커서 위치 복원 실패:', e.message);
           }
-      }
-      
-        // 🔧 execCommand 사용 (fontColor.js와 동일)
-        const success = document.execCommand('hiliteColor', false, color);
+        }
         
-        errorHandler.colorLog('EMPHASIS', 'execCommand hiliteColor 결과', {
-          success: success
-        }, success ? '#4caf50' : '#f44336');
+        const success = document.execCommand('hiliteColor', false, color);
+        console.log('📝 execCommand 결과:', success);
       }
       
       util.editor.dispatchEditorEvent(contentArea);
       
     } catch (e) {
-      errorHandler.logError('EmphasisPlugin', errorHandler.codes.PLUGINS.EMPHASIS.APPLY, e);
+      console.error('❌ 하이라이트 적용 중 오류:', e);
     }
   }
   
@@ -265,6 +318,29 @@
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const selectedText = range.toString().trim();
+          
+          // ✅ 핵심 디버깅: 선택 영역의 HTML 구조 분석
+          const fragment = range.cloneContents();
+          const tempDiv = document.createElement('div');
+          tempDiv.appendChild(fragment);
+          
+          console.log('1️⃣ 선택 영역 기본 정보:');
+          console.log('  - 선택된 텍스트:', `"${selectedText}"`);
+          console.log('  - 선택 영역 HTML:', tempDiv.innerHTML);
+          console.log('  - BR 포함 여부:', tempDiv.innerHTML.includes('<br>'));
+          
+          console.log('2️⃣ Range 상세 정보:');
+          console.log('  - startContainer:', range.startContainer);
+          console.log('  - startContainer.nodeType:', range.startContainer.nodeType);
+          console.log('  - startOffset:', range.startOffset);
+          console.log('  - endContainer:', range.endContainer);
+          console.log('  - endContainer.nodeType:', range.endContainer.nodeType);
+          console.log('  - endOffset:', range.endOffset);
+          
+          // ✅ 핵심: BR 노드가 선택 영역에 포함되었는지 확인
+          if (tempDiv.innerHTML.includes('<br>')) {
+            console.log('🚨 BR이 선택 영역에 포함됨!');
+          }
           
           if (selectedText) {
             savedRange = util.selection.saveSelection();
