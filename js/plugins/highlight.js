@@ -118,9 +118,118 @@
   }
   
   /**
-   * 하이라이트 적용 함수 (highlight-bak.js 방식)
+   * 하이라이트 적용 후 줄바꿈 후처리 함수 (code.js 방식)
    */
-  function applyHighlightColor(color, contentArea, colorIndicator) {
+  function insertLineBreakAfterHighlight() {
+    // execCommand 실행 후 생성된 span 요소들 찾기
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let spanElement = null;
+    
+    // 현재 선택 영역에서 하이라이트 span 찾기
+    const container = range.commonAncestorContainer;
+    if (container.nodeType === Node.ELEMENT_NODE) {
+      spanElement = container.querySelector('span[style*="background-color"]');
+    } else if (container.parentElement) {
+      spanElement = container.parentElement.closest('span[style*="background-color"]') || 
+                   container.parentElement.querySelector('span[style*="background-color"]');
+    }
+    
+    if (spanElement) {
+      insertLineBreakIfNeeded(spanElement);
+    }
+  }
+  
+  /**
+   * 요소 뒤에 줄바꿈이 필요한 경우 BR 태그 삽입 (code.js와 동일)
+   */
+  function insertLineBreakIfNeeded(element) {
+    const nextNode = element.nextSibling;
+    
+    if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
+      const nextText = nextNode.textContent;
+      
+      // 다음 텍스트가 공백으로 시작하지 않고 내용이 있는 경우
+      if (nextText && !nextText.startsWith(' ') && nextText.trim()) {
+        const br = document.createElement('br');
+        element.parentNode.insertBefore(br, nextNode);
+        
+        errorHandler.colorLog('HIGHLIGHT', '✅ 줄바꿈 후처리 완료', {
+          elementHTML: element.outerHTML,
+          nextText: nextText.substring(0, 20) + '...'
+        }, '#4caf50');
+        
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 선택 영역 끝의 줄바꿈 분리 처리
+   */
+  function adjustSelectionForTrailingBreak(range) {
+    const fragment = range.cloneContents();
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(fragment);
+    
+    const html = tempDiv.innerHTML;
+    
+    // 선택 영역이 <br>로 끝나는 경우
+    if (html.endsWith('<br>') || html.endsWith('<br/>')) {
+      errorHandler.colorLog('HIGHLIGHT', '�� 선택 영역 끝 BR 감지', {
+        originalHTML: html
+      }, '#ff9800');
+      
+      // 선택 영역을 BR 직전까지로 축소
+      const walker = document.createTreeWalker(
+        range.commonAncestorContainer,
+        NodeFilter.SHOW_ALL,
+        null,
+        false
+      );
+      
+      let lastNonBrNode = null;
+      let brNode = null;
+      
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (range.intersectsNode(node)) {
+          if (node.nodeName === 'BR') {
+            brNode = node;
+            break;
+          } else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+            lastNonBrNode = node;
+          }
+        }
+      }
+      
+      // BR을 선택 영역에서 제외
+      if (brNode && lastNonBrNode) {
+        try {
+          range.setEndBefore(brNode);
+          
+          errorHandler.colorLog('HIGHLIGHT', '✅ 선택 영역 조정 완료', {
+            adjustedSelection: range.toString()
+          }, '#4caf50');
+          
+          return brNode; // 나중에 span 뒤에 추가할 BR 반환
+        } catch (e) {
+          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역 조정 실패', { error: e.message }, '#f44336');
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * 하이라이트 적용 함수 - 선택 영역 조정 방식
+   */
+  function applyHighlight(color, contentArea, colorIndicator) {
     try {
       if (colorIndicator) {
         colorIndicator.style.backgroundColor = color;
@@ -128,7 +237,6 @@
       }
       
       if (savedRange) {
-        // ✅ 선택 영역이 있는 경우
         const scrollPosition = util.scroll.savePosition();
         
         try {
@@ -139,17 +247,56 @@
         
         const restored = util.selection.restoreSelection(savedRange);
         if (!restored) {
-          console.error('하이라이트: 선택 영역 복원 실패');
+          errorHandler.logError('HighlightPlugin', errorHandler.codes.PLUGINS.HIGHLIGHT.APPLY, '선택 영역 복원 실패');
           return;
         }
         
-        // ✅ execCommand 사용 (span 태그 자동 생성)
-        document.execCommand('hiliteColor', false, color);
+        // 🔧 선택 영역 조정 - BR 분리
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const trailingBr = adjustSelectionForTrailingBreak(range);
+          
+          // 조정된 선택 영역으로 다시 선택
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // execCommand 실행
+          document.execCommand('hiliteColor', false, color);
+          
+          // 🔧 BR이 있었다면 span 다음에 BR 추가
+          if (trailingBr) {
+            setTimeout(() => {
+              // 새로 생성된 span 찾기
+              const newSelection = window.getSelection();
+              if (newSelection && newSelection.rangeCount > 0) {
+                const newRange = newSelection.getRangeAt(0);
+                let spanElement = null;
+                
+                // span 요소 찾기
+                if (newRange.endContainer.nodeType === Node.ELEMENT_NODE) {
+                  spanElement = newRange.endContainer.querySelector('span[style*="background-color"]');
+                } else if (newRange.endContainer.parentElement) {
+                  spanElement = newRange.endContainer.parentElement.closest('span[style*="background-color"]');
+                }
+                
+                if (spanElement && spanElement.nextSibling !== trailingBr) {
+                  // span 다음에 원래 BR 삽입
+                  spanElement.parentNode.insertBefore(trailingBr, spanElement.nextSibling);
+                  
+                  errorHandler.colorLog('HIGHLIGHT', '✅ BR 태그 span 뒤로 이동 완료', {
+                    spanHTML: spanElement.outerHTML
+                  }, '#4caf50');
+                }
+              }
+            }, 10);
+          }
+        }
         
         util.scroll.restorePosition(scrollPosition);
         
       } else {
-        // ✅ 커서 위치 모드
+        // 커서 위치 모드 - 기존 로직 유지
         if (document.activeElement !== contentArea) {
           try {
             contentArea.focus({ preventScroll: true });
@@ -158,7 +305,6 @@
           }
         }
         
-        // 저장된 커서 위치로 복원
         if (savedCursorPosition) {
           try {
             const range = document.createRange();
@@ -174,19 +320,21 @@
               sel.addRange(range);
             }
           } catch (e) {
-            console.error('커서 위치 복원 실패:', e);
+            errorHandler.colorLog('HIGHLIGHT', '❌ 커서 위치 복원 실패', { error: e.message }, '#f44336');
           }
         }
         
-        // ✅ execCommand 사용
         const success = document.execCommand('hiliteColor', false, color);
-        console.log('하이라이트 적용 결과:', success);
+        
+        errorHandler.colorLog('HIGHLIGHT', 'execCommand hiliteColor 결과', {
+          success: success
+        }, success ? '#4caf50' : '#f44336');
       }
       
       util.editor.dispatchEditorEvent(contentArea);
       
     } catch (e) {
-      console.error('하이라이트 적용 중 오류:', e);
+      errorHandler.logError('HighlightPlugin', errorHandler.codes.PLUGINS.HIGHLIGHT.APPLY, e);
     }
   }
 
@@ -261,7 +409,7 @@
           util.activeModalManager?.unregister?.(dropdown);
           
           // 하이라이트 적용
-          applyHighlightColor(color, contentArea, colorIndicator);
+          applyHighlight(color, contentArea, colorIndicator);
           
           // 버튼 상태 업데이트
           setTimeout(() => {
