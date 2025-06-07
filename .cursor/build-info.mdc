@@ -122,16 +122,17 @@ module.exports = {
 import './js/data/version.js';
 
 // 핵심 모듈
-import './js/error-handler.js';
 import './js/core.js';
-import './js/security-manager.js';
+
 
 // 플러그인 유틸리티
-import './js/plugins/plugin-util.js';
+import './js/plugins/utils/plugin-util.js';
+import './js/plugins/utils/format-util.js';
+import './js/utils/security-manager.js';
+import './js/utils/error-handler.js';
 
 // 유틸리티 및 기본 기능
 import './js/plugins/history.js';
-import './js/plugins/format-util.js';
 import './js/plugins/reset.js';
 
 // 텍스트 서식 관련 플러그인
@@ -168,7 +169,7 @@ import './js/plugins/bulletList.js';
 import './js/plugins/numberedList.js';
 
 // 모달 플러그인
-import './js/modal.js';
+import './js/plugin/utils/modal.js';
 
 // CSS 스타일
 import './css/core.css';
