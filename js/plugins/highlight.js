@@ -1,5 +1,5 @@
 /**
- * LiteEditor Emphasis Plugin
+ * LiteEditor Highlight Plugin
  * 텍스트 배경색(하이라이트) 플러그인
  * 수정: 선택 블록 유지 기능 추가 + Enter/Shift+Enter 처리
  */
@@ -8,7 +8,7 @@
   const util = window.PluginUtil || {};
 
   if (!util.selection) {
-    console.error('EmphasisPlugin: PluginUtil.selection이 필요합니다.');
+    console.error('HighlightPlugin: PluginUtil.selection이 필요합니다.');
   }
   
   // 전역 상태 변수
@@ -225,13 +225,13 @@
     return lastNode;
   }
   
-  LiteEditor.registerPlugin('emphasis', {
+  LiteEditor.registerPlugin('highlight', {
     customRender: function(toolbar, contentArea) {
       setupEnterKeyHandling(contentArea);
       
       const highlightContainer = util.dom.createElement('div', {
         className: 'lite-editor-button',
-        title: 'Emphasis'
+        title: 'Highlight'
       });
       
       const icon = util.dom.createElement('i', {
@@ -283,7 +283,7 @@
             e.stopPropagation();
             
             // 🔧 디버깅: 색상 셀 클릭
-            errorHandler.colorLog('EMPHASIS', '🎨 색상 셀 클릭', {
+            errorHandler.colorLog('HIGHLIGHT', '🎨 색상 셀 클릭', {
               color: color,
               hasSelection: !!savedRange,
               hasCursorPosition: !!savedCursorPosition
@@ -308,7 +308,7 @@
       
       highlightContainer.addEventListener('mousedown', (e) => {
         // 🔧 디버깅: mousedown 시점 상태
-        errorHandler.colorLog('EMPHASIS', '🖱️ mousedown 이벤트', {
+        errorHandler.colorLog('HIGHLIGHT', '🖱️ mousedown 이벤트', {
           activeElement: document.activeElement?.tagName,
           contentAreaFocused: document.activeElement === contentArea,
           hasFocus: document.hasFocus()
@@ -345,7 +345,7 @@
           if (selectedText) {
             savedRange = util.selection.saveSelection();
             savedCursorPosition = null; // 선택 영역이 있으면 커서 위치는 저장하지 않음
-            errorHandler.colorLog('EMPHASIS', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
+            errorHandler.colorLog('HIGHLIGHT', '✅ 선택 영역 저장됨', { text: selectedText }, '#4caf50');
           } else {
             savedRange = null;
             
@@ -357,7 +357,7 @@
               endOffset: range.endOffset
             };
             
-            errorHandler.colorLog('EMPHASIS', '✅ 커서 위치 저장됨', {
+            errorHandler.colorLog('HIGHLIGHT', '✅ 커서 위치 저장됨', {
               startContainer: range.startContainer?.nodeName,
               startOffset: range.startOffset,
               collapsed: range.collapsed
@@ -366,7 +366,7 @@
         } else {
           savedRange = null;
           savedCursorPosition = null;
-          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
+          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역을 가져올 수 없음', null, '#f44336');
         }
       });
       
@@ -375,7 +375,7 @@
         e.stopPropagation();
         
         // 🔧 디버깅: click 이벤트 시점 상태
-        errorHandler.colorLog('EMPHASIS', '🖱️ click 이벤트', {
+        errorHandler.colorLog('HIGHLIGHT', '🖱️ click 이벤트', {
           hasSelection: !!savedRange,
           hasCursorPosition: !!savedCursorPosition,
           activeElement: document.activeElement?.tagName,
@@ -385,7 +385,7 @@
         
         // 🔧 선택 영역이 없어도 커서 위치가 있으면 드롭다운 열기
         if (!savedRange && !savedCursorPosition) {
-          errorHandler.colorLog('EMPHASIS', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
+          errorHandler.colorLog('HIGHLIGHT', '❌ 선택 영역 및 커서 위치 없음', null, '#f44336');
           return;
         }
         
@@ -446,7 +446,7 @@
         }
         
         // 🔧 디버깅: click 이벤트 완료 후 상태
-        errorHandler.colorLog('EMPHASIS', '✅ click 이벤트 완료', {
+        errorHandler.colorLog('HIGHLIGHT', '✅ click 이벤트 완료', {
           dropdownVisible: !isVisible,
           activeElement: document.activeElement?.tagName,
           contentAreaFocused: document.activeElement === contentArea,
