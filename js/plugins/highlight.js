@@ -52,10 +52,77 @@
       }
       
       if (span && span.tagName === 'SPAN' && span.style.backgroundColor) {
+        // 🔍 span 정보 상세 로그
+        console.log('🔍 CursorSystem에서 찾은 span:', {
+          tagName: span.tagName,
+          hasBackground: !!span.style.backgroundColor,
+          hasDoubleClickAttr: span.hasAttribute('data-highlight-doubleclick'),
+          textContent: span.textContent?.substring(0, 30),
+          outerHTML: span.outerHTML?.substring(0, 100)
+        });
+        
+        // 🔥 더블클릭 span이면 DoubleClickSystem 로직 사용
+        if (span.hasAttribute('data-highlight-doubleclick')) {
+          console.log('🔵 커서 모드지만 더블클릭 span 감지 → DoubleClickSystem으로 위임');
+          DoubleClickSystem.handleEnter(e, contentArea);
+          return;
+        }
+        
+        console.log('🔍 일반 span으로 판단 - 커서 로직 실행');
+        
+        // 일반 span 처리
         if (e.shiftKey) {
-          // 커서 Shift+Enter: span 내부 줄바꿈
-          console.log('🔵 커서 Shift+Enter: span 내부 줄바꿈');
-          return; // 기본 동작
+          console.log('🔵 커서 Shift+Enter: span 내부 BR 삽입 처리');
+          e.preventDefault(); // 🔥 브라우저 기본 동작 차단
+          
+          // 🔥 더블클릭과 동일한 로직: span 내부에 BR + 공백 삽입
+          const currentRange = selection.getRangeAt(0);
+          const br = document.createElement('br');
+          currentRange.deleteContents();
+          currentRange.insertNode(br);
+          
+          // BR 뒤에 공백 문자 추가 (span 내부)
+          const spaceNode = document.createTextNode('\u00A0');
+          br.parentNode.insertBefore(spaceNode, br.nextSibling);
+          
+          // 커서를 공백 시작 위치로 이동
+          const newRange = document.createRange();
+          newRange.setStart(spaceNode, 0);
+          newRange.collapse(true);
+          
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          util.editor.dispatchEditorEvent(contentArea);
+          
+          // 🔥 커서 전용 중복 BR 제거 로직 추가
+          setTimeout(() => {
+            console.log('🔍 커서 중복 BR 검사 시작');
+            
+            // 현재 span 내의 모든 BR 태그 찾기
+            const allBRs = span.querySelectorAll('br');
+            console.log('🔍 커서 BR 개수:', allBRs.length);
+            
+            // 연속된 중복 BR 제거
+            for (let i = allBRs.length - 1; i > 0; i--) {
+              const currentBR = allBRs[i];
+              const prevBR = allBRs[i - 1];
+              
+              // 바로 인접한 BR인지 확인 (사이에 텍스트나 다른 노드 없음)
+              let prevNode = currentBR.previousSibling;
+              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
+                prevNode = prevNode.previousSibling;
+              }
+              
+              if (prevNode === prevBR) {
+                console.log('🔥 커서 중복 BR 제거:', currentBR);
+                currentBR.remove();
+              }
+            }
+            
+            console.log('✅ 커서 중복 BR 검사 완료');
+          }, 10); // DOM 조작 완료 후 실행
+          
         } else {
           // 커서 Enter: span 밖으로 나가기
           console.log('🔵 커서 Enter: span 밖으로 나가기');
@@ -126,10 +193,64 @@
       }
       
       if (span && span.tagName === 'SPAN' && span.style.backgroundColor) {
+        // 🔥 더블클릭 span이면 DoubleClickSystem 로직 사용
+        if (span.hasAttribute('data-highlight-doubleclick')) {
+          console.log('🟢 드래그 모드지만 더블클릭 span 감지 → DoubleClickSystem으로 위임');
+          DoubleClickSystem.handleEnter(e, contentArea);
+          return;
+        }
+        
+        // 일반 span 처리
         if (e.shiftKey) {
-          // 드래그 Shift+Enter: span 내부 줄바꿈
-          console.log('🟢 드래그 Shift+Enter: span 내부 줄바꿈');
-          return; // 기본 동작
+          console.log('🟢 드래그 Shift+Enter: span 내부 BR 삽입 처리');
+          e.preventDefault(); // 🔥 브라우저 기본 동작 차단
+          
+          // 🔥 동일한 로직
+          const currentRange = selection.getRangeAt(0);
+          const br = document.createElement('br');
+          currentRange.deleteContents();
+          currentRange.insertNode(br);
+          
+          const spaceNode = document.createTextNode('\u00A0');
+          br.parentNode.insertBefore(spaceNode, br.nextSibling);
+          
+          const newRange = document.createRange();
+          newRange.setStart(spaceNode, 0);
+          newRange.collapse(true);
+          
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          util.editor.dispatchEditorEvent(contentArea);
+          
+          // 🔥 드래그 전용 중복 BR 제거 로직 추가
+          setTimeout(() => {
+            console.log('🔍 드래그 중복 BR 검사 시작');
+            
+            // 현재 span 내의 모든 BR 태그 찾기
+            const allBRs = span.querySelectorAll('br');
+            console.log('🔍 드래그 BR 개수:', allBRs.length);
+            
+            // 연속된 중복 BR 제거
+            for (let i = allBRs.length - 1; i > 0; i--) {
+              const currentBR = allBRs[i];
+              const prevBR = allBRs[i - 1];
+              
+              // 바로 인접한 BR인지 확인 (사이에 텍스트나 다른 노드 없음)
+              let prevNode = currentBR.previousSibling;
+              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
+                prevNode = prevNode.previousSibling;
+              }
+              
+              if (prevNode === prevBR) {
+                console.log('🔥 드래그 중복 BR 제거:', currentBR);
+                currentBR.remove();
+              }
+            }
+            
+            console.log('✅ 드래그 중복 BR 검사 완료');
+          }, 10); // DOM 조작 완료 후 실행
+          
         } else {
           // 드래그 Enter: span 밖으로 나가기
           console.log('🟢 드래그 Enter: span 밖으로 나가기');
