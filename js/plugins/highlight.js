@@ -208,6 +208,35 @@
           selection.addRange(newRange);
           
           util.editor.dispatchEditorEvent(contentArea);
+          
+          // 🔥 중복 BR 제거 로직 (기존 코드 영향 없이 후처리)
+          setTimeout(() => {
+            console.log('🔍 중복 BR 검사 시작');
+            
+            // 현재 span 내의 모든 BR 태그 찾기
+            const allBRs = span.querySelectorAll('br');
+            console.log('🔍 발견된 BR 개수:', allBRs.length);
+            
+            // 연속된 중복 BR 제거
+            for (let i = allBRs.length - 1; i > 0; i--) {
+              const currentBR = allBRs[i];
+              const prevBR = allBRs[i - 1];
+              
+              // 바로 인접한 BR인지 확인 (사이에 텍스트나 다른 노드 없음)
+              let prevNode = currentBR.previousSibling;
+              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
+                prevNode = prevNode.previousSibling;
+              }
+              
+              if (prevNode === prevBR) {
+                console.log('🔥 중복 BR 제거:', currentBR);
+                currentBR.remove();
+              }
+            }
+            
+            console.log('✅ 중복 BR 검사 완료');
+          }, 10); // DOM 조작 완료 후 실행
+          
         } else {
           // 더블클릭 Enter: span 밖으로 나가기
           console.log('🔴 더블클릭 Enter: span 밖으로 나가기');
