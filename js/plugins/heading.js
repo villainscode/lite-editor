@@ -93,7 +93,7 @@
       // 아이콘 추가
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
-        textContent: 'title'
+        textContent: 'format_size'
       });
       headingButton.appendChild(icon);
       

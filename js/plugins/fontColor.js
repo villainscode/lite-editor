@@ -270,7 +270,7 @@
       
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
-        textContent: 'palette'
+        textContent: 'format_color_text'
       });
       colorContainer.appendChild(icon);
       
