@@ -100,47 +100,13 @@
     }
   }
 
-  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (Task 5: code.js 패턴 적용)
+  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (Task 11.1: 완전 단순화)
   function handleDoubleClickCaseEnter(e, contentArea) {
-    const selection = util.selection.getSafeSelection();
-    if (!selection || !selection.rangeCount) return;
+    // 🔧 Task 11.1: 완전 기본 동작 허용 (DOM 조작은 MutationObserver가 처리)
+    console.log('🔧 Task 11.1: 더블클릭 Enter - DOM 조작 방식으로 위임');
     
-    const range = selection.getRangeAt(0);
-    let emphasisSpan = range.startContainer.nodeType === Node.TEXT_NODE 
-      ? range.startContainer.parentElement 
-      : range.startContainer;
-    
-    while (emphasisSpan && emphasisSpan !== contentArea) {
-      if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
-        break;
-      }
-      emphasisSpan = emphasisSpan.parentElement;
-    }
-    
-    if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
-      if (e.shiftKey) {
-        // 🔧 Task 5: code.js와 동일한 완전 제어 패턴
-        console.log('🔧 Task 5: code.js 패턴 - 완전한 이벤트 차단');
-        e.preventDefault();
-        e.stopImmediatePropagation(); // 다른 핸들러 완전 차단
-        
-        // 🔧 Task 5: 직접 BR 삽입 (code.js insertLineBreakInCode 패턴)
-        insertLineBreakInHighlight(emphasisSpan);
-        
-        console.log('✅ Task 5: code.js 패턴 - Shift+Enter 완료');
-      } else {
-        // Enter: 하이라이트 탈출 (기존 로직 유지)
-        e.preventDefault();
-        const newP = util.dom.createElement('p');
-        newP.appendChild(document.createTextNode('\u00A0'));
-        const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
-        if (parentBlock && parentBlock.parentNode) {
-          parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
-          util.selection.moveCursorTo(newP.firstChild, 0);
-        }
-        util.editor.dispatchEditorEvent(contentArea);
-      }
-    }
+    // 아무것도 하지 않음 - 브라우저가 BR 생성 → MutationObserver가 커서 조정
+    return;
   }
 
   // 🔧 Task 5: code.js insertLineBreakInCode 함수 적용
@@ -170,19 +136,48 @@
     console.log('✅ Task 5: BR 삽입 및 커서 위치 조정 완료');
   }
 
-  // ✅ 통합 키 핸들러 (Task 5: 더블클릭만 캡처 단계로 변경)
+  // ✅ 통합 키 핸들러 (Task 11: DOM 변경 후 커서 조정)
   function setupEnterKeyHandling(contentArea) {
-    // 🔧 더블클릭 케이스만 캡처 단계로 등록 (code.js 패턴)
+    // 🔧 Task 11: DOM 변경 감지로 BR 생성 후 커서 조정
+    const contentObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            // 🔧 Task 11: 하이라이트 span 내부에 BR 추가된 경우만 처리
+            if (node.nodeName === 'BR' && 
+                node.parentElement?.tagName === 'SPAN' && 
+                node.parentElement?.style.backgroundColor &&
+                node.parentElement?.hasAttribute('data-highlight-doubleclick')) {
+              
+              console.log('🔧 Task 11: 더블클릭 span 내 BR 생성 감지');
+              
+              // 🔧 Task 11: BR 뒤에 공백 문자 + 커서 위치 조정
+              setTimeout(() => {
+                adjustCursorAfterBR(node);
+              }, 10);
+            }
+          });
+        }
+      });
+    });
+    
+    contentObserver.observe(contentArea, { 
+      childList: true, 
+      subtree: true
+    });
+    
+    // 기존 키 핸들러는 완전 기본 동작만 허용
     const doubleClickKeyHandler = (e) => {
       if (e.key === 'Enter' && currentCaseType === 'doubleclick') {
-        handleDoubleClickCaseEnter(e, contentArea);
+        console.log('🔧 Task 11: 더블클릭 Enter - 완전 기본 동작');
+        // 아무것도 하지 않음 (기본 동작 허용)
+        return;
       }
     };
     
-    // 🔧 캡처 단계 등록 (code.js와 동일)
     contentArea.addEventListener('keydown', doubleClickKeyHandler, true);
     
-    // 🔧 커서/드래그 케이스는 기존 버블링 단계 유지
+    // 기존 버블링 핸들러...
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         if (currentCaseType === 'cursor') {
@@ -192,6 +187,56 @@
         }
       }
     });
+  }
+
+  // 🔧 Task 11: BR 생성 후 커서 위치 조정 함수
+  function adjustCursorAfterBR(brElement) {
+    const span = brElement.parentElement;
+    if (!span) return;
+    
+    console.log('🔧 Task 11: BR 후 커서 조정 시작:', {
+      spanHTML: span.innerHTML,
+      brNextSibling: brElement.nextSibling?.nodeName
+    });
+    
+    // 🔧 Task 11: BR 뒤에 공백 문자가 없으면 추가
+    if (!brElement.nextSibling || 
+        brElement.nextSibling.nodeType !== Node.TEXT_NODE ||
+        !brElement.nextSibling.textContent.startsWith('\u00A0')) {
+      
+      const spaceNode = document.createTextNode('\u00A0');
+      
+      if (brElement.nextSibling) {
+        span.insertBefore(spaceNode, brElement.nextSibling);
+      } else {
+        span.appendChild(spaceNode);
+      }
+      
+      console.log('🔧 Task 11: 공백 문자 추가 완료');
+    }
+    
+    // 🔧 Task 11: plugin-util.js 활용한 정확한 커서 위치 설정
+    const spaceNode = brElement.nextSibling;
+    if (spaceNode && spaceNode.nodeType === Node.TEXT_NODE) {
+      // 공백 문자 시작 위치에 커서 설정 (시각적으로 다음 줄 시작)
+      util.selection.moveCursorTo(spaceNode, 0);
+      
+      console.log('✅ Task 11: 커서 위치 조정 완료 - BR 다음 줄 시작');
+      
+      // 🔧 Task 11: 결과 확인
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          console.log('🔍 Task 11: 최종 커서 위치:', {
+            container: range.startContainer.nodeName,
+            offset: range.startOffset,
+            parentElement: range.startContainer.parentElement?.tagName,
+            isInSpan: range.startContainer.parentElement === span
+          });
+        }
+      }, 50);
+    }
   }
 
   // ✅ 케이스 1: 커서 전용 적용 함수 (기존 보존)
