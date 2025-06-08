@@ -219,26 +219,9 @@
 
   // ✅ 시스템 폰트 감지 함수 추가 (Line 14 근처에 추가)
   function isSystemFont(fontFamily) {
-    if (!fontFamily) return true;
-    
-    // ✅ 완전한 시스템 폰트 목록
-    const systemFonts = [
-      // macOS 시스템 폰트
-      '-apple-system', 'BlinkMacSystemFont', 'Apple SD Gothic Neo',
-      // Windows 시스템 폰트  
-      'Segoe UI', 'Tahoma', 'Arial', 'Verdana',
-      // Linux 시스템 폰트
-      'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans',
-      // 기본 폰트 패밀리
-      'Helvetica Neue', 'Helvetica', 'sans-serif', 'serif', 'monospace',
-      // 한국 시스템 폰트
-      'Malgun Gothic', 'Gulim', 'Dotum', 'Batang'
-    ];
-    
-    const lowerFontFamily = fontFamily.toLowerCase();
-    return systemFonts.some(sysFont => 
-      lowerFontFamily.includes(sysFont.toLowerCase())
-    );
+    // 브라우저 기본 폰트들을 체크
+    const systemFonts = ['times', 'arial', 'helvetica', 'courier', 'sans-serif', 'serif', 'monospace'];
+    return systemFonts.some(sysFont => fontFamily.toLowerCase().includes(sysFont));
   }
 
   // ✅ 현재 요소의 실제 계산된 폰트 확인 함수 추가
@@ -392,13 +375,8 @@
                 }
             }
             
-            // ✅ 시스템 폰트인 경우 currentFontValue를 초기화
-            if (isSystemFont(font.value)) {
-              currentFontValue = null;
-              console.log('시스템 폰트 선택 - currentFontValue 초기화');
-            } else {
-              currentFontValue = font.value;
-            }
+            // 폰트 값 저장
+            currentFontValue = font.value;
             
             // 🔴 중요: execCommand 실행 - 수정 금지
             try {
@@ -644,58 +622,146 @@
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
+          const currentElement = range.startContainer.nodeType === Node.TEXT_NODE 
+            ? range.startContainer.parentElement 
+            : range.startContainer;
           
-          // ✅ 안전한 currentElement 처리
-          let currentElement;
-          if (range.startContainer.nodeType === Node.TEXT_NODE) {
-            currentElement = range.startContainer.parentElement;
-          } else if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
-            currentElement = range.startContainer;
-          } else {
-            return;
-          }
+          // 폰트 스타일이 적용된 요소 또는 그 내부에 있는지 확인
+          const fontElement = currentElement.closest('span[style*="font-family"], font') || 
+                             currentElement.querySelector('span[style*="font-family"], font');
           
-          if (!currentElement || typeof currentElement.closest !== 'function') {
-            return;
-          }
+          // 🔴 중요: 현재 커서 위치가 폰트 영역 내부인지 확인
+          const isInFontArea = fontElement && (
+            fontElement.contains(range.startContainer) || 
+            fontElement === range.startContainer ||
+            (range.startContainer.nodeType === Node.TEXT_NODE && 
+             fontElement.contains(range.startContainer.parentElement))
+          );
           
-          // ✅ 핵심 수정: 명시적으로 설정된 폰트 영역만 감지
-          const fontElement = currentElement.closest('span[style*="font-family"], font');
-          
-          // ✅ 더 엄격한 폰트 영역 감지
-          let isInFontArea = false;
-          
-          if (fontElement) {
-            // font 태그는 항상 사용자 설정으로 간주
-            if (fontElement.tagName === 'FONT') {
-              isInFontArea = true;
-            } 
-            // span 태그는 명시적으로 설정된 폰트만 인정
-            else if (fontElement.tagName === 'SPAN') {
-              const fontFamily = fontElement.style.fontFamily;
-              // 시스템 폰트가 아니고, 실제로 폰트가 설정된 경우만
-              isInFontArea = fontFamily && !isSystemFont(fontFamily);
+          if (isInFontArea) {
+            if (e.shiftKey) {
+              // ✅ 수정된 Shift+Enter 처리 - 시스템 폰트 감지
+              e.preventDefault();
+              
+              // ✅ 현재 위치의 실제 계산된 폰트 확인
+              const currentComputedFont = getCurrentComputedFont(currentElement);
+              
+              // ✅ 시스템 폰트인지 확인
+              const isCurrentSystemFont = isSystemFont(currentComputedFont);
+              
+              // 새 줄과 span 생성
+              const br = document.createElement('br');
+              const newSpan = document.createElement('span');
+              
+              // ✅ 핵심 수정: 시스템 폰트가 아닌 경우만 폰트 상속
+              if (!isCurrentSystemFont) {
+                // 명시적으로 설정된 폰트인 경우만 상속
+                let fontFamily = currentFontValue;
+                
+                if (!fontFamily) {
+                  // font 태그의 face 속성 확인
+                  if (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) {
+                    fontFamily = fontElement.getAttribute('face');
+                  } else {
+                    // span 태그의 style 속성에서 폰트 추출
+                    const styleAttr = fontElement.getAttribute('style');
+                    fontFamily = parseFontFamily(styleAttr) || currentComputedFont;
+                  }
+                }
+                
+                // 시스템 폰트가 아닌 경우만 폰트 적용
+                if (!isSystemFont(fontFamily)) {
+                  newSpan.style.fontFamily = fontFamily;
+                }
+              }
+              
+              newSpan.innerHTML = '&#8203;'; // 제로폭 공백
+              
+              // 현재 위치에 br과 새 span 삽입
+              range.insertNode(br);
+              range.setStartAfter(br);
+              range.insertNode(newSpan);
+              
+              // 커서를 새 span으로 이동
+              const newRange = document.createRange();
+              newRange.setStart(newSpan.firstChild || newSpan, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+              
+            } else {
+              // ✅ 수정된 Enter 키 처리 - div 구조 고려
+              e.preventDefault();
+              
+              const currentFontElement = fontElement.tagName === 'FONT' ? fontElement : fontElement.closest('font');
+              
+              if (currentFontElement) {
+                // ✅ 올바른 부모 컨테이너 찾기 (P 또는 DIV)
+                const parentContainer = currentFontElement.closest('p, div');
+                const contentAreaContainer = contentArea;
+                
+                if (parentContainer && contentAreaContainer.contains(parentContainer)) {
+                  // ✅ font 요소 다음의 모든 형제 노드들 수집
+                  const remainingNodes = [];
+                  let nextSibling = currentFontElement.nextSibling;
+                  while (nextSibling) {
+                    remainingNodes.push(nextSibling);
+                    nextSibling = nextSibling.nextSibling;
+                  }
+                  
+                  // ✅ 새 문단 생성
+                  const newP = document.createElement('p');
+                  
+                  if (remainingNodes.length > 0) {
+                    // 남은 노드들을 새 문단으로 이동
+                    remainingNodes.forEach(node => {
+                      newP.appendChild(node);
+                    });
+                  } else {
+                    newP.innerHTML = '<br>';
+                  }
+                  
+                  // ✅ 핵심 수정: 부모 컨테이너 다음에 새 문단 삽입
+                  if (parentContainer.parentNode) {
+                    parentContainer.parentNode.insertBefore(newP, parentContainer.nextSibling);
+                  } else {
+                    // 부모가 없으면 contentArea에 직접 추가
+                    contentAreaContainer.appendChild(newP);
+                  }
+                  
+                  // ✅ 커서를 새 문단으로 이동
+                  const newRange = document.createRange();
+                  newRange.setStart(newP.firstChild || newP, 0);
+                  newRange.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(newRange);
+                }
+              } else {
+                // ✅ 폴백: 기본 새 문단 생성
+                const newP = document.createElement('p');
+                newP.innerHTML = '<br>';
+                
+                // 현재 컨테이너 찾기 (P 또는 DIV)
+                const currentContainer = range.startContainer.closest('p, div') || 
+                                        range.startContainer.parentElement.closest('p, div');
+                
+                if (currentContainer && currentContainer.parentNode) {
+                  currentContainer.parentNode.insertBefore(newP, currentContainer.nextSibling);
+                } else {
+                  contentArea.appendChild(newP);
+                }
+                
+                const newRange = document.createRange();
+                newRange.setStart(newP, 0);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              }
+              
+              setTimeout(() => {
+                updateFontButtonState(fontContainer, fontText, icon);
+              }, 10);
             }
-            
-            // 추가 검증: 현재 위치가 실제로 폰트 요소 내부인지 확인
-            if (isInFontArea) {
-              isInFontArea = fontElement.contains(range.startContainer) || 
-                            fontElement === range.startContainer ||
-                            (range.startContainer.nodeType === Node.TEXT_NODE && 
-                             fontElement.contains(range.startContainer.parentElement));
-            }
-          }
-          
-          // ✅ 폰트 영역이 아닌 경우 기본 동작 허용
-          if (!isInFontArea) {
-            return; // 브라우저 기본 엔터 동작 허용
-          }
-          
-          // 이하 기존 폰트 영역 처리 로직...
-          if (e.shiftKey) {
-            // ... Shift+Enter 처리 ...
-          } else {
-            // ... Enter 처리 ...
           }
         }
       }
