@@ -47,21 +47,21 @@
             'js/data/fontList.js',
             'js/data/version.js',
             'js/data/videoList.js',
-            'js/error-handler.js',
+            'js/plugins/utils/error-handler.js',
             
             // ✅ 새로운 단축키 시스템 (core.js 이전에 로드)
-            'js/core/shortcut-definitions.js',
-            'js/core/shortcut-manager.js',
+            'js/plugins/utils/shortcut-definitions.js',
+            'js/plugins/utils/shortcut-manager.js',
+            'js/plugins/utils/security-manager.js',
             
             'js/core.js',
-            'js/security-manager.js',
             
             // 먼저 플러그인 유틸리티를 로드
-            'js/plugins/plugin-util.js',
+            'js/plugins/utils/plugin-util.js',
+            'js/plugins/utils/format-util.js',
             
             // 유틸리티 및 기본 기능
             'js/plugins/history.js',
-            'js/plugins/format-util.js',
             'js/plugins/reset.js',
             
             // 텍스트 서식 관련 플러그인
@@ -99,7 +99,7 @@
             'js/plugins/numberedList.js',
 
             // 모달 플러그인
-            'js/modal.js'
+            'js/plugins/utils/modal.js'
         ];
         
         function loadScript(index) {

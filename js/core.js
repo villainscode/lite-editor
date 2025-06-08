@@ -405,7 +405,7 @@ const LiteEditor = (function() {
         else if (pluginName === 'fontFamily') { defaultIcon = 'font_download'; defaultTitle = 'Font'; }
         else if (pluginName === 'fontSize') { defaultIcon = 'format_size'; defaultTitle = 'Font Size'; }
         else if (pluginName === 'fontColor') { defaultIcon = 'format_color_text'; defaultTitle = 'Font Color'; }
-        else if (pluginName === 'highlight') { defaultIcon = 'highlight'; defaultTitle = 'Highlight'; }
+        else if (pluginName === 'highlight') { defaultIcon = 'highlight'; defaultTitle = 'Highlight'; } 
         else if (pluginName === 'bold') { defaultIcon = 'format_bold'; defaultTitle = 'Bold'; }
         else if (pluginName === 'italic') { defaultIcon = 'format_italic'; defaultTitle = 'Italic'; }
         else if (pluginName === 'underline') { defaultIcon = 'format_underlined'; defaultTitle = 'Underline'; }
