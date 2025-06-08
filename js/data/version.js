@@ -6,7 +6,7 @@
 
 window.LiteEditorVersion = {
   // 현재 버전
-  version: 'v1.0.59',
+  version: 'v1.0.61',
   
   // 개발자 정보
   developer: 'Code Villain',
@@ -17,7 +17,7 @@ window.LiteEditorVersion = {
     history: ['historyInit', 'undo', 'redo', 'reset'],
     
     // 폰트 서식
-    fonts: ['fontFamily', 'heading', 'fontColor', 'emphasis'],
+    fonts: ['fontFamily', 'heading', 'fontColor', 'highlight'],
     
     // 텍스트 서식
     formatting: ['bold', 'italic', 'underline', 'strike'],
