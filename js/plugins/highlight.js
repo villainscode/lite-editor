@@ -100,42 +100,6 @@
     }
   }
 
-  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (Task 11.1: 완전 단순화)
-  function handleDoubleClickCaseEnter(e, contentArea) {
-    // 🔧 Task 11.1: 완전 기본 동작 허용 (DOM 조작은 MutationObserver가 처리)
-    console.log('🔧 Task 11.1: 더블클릭 Enter - DOM 조작 방식으로 위임');
-    
-    // 아무것도 하지 않음 - 브라우저가 BR 생성 → MutationObserver가 커서 조정
-    return;
-  }
-
-  // 🔧 Task 5: code.js insertLineBreakInCode 함수 적용
-  function insertLineBreakInHighlight(highlightSpan) {
-    const selection = util.selection.getSafeSelection();
-    if (!selection || !selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    
-    console.log('🔧 Task 5: BR 삽입 전 커서 위치:', {
-      startContainer: range.startContainer.nodeName,
-      startOffset: range.startOffset
-    });
-    
-    // 🔧 현재 커서 위치에 <br> 태그 삽입 (code.js와 동일)
-    const br = document.createElement('br');
-    range.deleteContents();
-    range.insertNode(br);
-    
-    // 🔧 커서를 <br> 다음으로 이동 (code.js와 동일)
-    range.setStartAfter(br);
-    range.collapse(true);
-    
-    selection.removeAllRanges();
-    selection.addRange(range);
-    
-    console.log('✅ Task 5: BR 삽입 및 커서 위치 조정 완료');
-  }
-
   // ✅ 통합 키 핸들러 (Task 11: DOM 변경 후 커서 조정)
   function setupEnterKeyHandling(contentArea) {
     // 🔧 Task 11: DOM 변경 감지로 BR 생성 후 커서 조정
@@ -177,13 +141,15 @@
     
     contentArea.addEventListener('keydown', doubleClickKeyHandler, true);
     
-    // 기존 버블링 핸들러...
+    // 기존 버블링 핸들러 수정
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         if (currentCaseType === 'cursor') {
           handleCursorCaseEnter(e, contentArea);
         } else if (currentCaseType === 'drag') {
           handleDragCaseEnter(e, contentArea);
+        } else if (currentCaseType === 'doubleclick') {
+          handleDoubleClickCaseEnter(e, contentArea);
         }
       }
     });
@@ -371,6 +337,39 @@
       
     } catch (e) {
       console.error('❌ 하이라이트 적용 중 오류:', e);
+    }
+  }
+  
+  function handleDoubleClickCaseEnter(e, contentArea) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    let emphasisSpan = range.startContainer.nodeType === Node.TEXT_NODE 
+      ? range.startContainer.parentElement 
+      : range.startContainer;
+    
+    while (emphasisSpan && emphasisSpan !== contentArea) {
+      if (emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+        break;
+      }
+      emphasisSpan = emphasisSpan.parentElement;
+    }
+    
+    if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
+      if (e.shiftKey) {
+        return; // Shift+Enter - span 내부 줄바꿈
+      } else {
+        e.preventDefault(); // Enter - span 밖으로 나가기
+        const newP = util.dom.createElement('p');
+        newP.appendChild(document.createTextNode('\u00A0'));
+        const parentBlock = util.dom.findClosestBlock(emphasisSpan, contentArea);
+        if (parentBlock && parentBlock.parentNode) {
+          parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+          util.selection.moveCursorTo(newP.firstChild, 0);
+        }
+        util.editor.dispatchEditorEvent(contentArea);
+      }
     }
   }
   
