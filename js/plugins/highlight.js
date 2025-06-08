@@ -100,7 +100,7 @@
     }
   }
 
-  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (code.js 방식 적용)
+  // ✅ 케이스 3: 더블클릭 전용 키 핸들러 (Task 5: code.js 패턴 적용)
   function handleDoubleClickCaseEnter(e, contentArea) {
     const selection = util.selection.getSafeSelection();
     if (!selection || !selection.rangeCount) return;
@@ -119,29 +119,17 @@
     
     if (emphasisSpan && emphasisSpan.tagName === 'SPAN' && emphasisSpan.style.backgroundColor) {
       if (e.shiftKey) {
-        // 🔍 더블클릭 케이스 Shift+Enter 커서 위치 디버깅 로그 (간소화)
-        console.log('🟡 [더블클릭 케이스] Shift+Enter - code.js 방식 적용');
-        
-        // ✅ code.js 방식: preventDefault + 직접 BR 삽입
+        // 🔧 Task 5: code.js와 동일한 완전 제어 패턴
+        console.log('🔧 Task 5: code.js 패턴 - 완전한 이벤트 차단');
         e.preventDefault();
-        e.stopImmediatePropagation();
+        e.stopImmediatePropagation(); // 다른 핸들러 완전 차단
         
-        // 현재 커서 위치에 <br> 태그 삽입
-        const br = document.createElement('br');
-        range.deleteContents();
-        range.insertNode(br);
+        // 🔧 Task 5: 직접 BR 삽입 (code.js insertLineBreakInCode 패턴)
+        insertLineBreakInHighlight(emphasisSpan);
         
-        // 커서를 <br> 다음으로 이동
-        range.setStartAfter(br);
-        range.collapse(true);
-        
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        console.log('✅ span 내부에 BR 직접 삽입 완료');
-        
-        return;
+        console.log('✅ Task 5: code.js 패턴 - Shift+Enter 완료');
       } else {
+        // Enter: 하이라이트 탈출 (기존 로직 유지)
         e.preventDefault();
         const newP = util.dom.createElement('p');
         newP.appendChild(document.createTextNode('\u00A0'));
@@ -152,27 +140,56 @@
         }
         util.editor.dispatchEditorEvent(contentArea);
       }
-    } else {
-      // 하이라이트 span 밖에 있는 경우 (간소화)
-      if (e.shiftKey) {
-        console.log('🔴 [더블클릭 케이스] span 밖에 있음 - 기본 동작');
-      }
     }
   }
 
-  // ✅ 통합 키 핸들러 (케이스별 완전 분리)
+  // 🔧 Task 5: code.js insertLineBreakInCode 함수 적용
+  function insertLineBreakInHighlight(highlightSpan) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    console.log('🔧 Task 5: BR 삽입 전 커서 위치:', {
+      startContainer: range.startContainer.nodeName,
+      startOffset: range.startOffset
+    });
+    
+    // 🔧 현재 커서 위치에 <br> 태그 삽입 (code.js와 동일)
+    const br = document.createElement('br');
+    range.deleteContents();
+    range.insertNode(br);
+    
+    // 🔧 커서를 <br> 다음으로 이동 (code.js와 동일)
+    range.setStartAfter(br);
+    range.collapse(true);
+    
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    console.log('✅ Task 5: BR 삽입 및 커서 위치 조정 완료');
+  }
+
+  // ✅ 통합 키 핸들러 (Task 5: 더블클릭만 캡처 단계로 변경)
   function setupEnterKeyHandling(contentArea) {
+    // 🔧 더블클릭 케이스만 캡처 단계로 등록 (code.js 패턴)
+    const doubleClickKeyHandler = (e) => {
+      if (e.key === 'Enter' && currentCaseType === 'doubleclick') {
+        handleDoubleClickCaseEnter(e, contentArea);
+      }
+    };
+    
+    // 🔧 캡처 단계 등록 (code.js와 동일)
+    contentArea.addEventListener('keydown', doubleClickKeyHandler, true);
+    
+    // 🔧 커서/드래그 케이스는 기존 버블링 단계 유지
     contentArea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        // 케이스별 완전 분리 실행
         if (currentCaseType === 'cursor') {
           handleCursorCaseEnter(e, contentArea);
         } else if (currentCaseType === 'drag') {
           handleDragCaseEnter(e, contentArea);
-        } else if (currentCaseType === 'doubleclick') {
-          handleDoubleClickCaseEnter(e, contentArea);
         }
-        // currentCaseType이 null이면 기본 동작
       }
     });
   }
@@ -226,7 +243,7 @@
     util.scroll.restorePosition(scrollPosition);
   }
 
-  // ✅ 케이스 3: 더블클릭 전용 적용 함수 (새로 구현)
+  // ✅ 케이스 3: 더블클릭 전용 적용 함수 (Task 4.5: execCommand 전에 BR 제거)
   function applyDoubleClickHighlight(color, contentArea, colorIndicator) {
     const scrollPosition = util.scroll.savePosition();
     
@@ -236,36 +253,52 @@
       contentArea.focus();
     }
     
+    // 🔧 Task 4.5: 선택 영역 복원 전에 BR 제거
     const restored = util.selection.restoreSelection(savedRange);
     if (!restored) return;
     
-    // BR 분리 로직 (더블클릭 케이스만)
+    // 🔧 Task 4.5: execCommand 전에 BR을 선택 영역에서 제거
     const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    const fragment = range.cloneContents();
-    const tempDiv = document.createElement('div');
-    tempDiv.appendChild(fragment);
-    
-    if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
-      const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ALL);
-      while (walker.nextNode()) {
-        if (walker.currentNode.nodeName === 'BR' && range.intersectsNode(walker.currentNode)) {
-          range.setEndBefore(walker.currentNode);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          break;
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const fragment = range.cloneContents();
+      const tempDiv = document.createElement('div');
+      tempDiv.appendChild(fragment);
+      
+      if (tempDiv.innerHTML.includes('<br>')) {
+        console.log('🔧 Task 4.5: execCommand 전 BR 제거');
+        
+        // TreeWalker로 BR 찾아서 선택 영역에서 제외
+        const walker = document.createTreeWalker(
+          range.commonAncestorContainer,
+          NodeFilter.SHOW_ALL,
+          null,
+          false
+        );
+        
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (range.intersectsNode(node) && node.nodeName === 'BR') {
+            range.setEndBefore(node);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            console.log('✅ Task 4.5: BR 제외하고 range 재설정');
+            break;
+          }
         }
       }
     }
     
+    // execCommand 실행 (BR이 제거된 상태)
     document.execCommand('hiliteColor', false, color);
     
-    // 더블클릭 마커 추가
+    // 더블클릭 마커만 추가
     setTimeout(() => {
       const spans = contentArea.querySelectorAll('span[style*="background-color"]');
       const lastSpan = spans[spans.length - 1];
-      if (lastSpan) {
+      if (lastSpan && !lastSpan.hasAttribute('data-highlight-doubleclick')) {
         lastSpan.setAttribute('data-highlight-doubleclick', 'true');
+        console.log('✅ Task 4.5: 더블클릭 마커 추가');
       }
     }, 10);
     
@@ -369,7 +402,7 @@
       
       document.body.appendChild(dropdownMenu);
       
-      // ✅ 케이스 타입 결정 로직 (mousedown에서)
+      // 🔧 Task 2.2: 케이스 타입 결정 로직 개선
       highlightContainer.addEventListener('mousedown', (e) => {
         const selection = util.selection.getSafeSelection();
         if (selection && selection.rangeCount > 0) {
@@ -377,15 +410,21 @@
           const selectedText = range.toString().trim();
           
           if (selectedText) {
-            // 선택 영역 있음 - BR 확인해서 케이스 결정
+            // 🔧 Task 2.2: 더블클릭 감지 개선
             const fragment = range.cloneContents();
             const tempDiv = document.createElement('div');
             tempDiv.appendChild(fragment);
             
-            if (tempDiv.innerHTML.endsWith('<br>') || tempDiv.innerHTML.endsWith('<br/>')) {
+            console.log('🔍 Task 2.2: 선택된 HTML:', tempDiv.innerHTML);
+            console.log('🔍 Task 2.2: BR 포함 여부:', tempDiv.innerHTML.includes('<br>'));
+            console.log('🔍 Task 2.2: 선택된 텍스트:', selectedText);
+            
+            if (tempDiv.innerHTML.includes('<br>')) {
               currentCaseType = 'doubleclick';
+              console.log('✅ Task 2.2: 더블클릭 케이스 감지');
             } else {
               currentCaseType = 'drag';
+              console.log('✅ Task 2.2: 드래그 케이스 감지');
             }
             
             savedRange = util.selection.saveSelection();
@@ -400,11 +439,13 @@
               endContainer: range.endContainer,
               endOffset: range.endOffset
             };
+            console.log('✅ Task 2.2: 커서 케이스 감지');
           }
         } else {
           currentCaseType = null;
           savedRange = null;
           savedCursorPosition = null;
+          console.log('⚠️ Task 2.2: 선택 영역 없음');
         }
       });
       
