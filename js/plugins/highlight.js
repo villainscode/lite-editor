@@ -238,17 +238,29 @@
           }, 10); // DOM 조작 완료 후 실행
           
         } else {
-          // 더블클릭 Enter: span 밖으로 나가기
-          console.log('🔴 더블클릭 Enter: span 밖으로 나가기');
+          // 더블클릭 Enter: span 밖으로 나가기 - P 태그 생성 방식으로 통일
+          console.log('🔴 더블클릭 Enter: span 밖으로 나가기 - P 태그 생성 방식');
           e.preventDefault();
           
-          let spaceNode = span.nextSibling;
-          if (!spaceNode || spaceNode.nodeType !== Node.TEXT_NODE) {
-            spaceNode = document.createTextNode('\u00A0');
-            span.parentNode.insertBefore(spaceNode, span.nextSibling);
+          // 🔥 커서/드래그와 동일한 방식으로 변경
+          const newP = util.dom.createElement('p');
+          newP.appendChild(document.createTextNode('\u00A0'));
+          const parentBlock = util.dom.findClosestBlock(span, contentArea);
+          
+          if (parentBlock && parentBlock.parentNode) {
+            parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+            util.selection.moveCursorTo(newP.firstChild, 0);
+          } else {
+            // 🚨 fallback: findClosestBlock 실패 시 기존 방식
+            console.warn('🚨 findClosestBlock 실패 - 기존 방식으로 fallback');
+            let spaceNode = span.nextSibling;
+            if (!spaceNode || spaceNode.nodeType !== Node.TEXT_NODE) {
+              spaceNode = document.createTextNode('\u00A0');
+              span.parentNode.insertBefore(spaceNode, span.nextSibling);
+            }
+            util.selection.moveCursorTo(spaceNode, 0);
           }
           
-          util.selection.moveCursorTo(spaceNode, 0);
           util.editor.dispatchEditorEvent(contentArea);
         }
       }
