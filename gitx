@@ -8,6 +8,7 @@ set -euo pipefail
 #   ./gitx push                               # git fetch → push - ./gitx push
 #   ./gitx reset                              # 로컬 변경사항 버리기 (reset --hard, clean -fd) -" ./gitx reset
 #   ./gitx merge                              # 현재 브랜치를 develop 브랜치로 병합 - ./gitx merge "[docs] : 문서 수정"
+#   ./gitx fmerge                             # 현재 브랜치를 develop에 강제 병합 후 푸시 - ./gitx fmerge
 #   ./gitx fetch                              # 모든 원격 저장소 fetch (git fetch --all) - ./gitx fetch
 #   ./gitx checkout [branch명]                 # 새 브랜치 생성 및 체크아웃 - ./gitx checkout feature/login
 #   ./gitx merge-from <source-branch>         # <source-branch>를 현재 브랜치에 병합 & 푸시 - ./gitx merge-from develop
@@ -72,6 +73,50 @@ do_merge() {
   git merge "$current_branch" --no-ff -m "$merge_msg"
   echo "✅ '$current_branch' 브랜치가 'develop'으로 병합되었습니다."
   echo "ℹ️ 변경사항을 원격 'develop' 브랜치에 푸시하려면 './gitx push'를 실행하세요."
+}
+
+do_force_merge() {
+  current_branch=$(git rev-parse --abbrev-ref HEAD)
+  if [[ "$current_branch" == "develop" ]]; then
+    echo "❗️ 현재 브랜치가 이미 'develop'입니다. 병합할 필요가 없습니다."
+    exit 1
+  fi
+
+  merge_msg="${2:-"[강제병합] Merge branch '$current_branch' into develop"}"
+
+  echo "🚨 현재 브랜치 '$current_branch'를 'develop'에 강제 병합 후 푸시합니다."
+  echo "ℹ️ 커밋 메시지: \"$merge_msg\""
+  echo "⚠️  이 작업은 되돌릴 수 없습니다!"
+  read -p "정말로 계속하시겠습니까? (y/N): " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "취소되었습니다."
+    exit 1
+  fi
+
+  echo "🔄 현재 브랜치 변경사항 커밋 중..."
+  git add .
+  if ! git diff --staged --quiet; then
+    git commit -m "WIP: Auto-commit before force merge" || true
+  fi
+
+  echo "🔄 'develop' 브랜치로 이동 중..."
+  git checkout develop
+  
+  echo "🔄 'develop' 브랜치의 최신 변경사항을 가져오는 중..."
+  git pull origin develop
+  
+  echo "🔄 '$current_branch' 브랜치를 'develop'으로 강제 병합 중..."
+  git merge "$current_branch" --no-ff -m "$merge_msg" --strategy-option=theirs || {
+    echo "⚠️ 병합 충돌 발생. 자동으로 현재 브랜치 우선으로 해결 중..."
+    git add .
+    git commit -m "$merge_msg" || true
+  }
+  
+  echo "🔄 'develop' 브랜치에 푸시 중..."
+  git push origin develop
+  
+  echo "✅ '$current_branch' 브랜치가 'develop'에 강제 병합되고 푸시되었습니다."
+  echo "ℹ️ 현재 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 }
 
 do_fetch() {
@@ -156,6 +201,9 @@ case "$cmd" in
   merge)
     do_merge "$@"
     ;;
+  fmerge)
+    do_force_merge "$@"
+    ;;
   merge-from)
     do_merge_from "$@"
     ;;
@@ -170,7 +218,7 @@ case "$cmd" in
     ;;
   *)
     if [[ -z "$cmd" ]]; then
-      echo "❗️ 사용법: ./gitx commit/push/reset/merge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
+      echo "❗️ 사용법: ./gitx commit/push/reset/merge/fmerge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
       exit 1
     elif [[ "$cmd" == *" : "* ]]; then
         # 전체 워크플로우: commit + push
@@ -178,7 +226,7 @@ case "$cmd" in
         do_push
     else
         echo "❗️ 잘못된 명령어 또는 커밋 메시지 형식입니다. 사용법을 확인하세요."
-        echo "   ./gitx commit/push/reset/merge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
+        echo "   ./gitx commit/push/reset/merge/fmerge/merge-from/fetch/checkout/abort 또는 ./gitx \"[prefix] : message\""
         exit 1
     fi
     ;;
