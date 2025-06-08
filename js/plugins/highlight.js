@@ -31,79 +31,110 @@
     return util.dataLoader.loadColorData('highlight', defaultColors);
   }
 
+  // 🔧 공통 유틸리티 함수들
+  function findHighlightSpan(contentArea) {
+    const selection = util.selection.getSafeSelection();
+    if (!selection || !selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    let span = range.startContainer.nodeType === Node.TEXT_NODE 
+      ? range.startContainer.parentElement 
+      : range.startContainer;
+    
+    while (span && span !== contentArea) {
+      if (span.tagName === 'SPAN' && span.style.backgroundColor) {
+        break;
+      }
+      span = span.parentElement;
+    }
+    
+    return { span, selection, range };
+  }
+
+  function handleShiftEnter(selection, span) {
+    const currentRange = selection.getRangeAt(0);
+    const br = document.createElement('br');
+    currentRange.deleteContents();
+    currentRange.insertNode(br);
+    
+    const spaceNode = document.createTextNode('\u00A0');
+    br.parentNode.insertBefore(spaceNode, br.nextSibling);
+    
+    const newRange = document.createRange();
+    newRange.setStart(spaceNode, 0);
+    newRange.collapse(true);
+    
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
+
+  function removeDuplicateBR(span) {
+    setTimeout(() => {
+      const allBRs = span.querySelectorAll('br');
+      for (let i = allBRs.length - 1; i > 0; i--) {
+        const currentBR = allBRs[i];
+        const prevBR = allBRs[i - 1];
+        
+        let prevNode = currentBR.previousSibling;
+        while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
+          prevNode = prevNode.previousSibling;
+        }
+        
+        if (prevNode === prevBR) {
+          currentBR.remove();
+        }
+      }
+    }, 10);
+  }
+
+  function handleEnterKey(span, contentArea) {
+    const newP = util.dom.createElement('p');
+    newP.appendChild(document.createTextNode('\u00A0'));
+    const parentBlock = util.dom.findClosestBlock(span, contentArea);
+    if (parentBlock && parentBlock.parentNode) {
+      parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
+      util.selection.moveCursorTo(newP.firstChild, 0);
+    }
+  }
+
+  function applyColorToIndicator(colorIndicator, color) {
+    if (colorIndicator) {
+      colorIndicator.style.backgroundColor = color;
+      colorIndicator.style.border = 'none';
+    }
+  }
+
+  function safeFocus(contentArea) {
+    try {
+      contentArea.focus({ preventScroll: true });
+    } catch (e) {
+      contentArea.focus();
+    }
+  }
+
   // 🔥 시스템 1: 커서 전용 완전 독립 시스템
   const CursorSystem = {
     handleEnter(e, contentArea) {
       if (currentCaseType !== 'cursor') return;
       console.log('🔵 CursorSystem.handleEnter 실행');
       
-      const selection = util.selection.getSafeSelection();
-      if (!selection || !selection.rangeCount) return;
+      const result = findHighlightSpan(contentArea);
+      if (!result) return;
       
-      const range = selection.getRangeAt(0);
-      let span = range.startContainer.nodeType === Node.TEXT_NODE 
-        ? range.startContainer.parentElement 
-        : range.startContainer;
-      
-      while (span && span !== contentArea) {
-        if (span.tagName === 'SPAN' && span.style.backgroundColor) {
-          break;
-        }
-        span = span.parentElement;
-      }
-      
+      const { span, selection } = result;
       if (span && span.tagName === 'SPAN' && span.style.backgroundColor) {
-        // 일반 span 처리
         if (e.shiftKey) {
           console.log('🔵 커서 Shift+Enter 처리');
           e.preventDefault();
           
-          const currentRange = selection.getRangeAt(0);
-          const br = document.createElement('br');
-          currentRange.deleteContents();
-          currentRange.insertNode(br);
-          
-          const spaceNode = document.createTextNode('\u00A0');
-          br.parentNode.insertBefore(spaceNode, br.nextSibling);
-          
-          const newRange = document.createRange();
-          newRange.setStart(spaceNode, 0);
-          newRange.collapse(true);
-          
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-          
+          handleShiftEnter(selection, span);
           util.editor.dispatchEditorEvent(contentArea);
-          
-          // 중복 BR 제거
-          setTimeout(() => {
-            const allBRs = span.querySelectorAll('br');
-            for (let i = allBRs.length - 1; i > 0; i--) {
-              const currentBR = allBRs[i];
-              const prevBR = allBRs[i - 1];
-              
-              let prevNode = currentBR.previousSibling;
-              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
-                prevNode = prevNode.previousSibling;
-              }
-              
-              if (prevNode === prevBR) {
-                console.log('🔵 커서 중복 BR 제거');
-                currentBR.remove();
-              }
-            }
-          }, 10);
+          removeDuplicateBR(span);
           
         } else {
           console.log('🔵 커서 Enter 처리');
           e.preventDefault();
-          const newP = util.dom.createElement('p');
-          newP.appendChild(document.createTextNode('\u00A0'));
-          const parentBlock = util.dom.findClosestBlock(span, contentArea);
-          if (parentBlock && parentBlock.parentNode) {
-            parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
-            util.selection.moveCursorTo(newP.firstChild, 0);
-          }
+          handleEnterKey(span, contentArea);
           util.editor.dispatchEditorEvent(contentArea);
         }
       }
@@ -112,11 +143,7 @@
     applyHighlight(color, contentArea, colorIndicator) {
       console.log('🔵 CursorSystem.applyHighlight 실행');
       if (document.activeElement !== contentArea) {
-        try {
-          contentArea.focus({ preventScroll: true });
-        } catch (e) {
-          contentArea.focus();
-        }
+        safeFocus(contentArea);
       }
       
       if (savedCursorPosition) {
@@ -144,72 +171,23 @@
       if (currentCaseType !== 'drag') return;
       console.log('🟢 DragSystem.handleEnter 실행');
       
-      const selection = util.selection.getSafeSelection();
-      if (!selection || !selection.rangeCount) return;
+      const result = findHighlightSpan(contentArea);
+      if (!result) return;
       
-      const range = selection.getRangeAt(0);
-      let span = range.startContainer.nodeType === Node.TEXT_NODE 
-        ? range.startContainer.parentElement 
-        : range.startContainer;
-      
-      while (span && span !== contentArea) {
-        if (span.tagName === 'SPAN' && span.style.backgroundColor) {
-          break;
-        }
-        span = span.parentElement;
-      }
-      
+      const { span, selection } = result;
       if (span && span.tagName === 'SPAN' && span.style.backgroundColor) {
         if (e.shiftKey) {
           console.log('🟢 드래그 Shift+Enter 처리');
           e.preventDefault();
           
-          const currentRange = selection.getRangeAt(0);
-          const br = document.createElement('br');
-          currentRange.deleteContents();
-          currentRange.insertNode(br);
-          
-          const spaceNode = document.createTextNode('\u00A0');
-          br.parentNode.insertBefore(spaceNode, br.nextSibling);
-          
-          const newRange = document.createRange();
-          newRange.setStart(spaceNode, 0);
-          newRange.collapse(true);
-          
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-          
+          handleShiftEnter(selection, span);
           util.editor.dispatchEditorEvent(contentArea);
-          
-          // 중복 BR 제거
-          setTimeout(() => {
-            const allBRs = span.querySelectorAll('br');
-            for (let i = allBRs.length - 1; i > 0; i--) {
-              const currentBR = allBRs[i];
-              const prevBR = allBRs[i - 1];
-              
-              let prevNode = currentBR.previousSibling;
-              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
-                prevNode = prevNode.previousSibling;
-              }
-              
-              if (prevNode === prevBR) {
-                console.log('🟢 드래그 중복 BR 제거');
-                currentBR.remove();
-              }
-            }
-          }, 10);
+          removeDuplicateBR(span);
           
         } else {
           console.log('🟢 드래그 Enter 처리');
           e.preventDefault();
-          const newP = util.dom.createElement('p');
-          newP.appendChild(document.createTextNode('\u00A0'));
-          const parentBlock = util.dom.findClosestBlock(span, contentArea);
-          if (parentBlock && parentBlock.parentNode) {
-            parentBlock.parentNode.insertBefore(newP, parentBlock.nextSibling);
-            util.selection.moveCursorTo(newP.firstChild, 0);
-          }
+          handleEnterKey(span, contentArea);
           util.editor.dispatchEditorEvent(contentArea);
         }
       }
@@ -219,11 +197,7 @@
       console.log('🟢 DragSystem.applyHighlight 실행');
       const scrollPosition = util.scroll.savePosition();
       
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
+      safeFocus(contentArea);
       
       const restored = util.selection.restoreSelection(savedRange);
       if (!restored) return;
@@ -239,60 +213,18 @@
       if (currentCaseType !== 'doubleclick') return;
       console.log('🔴 DoubleClickSystem.handleEnter 실행');
       
-      const selection = util.selection.getSafeSelection();
-      if (!selection || !selection.rangeCount) return;
+      const result = findHighlightSpan(contentArea);
+      if (!result) return;
       
-      const range = selection.getRangeAt(0);
-      let span = range.startContainer.nodeType === Node.TEXT_NODE 
-        ? range.startContainer.parentElement 
-        : range.startContainer;
-      
-      while (span && span !== contentArea) {
-        if (span.tagName === 'SPAN' && span.style.backgroundColor) {
-          break;
-        }
-        span = span.parentElement;
-      }
-      
+      const { span, selection } = result;
       if (span && span.tagName === 'SPAN' && span.style.backgroundColor) {
         if (e.shiftKey) {
           console.log('🔴 더블클릭 Shift+Enter 처리');
           e.preventDefault();
           
-          const currentRange = selection.getRangeAt(0);
-          const br = document.createElement('br');
-          currentRange.deleteContents();
-          currentRange.insertNode(br);
-          
-          const spaceNode = document.createTextNode('\u00A0');
-          br.parentNode.insertBefore(spaceNode, br.nextSibling);
-          
-          const newRange = document.createRange();
-          newRange.setStart(spaceNode, 0);
-          newRange.collapse(true);
-          
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-          
+          handleShiftEnter(selection, span);
           util.editor.dispatchEditorEvent(contentArea);
-          
-          setTimeout(() => {
-            const allBRs = span.querySelectorAll('br');
-            for (let i = allBRs.length - 1; i > 0; i--) {
-              const currentBR = allBRs[i];
-              const prevBR = allBRs[i - 1];
-              
-              let prevNode = currentBR.previousSibling;
-              while (prevNode && prevNode.nodeType === Node.TEXT_NODE && prevNode.textContent.trim() === '') {
-                prevNode = prevNode.previousSibling;
-              }
-              
-              if (prevNode === prevBR) {
-                console.log('🔴 더블클릭 중복 BR 제거');
-                currentBR.remove();
-              }
-            }
-          }, 10);
+          removeDuplicateBR(span);
           
         } else {
           console.log('🔴 더블클릭 Enter 처리');
@@ -323,11 +255,7 @@
       console.log('🔴 DoubleClickSystem.applyHighlight 실행');
       const scrollPosition = util.scroll.savePosition();
       
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
-      }
+      safeFocus(contentArea);
       
       const restored = util.selection.restoreSelection(savedRange);
       if (!restored) return;
@@ -429,48 +357,21 @@
 
   // 🔥 완전 분리: 3개 독립 적용 함수
   function applyCursorHighlightColor(color, contentArea, colorIndicator) {
-    try {
-      if (colorIndicator) {
-        colorIndicator.style.backgroundColor = color;
-        colorIndicator.style.border = 'none';
-      }
-      
-      CursorSystem.applyHighlight(color, contentArea, colorIndicator);
-      util.editor.dispatchEditorEvent(contentArea);
-      
-    } catch (e) {
-      console.error('❌ 커서 하이라이트 적용 중 오류:', e);
-    }
+    applyColorToIndicator(colorIndicator, color);
+    CursorSystem.applyHighlight(color, contentArea, colorIndicator);
+    util.editor.dispatchEditorEvent(contentArea);
   }
 
   function applyDragHighlightColor(color, contentArea, colorIndicator) {
-    try {
-      if (colorIndicator) {
-        colorIndicator.style.backgroundColor = color;
-        colorIndicator.style.border = 'none';
-      }
-      
-      DragSystem.applyHighlight(color, contentArea, colorIndicator);
-      util.editor.dispatchEditorEvent(contentArea);
-      
-    } catch (e) {
-      console.error('❌ 드래그 하이라이트 적용 중 오류:', e);
-    }
+    applyColorToIndicator(colorIndicator, color);
+    DragSystem.applyHighlight(color, contentArea, colorIndicator);
+    util.editor.dispatchEditorEvent(contentArea);
   }
 
   function applyDoubleClickHighlightColor(color, contentArea, colorIndicator) {
-    try {
-      if (colorIndicator) {
-        colorIndicator.style.backgroundColor = color;
-        colorIndicator.style.border = 'none';
-      }
-      
-      DoubleClickSystem.applyHighlight(color, contentArea, colorIndicator);
-      util.editor.dispatchEditorEvent(contentArea);
-      
-    } catch (e) {
-      console.error('❌ 더블클릭 하이라이트 적용 중 오류:', e);
-    }
+    applyColorToIndicator(colorIndicator, color);
+    DoubleClickSystem.applyHighlight(color, contentArea, colorIndicator);
+    util.editor.dispatchEditorEvent(contentArea);
   }
 
   LiteEditor.registerPlugin('highlight', {
