@@ -470,6 +470,13 @@
       submitButton
     };
 
+    // ✅ 드롭다운에 이벤트 리스너 추가
+    urlInput.addEventListener('paste', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // 텍스트만 처리하는 로직
+    });
+
     return cachedDropdownElements;
   }
   

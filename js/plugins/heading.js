@@ -15,16 +15,6 @@
   let savedCursorPosition = null;
   let isDropdownOpen = false;
   
-  // 선택 영역 저장/복원 함수
-  function saveSelection() {
-    savedRange = util.selection.saveSelection();
-  }
-
-  function restoreSelection() {
-    if (!savedRange) return false;
-    return util.selection.restoreSelection(savedRange);
-  }  
-
   /**
    * Enter 키 처리 함수 - heading 블럭에서 나가기
    */
@@ -87,13 +77,14 @@
       // 제목 버튼 생성
       const headingButton = util.dom.createElement('button', {
         className: 'lite-editor-button lite-editor-heading-button',
-        title: 'Heading'
+        title: 'Heading (⌘1~4)'
+
       });
       
       // 아이콘 추가
       const icon = util.dom.createElement('i', {
         className: 'material-icons',
-        textContent: 'title'
+        textContent: 'format_size'
       });
       headingButton.appendChild(icon);
       
