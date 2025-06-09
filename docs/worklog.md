@@ -161,7 +161,7 @@ insertTable	@	table.js:584
 [x] 이미지 클립보드에 있는거 입력 가능하게 
 [x] 현재 bullet list에서 엔터 후 탭키를 두번 누르면 bullet style이 사라지는 버그가 있음 (마이너)
 [ ] b, u, i, s 단축키 윈도우, 맥 전용 기본키로 다시 설정해야 함 (충돌이 나는 상황이 있을수 있음 - 마이너)
-
+[ ] b, u, i, s 단축키 redo, undo 에서 strike 의 경우 적용이 안되는 버그가 있음 
 
 
 

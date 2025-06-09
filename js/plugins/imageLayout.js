@@ -695,6 +695,20 @@
         document.addEventListener('keydown', (e) => {
             // ✅ 붙여넣기는 copiedImageData가 있으면 selectedImage 없어도 허용
             if (e.key === 'v' && (e.ctrlKey || e.metaKey) && copiedImageData) {
+                // ✅ 현재 포커스된 요소가 특정 플러그인 레이어 내부인지 확인
+                const focusedElement = document.activeElement;
+                const mediaDropdown = focusedElement?.closest('.media-dropdown');
+                const codeBlockLayer = focusedElement?.closest('.lite-editor-code-block-layer');
+                
+                if (mediaDropdown || codeBlockLayer) {
+                    // 특정 플러그인 레이어 내부에서는 이미지 붙여넣기 차단
+                    console.log('플러그인 레이어 내부에서 이미지 붙여넣기 차단:', {
+                        mediaDropdown: !!mediaDropdown,
+                        codeBlockLayer: !!codeBlockLayer
+                    });
+                    return;
+                }
+                
                 console.log('붙여넣기 시도:', { copiedImageData: !!copiedImageData, isCut, selectedImage: !!selectedImage });
                 e.preventDefault();
                 pasteImageAtCursor();
