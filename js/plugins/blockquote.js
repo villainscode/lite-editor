@@ -62,71 +62,69 @@
     marker.setAttribute('data-blockquote-enter-handler', 'true');
     document.body.appendChild(marker);
   }
-  
-  // PluginUtil 참조 추가
-  const util = window.PluginUtil;
 
-  // 플러그인 등록 - 기본 동작만 사용
-  LiteEditor.registerPlugin('blockquote', {
+  // ✅ 공통 로직을 별도 함수로 추출
+  function executeBlockquoteAction(contentArea, triggerSource = 'unknown') {
+    if (!contentArea) return;
+    if (!PluginUtil.utils.canExecutePlugin(contentArea)) return;
+    
+    contentArea.focus();
+    
+    // 히스토리 기록
+    if (window.LiteEditorHistory) {
+      window.LiteEditorHistory.forceRecord(contentArea, `Before Blockquote (${triggerSource})`);
+    }
+    
+    document.execCommand('formatBlock', false, 'blockquote');
+    
+    // ✅ 커서를 텍스트 마지막으로 이동
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.collapse(false); // false = 끝으로 이동
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      // 히스토리 완료 기록
+      if (window.LiteEditorHistory) {
+        window.LiteEditorHistory.recordState(contentArea, `After Blockquote (${triggerSource})`);
+      }
+    }, 100);
+  }
+
+  // ✅ 플러그인 등록 (간소화)
+  PluginUtil.registerPlugin('blockquote', {
     title: 'Blockquote',
     icon: 'format_quote',
-    customRender: function(toolbar, contentArea) {
-      const button = util.dom.createElement('button', {
-        className: 'lite-editor-button',
-        title: 'Blockquote'
-      });
+    action: function(contentArea, buttonElement, event) {
+      if (event) event.preventDefault();
+      executeBlockquoteAction(contentArea, 'Button Click');
+    }
+  });
 
-      const icon = util.dom.createElement('i', {
-        className: 'material-icons',
-        textContent: 'format_quote'
-      });
-      button.appendChild(icon);
+  // ✅ 단축키 등록 (Alt+Shift+B)
+  document.addEventListener('keydown', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+    if (!editorContainer) return;
 
-      button.addEventListener('click', (e) => {
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // ✅ Alt+Shift+B (Mac/Windows 공통)
+    if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'b') {
+      try {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (!util.utils.canExecutePlugin(contentArea)) {
-            return;
+        executeBlockquoteAction(contentArea, 'Alt+Shift+B');
+      } catch (error) {
+        if (window.errorHandler) {
+          errorHandler.logWarning('BlockquotePlugin', 'Alt+Shift+B 처리 중 확장 프로그램 충돌', error);
         }
-        
-        contentArea.focus();
-        
-        document.execCommand('formatBlock', false, 'blockquote');
-        
-        // ✅ 커서를 텍스트 마지막으로 이동 (code와 일관성)
-        setTimeout(() => {
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.collapse(false); // false = 끝으로 이동
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        }, 0);
-      });
-
-      return button;
+      }
     }
-  });
-
-  // Blockquote 단축키 (Alt+Q)
-  LiteEditor.registerShortcut('blockquote', {
-    key: 'q',
-    alt: true,
-    action: function(contentArea) {
-      document.execCommand('formatBlock', false, 'blockquote');
-      
-      // ✅ 커서를 텍스트 마지막으로 이동
-      setTimeout(() => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }, 0);
-    }
-  });
+  }, true);
 })();

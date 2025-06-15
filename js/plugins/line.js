@@ -4,70 +4,38 @@
  */
 
 (function() {
-    // PluginUtil 참조
-    const util = window.PluginUtil;
-    
     // 🔧 추가: 플러그인 인스턴스 관리
     const pluginInstances = new WeakMap();
-    
-    /**
-     * 라인 버튼 렌더링 (메모리 안전 버전)
-     */
-    function renderLineButton(toolbar, contentArea) {
-        const lineButton = util.dom.createElement('button', {
-            className: 'lite-editor-button lite-editor-line-button',
-            title: 'Insert Line'
-        });
 
-        const lineIcon = util.dom.createElement('i', {
-            className: 'material-icons',
-            textContent: 'horizontal_rule'
-        });
-        lineButton.appendChild(lineIcon);
+    // ✅ 공통 로직을 별도 함수로 추출
+    function executeLineAction(contentArea, triggerSource = 'unknown') {
+        if (!contentArea) return;
+        if (!PluginUtil.utils.canExecutePlugin(contentArea)) return;
         
-        // 🔧 개선: 메모리 안전한 이벤트 핸들러
-        const clickHandler = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // 🔧 개선: contentArea 유효성 검사
-            if (contentArea && contentArea.isConnected) {
-                insertLine(contentArea);
+        contentArea.focus();
+        
+        // 히스토리 기록
+        if (window.LiteEditorHistory) {
+            window.LiteEditorHistory.forceRecord(contentArea, `Before Insert Line (${triggerSource})`);
+        }
+        
+        insertLine(contentArea);
+        
+        // 히스토리 완료 기록
+        setTimeout(() => {
+            if (window.LiteEditorHistory) {
+                window.LiteEditorHistory.recordState(contentArea, `After Insert Line (${triggerSource})`);
             }
-        };
-        
-        lineButton.addEventListener('click', clickHandler);
-        
-        // 🔧 추가: 정리 함수 등록
-        pluginInstances.set(lineButton, {
-            cleanup: () => {
-                lineButton.removeEventListener('click', clickHandler);
-                // DOM 참조 해제
-                lineButton.innerHTML = '';
-            }
-        });
-        
-        return lineButton;
+        }, 100);
     }
 
-    // 플러그인 등록
-    util.registerPlugin('line', {
+    // ✅ 플러그인 등록 (간소화)
+    PluginUtil.registerPlugin('line', {
         title: 'Insert Line',
-        icon: 'horizontal_rule', 
-        customRender: renderLineButton,
-        
-        // 🔧 추가: 플러그인 정리 함수
-        cleanup: function(editor) {
-            const buttons = editor.toolbar?.querySelectorAll('.lite-editor-line-button');
-            if (buttons) {
-                buttons.forEach(button => {
-                    const instance = pluginInstances.get(button);
-                    if (instance && instance.cleanup) {
-                        instance.cleanup();
-                        pluginInstances.delete(button);
-                    }
-                });
-            }
+        icon: 'horizontal_rule',
+        action: function(contentArea, buttonElement, event) {
+            if (event) event.preventDefault();
+            executeLineAction(contentArea, 'Button Click');
         }
     });
 
@@ -75,15 +43,6 @@
      * HR 라인 삽입 함수 (공통 함수 사용)
      */
     function insertLine(contentArea) {
-        // ✅ 한 줄로 모든 체크 완료!
-        if (!PluginUtil.utils.canExecutePlugin(contentArea)) {
-            return;
-        }
-        
-        // ✅ 포커스 설정 (이미 체크 완료된 상태)
-        contentArea.focus();
-        
-        // ✅ 기존 HR 삽입 로직...
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) {
             appendHrToEnd(contentArea);
@@ -220,6 +179,30 @@
             }, '#2196f3');
         }
     }
+
+    // ✅ 단축키 등록 (Alt+Shift+H)
+    document.addEventListener('keydown', function(e) {
+        const contentArea = e.target.closest('[contenteditable="true"]');
+        if (!contentArea) return;
+        
+        const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+        if (!editorContainer) return;
+
+        const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+        // ✅ Alt+Shift+H (Mac/Windows 공통)
+        if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'h') {
+            try {
+                e.preventDefault();
+                e.stopPropagation();
+                executeLineAction(contentArea, 'Alt+Shift+H');
+            } catch (error) {
+                if (window.errorHandler) {
+                    errorHandler.logWarning('LinePlugin', 'Alt+Shift+H 처리 중 확장 프로그램 충돌', error);
+                }
+            }
+        }
+    }, true);
 
     // 🔧 추가: 페이지 언로드 시 정리
     window.addEventListener('beforeunload', function() {
