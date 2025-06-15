@@ -388,37 +388,21 @@
     if (!contentArea) return;
 
     const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+    
+    // 단축키 조합 체크
+    const isHeadingShortcut = 
+      ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && 
+      e.altKey && 
+      !e.shiftKey && 
+      ['1', '2', '3', '4'].includes(e.key);
 
-    // ✅ Alt+Cmd+1 (Mac) / Alt+Ctrl+1 (Windows/Linux)
-    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '1') {
+    if (isHeadingShortcut) {
       e.preventDefault();
+      e.stopPropagation();
       e.stopImmediatePropagation();
-      applyHeadingByShortcut('h1', contentArea);
-      return;
+      
+      const tag = e.key === '4' ? 'p' : `h${e.key}`;
+      applyHeadingByShortcut(tag, contentArea);
     }
-    
-    // ✅ Alt+Cmd+2 (Mac) / Alt+Ctrl+2 (Windows/Linux)
-    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '2') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      applyHeadingByShortcut('h2', contentArea);
-      return;
-    }
-    
-    // ✅ Alt+Cmd+3 (Mac) / Alt+Ctrl+3 (Windows/Linux)
-    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '3') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      applyHeadingByShortcut('h3', contentArea);
-      return;
-    }
-    
-    // ✅ Alt+Cmd+4 (Mac) / Alt+Ctrl+4 (Windows/Linux)
-    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '4') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      applyHeadingByShortcut('p', contentArea);
-      return;
-    }
-  }, true); // ✅ capture: true로 최우선 처리
+  }, true);
 })();
