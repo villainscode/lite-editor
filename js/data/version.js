@@ -5,7 +5,7 @@
 
 window.LiteEditorVersion = {
   // 현재 버전
-  version: 'v1.0.81',
+  version: 'v1.0.85',
   
   // 릴리즈 날짜
   releaseDate: '2025-01-09',
