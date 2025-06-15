@@ -102,7 +102,7 @@
   
   // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('orderedList', {
-    title: 'Numbered List',
+    title: 'Numbered List (⌘⇧7)',
     icon: 'format_list_numbered',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();

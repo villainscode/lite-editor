@@ -31,7 +31,7 @@
 
     // ✅ 플러그인 등록 (간소화)
     PluginUtil.registerPlugin('line', {
-        title: 'Insert Line',
+        title: 'Insert Line (⌥⇧H)',
         icon: 'horizontal_rule',
         action: function(contentArea, buttonElement, event) {
             if (event) event.preventDefault();

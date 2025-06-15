@@ -8,7 +8,7 @@
    * 밑줄 플러그인 (PluginUtil 유틸리티 활용)
    * 2025-03-30 리팩토링: PluginUtil.registerInlineFormatPlugin 활용
    */
-  PluginUtil.registerInlineFormatPlugin('underline', 'Underline', 'format_underlined');
+  PluginUtil.registerInlineFormatPlugin('underline', 'Underline (⌘U)', 'format_underlined');
   
   // 밑줄 기능 실행 함수
   function applyUnderline(contentArea) {

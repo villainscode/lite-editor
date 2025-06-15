@@ -355,14 +355,10 @@
   
   // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('checkList', {
-    title: 'Check List',
+    title: 'Check List (⌘⇧9)',
     icon: 'checklist',
-    action: function(contentArea, button, event) {
-      if (event) { 
-        event.preventDefault(); 
-        event.stopPropagation(); 
-      }
-      contentArea.focus();
+    action: function(contentArea, buttonElement, event) {
+      if (event) event.preventDefault();
       executeCheckListAction(contentArea, 'Button Click');
     },
     initCheckboxHandlers: initCheckboxHandlers

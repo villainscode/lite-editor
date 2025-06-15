@@ -100,7 +100,7 @@
   
   // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('unorderedList', {
-    title: 'Bullet List',
+    title: 'Bullet List (⌘⇧8)',
     icon: 'format_list_bulleted',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();

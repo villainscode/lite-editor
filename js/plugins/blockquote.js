@@ -96,7 +96,7 @@
 
   // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('blockquote', {
-    title: 'Blockquote',
+    title: 'Blockquote (⌥⇧B)',
     icon: 'format_quote',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();

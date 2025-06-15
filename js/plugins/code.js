@@ -31,7 +31,7 @@
 
   // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('code', {
-    title: 'Code',
+    title: 'Code (⌥⇧C)',
     icon: 'code',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();
