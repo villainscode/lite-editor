@@ -358,181 +358,186 @@
     return p;
   }
 
-  // 서식 초기화 플러그인 등록
-  LiteEditor.registerPlugin('reset', {
-    title: 'Clear Formatting',
-    icon: 'format_clear',
-    action: function(contentArea) {
+  // ✅ 공통 로직을 별도 함수로 추출
+  function executeResetAction(contentArea, triggerSource = 'unknown') {
+    if (!contentArea) return;
+    
+    // 히스토리 기록
+    if (window.LiteEditorHistory) {
+      window.LiteEditorHistory.forceRecord(contentArea, `Before Clear Formatting (${triggerSource})`);
+    }
+    
+    // 기존 action 함수의 모든 로직을 여기에 복사
+    try {
+      // 현재 선택 상태 저장
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
+        return false;
+      }
+
+      const selectedText = selection.toString();
+      if (!selectedText.trim()) {
+        errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
+        return false;
+      }
+
+      // 선택 범위 복제
+      const range = selection.getRangeAt(0).cloneRange();
+      
+      // 초기화 전 선택 영역 정보 저장
+      const originalSelection = {
+        text: selectedText,
+        cleanText: selectedText.replace(/\s+/g, ' ').trim() // 검색용 텍스트 표준화 
+      };
+      
+      const startContainer = range.startContainer;
+      const startOffset = range.startOffset;
+      const endContainer = range.endContainer;
+      const endOffset = range.endOffset;
+
+      // 주변 컨텍스트 포착
+      let startNode = startContainer;
+      let endNode = endContainer;
+      
+      // 텍스트 노드가 아닌 경우 처리
+      if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
+        startNode = getTextNodeAtPosition(startContainer, startOffset);
+      }
+      
+      if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
+        endNode = getTextNodeAtPosition(endContainer, endOffset);
+      }
+      
+      // 주변 요소의 참조 저장
+      const startParent = startNode.parentNode;
+      const endParent = endNode.parentNode;
+      
+      // 서식 제거 수행
       try {
-        // 현재 선택 상태 저장
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) {
-          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_SELECTION, new Error('선택 영역 없음'));
-          return false;
-        }
-
-        const selectedText = selection.toString();
-        if (!selectedText.trim()) {
-          errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.NO_TEXT, new Error('선택된 텍스트 없음'));
-          return false;
-        }
-
-        // 선택 범위 복제
-        const range = selection.getRangeAt(0).cloneRange();
+        // 체크리스트 처리 로직 ---- 복원
+        // 선택 영역 내 체크리스트 항목만 찾기
+        const checklistItems = [];
+        const selectionFragment = range.cloneContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(selectionFragment);
         
-        // 초기화 전 선택 영역 정보 저장
-        const originalSelection = {
-          text: selectedText,
-          cleanText: selectedText.replace(/\s+/g, ' ').trim() // 검색용 텍스트 표준화 
-        };
-        
-        const startContainer = range.startContainer;
-        const startOffset = range.startOffset;
-        const endContainer = range.endContainer;
-        const endOffset = range.endOffset;
-
-        // 주변 컨텍스트 포착
-        let startNode = startContainer;
-        let endNode = endContainer;
-        
-        // 텍스트 노드가 아닌 경우 처리
-        if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
-          startNode = getTextNodeAtPosition(startContainer, startOffset);
+        // 선택 영역 내 체크리스트 항목만 가져오기
+        const selectedChecklistItems = Array.from(tempDiv.querySelectorAll('div[class*="checklist"] label'));
+        if (selectedChecklistItems.length > 0) {
+          checklistItems.push(...selectedChecklistItems);
         }
         
-        if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
-          endNode = getTextNodeAtPosition(endContainer, endOffset);
+        // 체크리스트 항목 처리
+        if (checklistItems.length > 0) {
+          log('체크리스트 항목 감지됨 - 선택 영역 내 항목만 처리');
+          
+          // 클린 텍스트 형태로 체크리스트 항목 추출
+          const cleanedItems = checklistItems.map(item => item.textContent.replace(/\s+/g, ' ').trim());
+          const checklistText = cleanedItems.join('\n');
+          
+          // 새 p 요소 생성 후 기존 선택 영역에 삽입
+          const newP = document.createElement('p');
+          newP.style.whiteSpace = 'pre-wrap';
+          newP.textContent = checklistText;
+          
+          // 선택 영역 교체
+          range.deleteContents();
+          range.insertNode(newP);
+          
+          // 새 p 요소 선택
+          const newRange = document.createRange();
+          newRange.selectNodeContents(newP);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          log('▶▶▶ 최종 결과물 ◀◀◀', {
+            HTML: newP.innerHTML,
+            텍스트: newP.textContent
+          });
+          
+          return true;
         }
         
-        // 주변 요소의 참조 저장
-        const startParent = startNode.parentNode;
-        const endParent = endNode.parentNode;
+        // 리스트 구조 감지 로직 ---- 복원
+        let isListStructure = false;
+        let listStructureElement = null;
         
-        // 서식 제거 수행
+        // 안전한 nodeName 비교
+        const container = range.commonAncestorContainer;
+        const containerNodeName = container.nodeName?.toUpperCase?.() || '';
+        
+        if (containerNodeName === 'UL' || containerNodeName === 'OL') {
+          isListStructure = true;
+          listStructureElement = container;
+        }
+        
+        // 안전한 closest 호출 방식 (텍스트 노드 방어)
+        let listElementDirect = null;
         try {
-          // 체크리스트 처리 로직 ---- 복원
-          // 선택 영역 내 체크리스트 항목만 찾기
-          const checklistItems = [];
-          const selectionFragment = range.cloneContents();
-          const tempDiv = document.createElement('div');
-          tempDiv.appendChild(selectionFragment);
-          
-          // 선택 영역 내 체크리스트 항목만 가져오기
-          const selectedChecklistItems = Array.from(tempDiv.querySelectorAll('div[class*="checklist"] label'));
-          if (selectedChecklistItems.length > 0) {
-            checklistItems.push(...selectedChecklistItems);
+          if (container.nodeType === Node.ELEMENT_NODE) {
+            // data-lite-editor-bullet 속성을 가진 요소도 검색
+            listElementDirect = container.closest('ul[data-lite-editor-bullet], ol, ul');
+          } else if (container.nodeType === Node.TEXT_NODE && container.parentNode) {
+            listElementDirect = container.parentNode.closest('ul[data-lite-editor-bullet], ol, ul');
           }
+        } catch (e) {
+          log('closest 메소드 호출 오류', e);
+        }
+        
+        // 위에서 감지되지 않은 경우에만 처리
+        if (listElementDirect && !isListStructure) {
+          log('리스트 태그 직접 처리');
           
-          // 체크리스트 항목 처리
-          if (checklistItems.length > 0) {
-            log('체크리스트 항목 감지됨 - 선택 영역 내 항목만 처리');
-            
-            // 클린 텍스트 형태로 체크리스트 항목 추출
-            const cleanedItems = checklistItems.map(item => item.textContent.replace(/\s+/g, ' ').trim());
-            const checklistText = cleanedItems.join('\n');
-            
-            // 새 p 요소 생성 후 기존 선택 영역에 삽입
-            const newP = document.createElement('p');
-            newP.style.whiteSpace = 'pre-wrap';
-            newP.textContent = checklistText;
-            
-            // 선택 영역 교체
-            range.deleteContents();
-            range.insertNode(newP);
-            
-            // 새 p 요소 선택
-            const newRange = document.createRange();
-            newRange.selectNodeContents(newP);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-            
-            log('▶▶▶ 최종 결과물 ◀◀◀', {
-              HTML: newP.innerHTML,
-              텍스트: newP.textContent
-            });
-            
-            return true;
+          // 컴퓨티드 스타일에서 색상 추출 (폰트 색상 보존)
+          const computedStyle = window.getComputedStyle(listElementDirect);
+          const originalColor = computedStyle.color || '';
+          
+          // 리스트 아이템 내용 추출
+          const listItems = Array.from(listElementDirect.querySelectorAll('li'));
+          const listText = listItems.map(item => item.textContent.trim()).join('\n');
+          
+          // p 요소 생성
+          const newP = document.createElement('p');
+          newP.style.whiteSpace = 'pre-wrap';
+          if (originalColor) {
+            newP.style.color = originalColor;
           }
+          newP.textContent = listText;
           
-          // 리스트 구조 감지 로직 ---- 복원
-          let isListStructure = false;
-          let listStructureElement = null;
+          // 리스트를 p로 대체
+          listElementDirect.parentNode.replaceChild(newP, listElementDirect);
           
-          // 안전한 nodeName 비교
-          const container = range.commonAncestorContainer;
-          const containerNodeName = container.nodeName?.toUpperCase?.() || '';
+          // 새 p 요소 선택
+          const newRange = document.createRange();
+          newRange.selectNodeContents(newP);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
           
-          if (containerNodeName === 'UL' || containerNodeName === 'OL') {
-            isListStructure = true;
-            listStructureElement = container;
+          log('▶▶▶ 최종 결과물 ◀◀◀', {
+            HTML: newP.innerHTML,
+            텍스트: newP.textContent,
+            색상: originalColor
+          });
+          
+          return true;
+        }
+        
+        // 코드 블록 처리 로직 ---- 복원
+        let codeElement = null;
+        try {
+          if (container.nodeType === Node.ELEMENT_NODE) {
+            codeElement = container.closest('code');
+          } else if (container.nodeType === Node.TEXT_NODE && container.parentNode) {
+            codeElement = container.parentNode.closest('code');
           }
+        } catch (e) {
+          log('closest 메소드 호출 오류', e);
+        }
+        
+        if (codeElement) {
+          log('CODE 태그 직접 처리');
           
-          // 안전한 closest 호출 방식 (텍스트 노드 방어)
-          let listElementDirect = null;
-          try {
-            if (container.nodeType === Node.ELEMENT_NODE) {
-              // data-lite-editor-bullet 속성을 가진 요소도 검색
-              listElementDirect = container.closest('ul[data-lite-editor-bullet], ol, ul');
-            } else if (container.nodeType === Node.TEXT_NODE && container.parentNode) {
-              listElementDirect = container.parentNode.closest('ul[data-lite-editor-bullet], ol, ul');
-            }
-          } catch (e) {
-            log('closest 메소드 호출 오류', e);
-          }
-          
-          // 위에서 감지되지 않은 경우에만 처리
-          if (listElementDirect && !isListStructure) {
-            log('리스트 태그 직접 처리');
-            
-            // 컴퓨티드 스타일에서 색상 추출 (폰트 색상 보존)
-            const computedStyle = window.getComputedStyle(listElementDirect);
-            const originalColor = computedStyle.color || '';
-            
-            // 리스트 아이템 내용 추출
-            const listItems = Array.from(listElementDirect.querySelectorAll('li'));
-            const listText = listItems.map(item => item.textContent.trim()).join('\n');
-            
-            // p 요소 생성
-            const newP = document.createElement('p');
-            newP.style.whiteSpace = 'pre-wrap';
-            if (originalColor) {
-              newP.style.color = originalColor;
-            }
-            newP.textContent = listText;
-            
-            // 리스트를 p로 대체
-            listElementDirect.parentNode.replaceChild(newP, listElementDirect);
-            
-            // 새 p 요소 선택
-            const newRange = document.createRange();
-            newRange.selectNodeContents(newP);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-            
-            log('▶▶▶ 최종 결과물 ◀◀◀', {
-              HTML: newP.innerHTML,
-              텍스트: newP.textContent,
-              색상: originalColor
-            });
-            
-            return true;
-          }
-          
-          // 코드 블록 처리 로직 ---- 복원
-          let codeElement = null;
-          try {
-            if (container.nodeType === Node.ELEMENT_NODE) {
-              codeElement = container.closest('code');
-            } else if (container.nodeType === Node.TEXT_NODE && container.parentNode) {
-              codeElement = container.parentNode.closest('code');
-            }
-          } catch (e) {
-            log('closest 메소드 호출 오류', e);
-          }
-          
-          if (codeElement) {
-            log('CODE 태그 직접 처리');
-            
         // 컴퓨티드 스타일에서 색상 추출
         const computedStyle = window.getComputedStyle(codeElement);
         const originalColor = computedStyle.color || '';
@@ -841,12 +846,52 @@
           return false;
         }
         
+      // 완료 후 상태 기록
+      setTimeout(() => {
+        if (window.LiteEditorHistory) {
+          window.LiteEditorHistory.recordState(contentArea, `After Clear Formatting (${triggerSource})`);
+        }
+      }, 100);
+      
       return true;
     } catch (error) {
-        errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
-        contentArea.focus();
+      errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
+      contentArea.focus();
       return false;
     }
   }
+
+  // 서식 초기화 플러그인 등록
+  LiteEditor.registerPlugin('reset', {
+    title: 'Clear Formatting (⌘⇧\\)',
+    icon: 'format_clear',
+    action: function(contentArea) {
+      executeResetAction(contentArea, 'Button Click');
+    }
   });
+
+  // ✅ 단축키 등록 (Cmd+Shift+\) - 다른 플러그인들과 동일한 패턴
+  document.addEventListener('keydown', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+    if (!editorContainer) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // Cmd+Shift+\ (Mac) / Ctrl+Shift+\ (Windows/Linux)
+    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key === '\\') {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        executeResetAction(contentArea, 'Cmd+Shift+\\');
+      } catch (error) {
+        if (window.errorHandler) {
+          errorHandler.logWarning('ResetPlugin', 'Cmd+Shift+\\ 처리 중 확장 프로그램 충돌', error);
+        }
+      }
+    }
+  }, true);
+
 })();
