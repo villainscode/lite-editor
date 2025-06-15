@@ -380,36 +380,44 @@
     util.editor.dispatchEditorEvent(contentArea);
   }
   
-  // 단축키 등록
-  LiteEditor.registerShortcut('heading', {
-    key: '1',
-    alt: true,
-    action: function(contentArea) {
+  // ✅ 수정: strike.js처럼 직접 document 레벨에서 capture: true로 처리
+  document.addEventListener('keydown', function(e) {
+    // 에디터 영역 찾기
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // ✅ Alt+Cmd+1 (Mac) / Alt+Ctrl+1 (Windows/Linux)
+    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '1') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       applyHeadingByShortcut('h1', contentArea);
+      return;
     }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '2',
-    alt: true,
-    action: function(contentArea) {
+    
+    // ✅ Alt+Cmd+2 (Mac) / Alt+Ctrl+2 (Windows/Linux)
+    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '2') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       applyHeadingByShortcut('h2', contentArea);
+      return;
     }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '3',
-    alt: true,
-    action: function(contentArea) {
+    
+    // ✅ Alt+Cmd+3 (Mac) / Alt+Ctrl+3 (Windows/Linux)
+    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '3') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       applyHeadingByShortcut('h3', contentArea);
+      return;
     }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '4',
-    alt: true,
-    action: function(contentArea) {
+    
+    // ✅ Alt+Cmd+4 (Mac) / Alt+Ctrl+4 (Windows/Linux)
+    if (e.altKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.shiftKey && e.key === '4') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       applyHeadingByShortcut('p', contentArea);
+      return;
     }
-  });
+  }, true); // ✅ capture: true로 최우선 처리
 })();
