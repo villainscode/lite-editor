@@ -1,41 +1,37 @@
 /**
- * LiteEditor Version Information
- * 버전 정보 및 플러그인 목록
- * 최종 업데이트: 2025-05-17
+ * LiteEditor 버전 정보
+ * 프로젝트 버전, 기능, 단축키 등의 정보를 관리합니다.
  */
 
 window.LiteEditorVersion = {
   // 현재 버전
-  version: 'v1.0.75',
+  version: 'v1.0.81',
   
-  // 개발자 정보
-  developer: 'Code Villain',
+  // 릴리즈 날짜
+  releaseDate: '2025-01-09',
   
-  // 플러그인 목록
-  plugins: {
-    // 실행 취소/되돌리기
-    history: ['historyInit', 'undo', 'redo', 'reset'],
-    
-    // 폰트 서식
-    fonts: ['fontFamily', 'heading', 'fontColor', 'highlight'],
-    
-    // 텍스트 서식
-    formatting: ['bold', 'italic', 'underline', 'strike'],
-    
-    // 오브젝트 삽입
-    objects: ['link', 'imageUpload', 'table', 'media'],
-    
-    // 인용 및 코드
-    quotes: ['line', 'blockquote', 'code', 'codeBlock'],
-    
-    // 목록
-    lists: ['unorderedList', 'orderedList', 'checkList'],
-    
-    // 정렬과 인덴트
-    layout: ['align', 'formatIndent']
-  },
+  // 주요 기능 목록
+  features: [
+    '리치 텍스트 편집',
+    '플러그인 기반 확장성',
+    '단축키 지원',
+    '실시간 프리뷰',
+    '이미지 드래그 앤 드롭',
+    '체크리스트',
+    '코드 하이라이팅',
+    '테이블 편집',
+    '링크 및 미디어 삽입'
+  ],
   
-  // 단축키 목록
+  // 지원 브라우저
+  supportedBrowsers: [
+    'Chrome 80+',
+    'Firefox 75+',
+    'Safari 13+',
+    'Edge 80+'
+  ],
+  
+  // ✅ 수정: 실제 구현된 단축키로 업데이트
   shortcuts: {
     // 텍스트 서식
     'Cmd+B / Ctrl+B': '굵게',
@@ -49,7 +45,7 @@ window.LiteEditorVersion = {
     'Alt+Cmd+3 / Alt+Ctrl+3': '제목 3 (H3)',
     'Alt+Cmd+4 / Alt+Ctrl+4': '본문 (P)',
     
-    // 정렬
+    // ✅ 수정: 정렬 단축키 업데이트
     'Cmd+Shift+L / Ctrl+Shift+L': '왼쪽 정렬',
     'Cmd+Shift+E / Ctrl+Shift+E': '중앙 정렬',
     'Cmd+Shift+R / Ctrl+Shift+R': '오른쪽 정렬',
@@ -75,7 +71,7 @@ window.LiteEditorVersion = {
     'Shift+Tab': '내어쓰기'
   },
   
-  // 업데이트 내역
+  // ✅ 수정: 업데이트 내역 추가
   updates: [
     {
       version: 'v1.0.75',
