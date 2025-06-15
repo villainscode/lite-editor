@@ -224,9 +224,13 @@
     return true;
   }
 
-  // ✅ 공통 로직을 별도 함수로 추출
+  // ✅ 공통 로직을 별도 함수로 추출 (수정)
   function executeResetAction(contentArea, triggerSource = 'unknown') {
     if (!contentArea) return;
+    
+    // ✅ 1. 먼저 선택 영역 저장 (DOM 변경 전에)
+    const savedRange = PluginUtil.selection.saveSelection();
+    const scrollPosition = PluginUtil.scroll.savePosition();
     
     if (window.LiteEditorHistory) {
       window.LiteEditorHistory.forceRecord(contentArea, `Before Clear Formatting (${triggerSource})`);
@@ -251,27 +255,8 @@
         cleanText: selectedText.replace(/\s+/g, ' ').trim()
       };
       
-      const startContainer = range.startContainer;
-      const startOffset = range.startOffset;
-      const endContainer = range.endContainer;
-      const endOffset = range.endOffset;
-
-      let startNode = startContainer;
-      let endNode = endContainer;
-      
-      if (startContainer.nodeType !== Node.TEXT_NODE && startContainer.childNodes.length > 0) {
-        startNode = getTextNodeAtPosition(startContainer, startOffset);
-      }
-      
-      if (endContainer.nodeType !== Node.TEXT_NODE && endContainer.childNodes.length > 0) {
-        endNode = getTextNodeAtPosition(endContainer, endOffset);
-      }
-      
-      const startParent = startNode.parentNode;
-      const endParent = endNode.parentNode;
-      
       try {
-        // 체크리스트 처리
+        // ✅ 2. 체크리스트 처리 (선택 영역 복원 추가)
         const selectionFragment = range.cloneContents();
         const tempDiv = document.createElement('div');
         tempDiv.appendChild(selectionFragment);
@@ -290,15 +275,21 @@
           range.deleteContents();
           range.insertNode(newP);
           
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newP);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // ✅ PluginUtil 사용한 선택 영역 복원
+          setTimeout(() => {
+            contentArea.focus({ preventScroll: true });
+            const newRange = document.createRange();
+            newRange.selectNodeContents(newP);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            PluginUtil.scroll.restorePosition(scrollPosition);
+          }, 10);
           
           return true;
         }
         
-        // 리스트/코드 블록 처리
+        // ✅ 3. 리스트/코드 블록 처리 (선택 영역 복원 추가)
         const container = range.commonAncestorContainer;
         let listElementDirect = null;
         let codeElement = null;
@@ -331,10 +322,16 @@
           
           listElementDirect.parentNode.replaceChild(newP, listElementDirect);
           
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newP);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // ✅ PluginUtil 사용한 선택 영역 복원
+          setTimeout(() => {
+            contentArea.focus({ preventScroll: true });
+            const newRange = document.createRange();
+            newRange.selectNodeContents(newP);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            PluginUtil.scroll.restorePosition(scrollPosition);
+          }, 10);
           
           return true;
         }
@@ -353,15 +350,21 @@
         
           codeElement.parentNode.replaceChild(newP, codeElement);
           
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newP);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // ✅ PluginUtil 사용한 선택 영역 복원
+          setTimeout(() => {
+            contentArea.focus({ preventScroll: true });
+            const newRange = document.createRange();
+            newRange.selectNodeContents(newP);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            PluginUtil.scroll.restorePosition(scrollPosition);
+          }, 10);
           
           return true;
         }
         
-        // 마커 기반 처리
+        // ✅ 4. 인라인 서식 처리 (가장 간단한 케이스)
         const tempFragment = range.cloneContents();
         const tempDiv2 = document.createElement('div');
         tempDiv2.appendChild(tempFragment);
@@ -374,81 +377,127 @@
         if ((hasFontTag || hasStyleSpan || hasBasicFormatTags) && !hasBlockTags) {
           log('인라인 서식 태그만 감지 - 특별 처리');
           
-          const temp = document.createElement('div');
-          temp.appendChild(range.cloneContents());
+          // ✅ 포커스 후 선택 영역 복원
+          contentArea.focus({ preventScroll: true });
+          const restored = PluginUtil.selection.restoreSelection(savedRange);
           
-          range.deleteContents();
-          const textNode = document.createTextNode(temp.textContent);
-          range.insertNode(textNode);
+          if (restored) {
+            document.execCommand('removeFormat', false, null);
+            document.execCommand('unlink', false, null);
+            
+            // ✅ 스크롤 위치 복원
+            PluginUtil.scroll.restorePosition(scrollPosition);
+            return true;
+          }
+        }
+        
+        // ✅ 5. 복잡한 블록 처리 (blockquote 등) - 핵심 수정 부분
+        const blockElements = Array.from(contentArea.querySelectorAll(BLOCK_TAGS.join(',')))
+          .filter(node => {
+            try {
+              return range.intersectsNode(node);
+            } catch (e) {
+              return false;
+            }
+          });
+        
+        if (blockElements.length > 0) {
+          log('블록 요소 처리 시작', { count: blockElements.length });
           
-          range.selectNode(textNode);
-          selection.removeAllRanges();
-          selection.addRange(range);
+          // ✅ 블록 요소들을 P 태그로 변환
+          const convertedTexts = [];
+          blockElements.forEach(blockElement => {
+            let textContent = '';
+            
+            if (blockElement.nodeName === 'UL' || blockElement.nodeName === 'OL') {
+              const listItems = Array.from(blockElement.querySelectorAll('li'));
+              textContent = listItems.map(item => item.textContent.trim()).join('\n');
+            } else {
+              textContent = blockElement.textContent.trim();
+            }
+            
+            convertedTexts.push(textContent);
+            
+            // ✅ 블록 요소를 P 태그로 교체
+            const newP = document.createElement('p');
+            newP.style.whiteSpace = 'pre-wrap';
+            newP.textContent = textContent;
+            
+            if (blockElement.parentNode) {
+              blockElement.parentNode.replaceChild(newP, blockElement);
+            }
+          });
           
-          document.execCommand('removeFormat', false, null);
-          document.execCommand('unlink', false, null);
+          // ✅ 변환 후 선택 영역 복원 (가장 중요한 부분)
+          setTimeout(() => {
+            contentArea.focus({ preventScroll: true });
+            
+            // 변환된 텍스트를 기준으로 새로운 선택 영역 생성
+            const allText = convertedTexts.join('\n');
+            const textNodes = [];
+            
+            // 모든 텍스트 노드 수집
+            const walker = document.createTreeWalker(
+              contentArea,
+              NodeFilter.SHOW_TEXT,
+              null,
+              false
+            );
+            
+            while (walker.nextNode()) {
+              if (walker.currentNode.textContent.trim()) {
+                textNodes.push(walker.currentNode);
+              }
+            }
+            
+            // 변환된 텍스트와 일치하는 노드 찾기
+            let targetNode = null;
+            for (const node of textNodes) {
+              if (node.textContent.includes(convertedTexts[0]) || 
+                  convertedTexts[0].includes(node.textContent.trim())) {
+                targetNode = node;
+                break;
+              }
+            }
+            
+            if (targetNode) {
+              const newRange = document.createRange();
+              newRange.setStart(targetNode, 0);
+              newRange.setEnd(targetNode, Math.min(targetNode.length, originalSelection.cleanText.length));
+              
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              
+              log('블록 요소 변환 후 선택 영역 복원 성공');
+            } else {
+              // ✅ 폴백: 에디터 끝으로 커서 이동
+              PluginUtil.selection.moveCursorToEnd(contentArea);
+              log('블록 요소 변환 후 선택 영역 복원 실패 - 커서를 끝으로 이동');
+            }
+            
+            PluginUtil.scroll.restorePosition(scrollPosition);
+          }, 10);
           
           return true;
         }
         
-        // 복잡한 마커 처리
-        const markerId = 'reset-selection-' + Date.now();
-        const markerElement = document.createElement('p');
-        markerElement.id = markerId;
-        markerElement.setAttribute('data-reset-marker', 'true');
-        markerElement.style.whiteSpace = 'pre-wrap';
-        markerElement.textContent = originalSelection.text;
-
-        range.deleteContents();
-        range.insertNode(markerElement);
+        // ✅ 6. 기본 폴백 처리
+        log('기본 서식 제거 처리');
+        contentArea.focus({ preventScroll: true });
+        const restored = PluginUtil.selection.restoreSelection(savedRange);
         
-        if (markerElement) {
-          handleBlockElements(contentArea, range, startNode, endNode);
-          
-          const elementsToRemove = [];
-          INLINE_TAGS.forEach(tag => {
-            const selector = tag.toLowerCase();
-            const selectedTags = contentArea.querySelectorAll(selector);
-      
-            selectedTags.forEach(el => {
-              if (markerElement.contains(el) || range.intersectsNode(el)) {
-                elementsToRemove.push(el);
-              }
-            });
-          });
-          
-          elementsToRemove
-            .sort((a, b) => b.contains(a) ? -1 : (a.contains(b) ? 1 : 0))
-            .forEach(el => {
-              try {
-                if (el.parentNode) {
-                  const textNode = document.createTextNode(el.textContent);
-                  el.parentNode.replaceChild(textNode, el);
-                }
-              } catch (e) {
-                log('태그 제거 중 오류', e);
-              }
-            });
-          
+        if (restored) {
           document.execCommand('removeFormat', false, null);
           document.execCommand('unlink', false, null);
-          
-          const targetMarker = document.getElementById(markerId);
-          if (targetMarker) {
-            removeInlineFormatting(targetMarker);
-            targetMarker.style.whiteSpace = 'pre-wrap';
-            
-            const range = document.createRange();
-            range.selectNodeContents(targetMarker);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } else {
-            restoreSelectionByReferenceNodes(contentArea, startParent, startNode, startOffset, endParent, endNode, endOffset);
-          }
         }
+        
+        PluginUtil.scroll.restorePosition(scrollPosition);
         
       } catch (error) {
         errorHandler.logError('ResetPlugin', errorHandler.codes.PLUGINS.RESET.FORMAT, error);
+        
+        // ✅ 에러 시에도 포커스 유지
         contentArea.focus();
         return false;
       }
