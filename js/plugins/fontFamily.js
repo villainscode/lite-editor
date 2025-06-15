@@ -125,8 +125,8 @@
       
       // 🔧 핵심 수정: 사용자가 명시적으로 설정한 폰트만 "폰트 영역"으로 인식
       const isUserSetFont = fontElement && currentFontValue && (
-        // font 태그는 항상 사용자 설정으로 간주
-        fontElement.tagName === 'FONT' ||
+        // font 태그는 face 속성이 있을 때만 사용자 설정으로 간주 - 🔧 수정
+        (fontElement.tagName === 'FONT' && fontElement.getAttribute('face')) ||
         // span 태그는 currentFontValue와 일치할 때만 사용자 설정으로 간주
         (fontElement.tagName === 'SPAN' && 
          fontElement.style.fontFamily && 
@@ -134,12 +134,6 @@
       );
       
       if (isUserSetFont) {
-        // 사용자가 설정한 폰트 영역 - 활성 상태 설정
-        fontContainer.classList.add('active');
-        fontContainer.style.backgroundColor = '#e9e9e9';
-        fontContainer.style.color = '#1a73e8';
-        icon.style.color = '#1a73e8';
-        
         // 🔧 3단계 최적화: 폰트 파싱 최적화
         let currentFontFamily = null;
         
@@ -196,11 +190,6 @@
           }
         }
       } else {
-        // 🔧 핵심 수정: 시스템 폰트 또는 비폰트 영역 - 기본 상태 유지
-        fontContainer.classList.remove('active');
-        fontContainer.style.backgroundColor = '';
-        fontContainer.style.color = '';
-        icon.style.color = '';
         fontText.textContent = 'Font Family';
         
         // 드롭다운 선택 해제
@@ -345,11 +334,6 @@
             }
             currentSelectedFontItem = fontItem;
             fontItem.style.backgroundColor = '#e9e9e9';
-            
-            // CSS 호버 효과 적용
-            fontContainer.style.backgroundColor = '#e9e9e9';  
-            fontContainer.style.color = '#1a73e8';            
-            icon.style.color = '#1a73e8';                     
             
             // 드롭다운 닫기
             dropdownMenu.style.display = 'none';
