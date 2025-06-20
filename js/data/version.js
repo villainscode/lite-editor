@@ -6,7 +6,7 @@
 
 window.LiteEditorVersion = {
   // 현재 버전
-  version: 'v1.0.91',
+  version: 'v1.0.92',
   
   // 릴리즈 날짜
   releaseDate: '2025-01-09',
@@ -72,28 +72,31 @@ window.LiteEditorVersion = {
     
     // 들여쓰기
     'Tab': '들여쓰기',
-    'Shift+Tab': '내어쓰기'
-  },
-  
-  // 미구현 단축키 (개발 예정)
-  upcomingShortcuts: {
-    // v1.1 예정
-    '⌘+K / Ctrl+K': '링크 삽입',
-    '⌘+M / Ctrl+M': '미디어 삽입',
-    '⌘+Shift+K / Ctrl+Shift+K': '코드 블록',
+    'Shift+Tab': '내어쓰기',
     
-    // v1.2 예정
-    '⌘+Shift+I / Ctrl+Shift+I': '이미지 삽입',
-    '⌘+Shift+T / Ctrl+Shift+T': '테이블 삽입',
-    
-    // v1.3 예정
-    '⌘+F / Ctrl+F': '찾기/바꾸기',
-    '⌘+D / Ctrl+D': '줄 복제',
-    '⌘+L / Ctrl+L': '줄 선택'
+    // ✅ 새로 추가: 레이어 단축키들
+    'Ctrl+Shift+K / ⌘+Shift+K': '링크 삽입',
+    'Ctrl+Shift+M / ⌘+Shift+M': '미디어 삽입', 
+    'Ctrl+Shift+C / ⌘+Shift+C': '코드 블록',
+    'Ctrl+Shift+I / ⌘+Shift+I': '이미지 삽입',
   },
   
   // ✅ 수정: 업데이트 내역 추가
   updates: [
+    {
+      version: 'v1.0.92',
+      date: '2025-06-20',
+      changes: [
+        '레이어 단축키 기능 구현 완료',
+        '링크 삽입 단축키 (⌘+Shift+K) 추가',
+        '미디어 삽입 단축키 (⌘+Shift+M) 추가', 
+        '코드 블록 단축키 (⌘+Shift+C) 추가',
+        '이미지 삽입 단축키 (⌘+Shift+I) 추가',
+        '모든 레이어 자동 포커스 기능 구현',
+        '선택된 텍스트 기반 코드 블록 자동 변환',
+        '단축키 치트시트 및 기능 목록 업데이트'
+      ]
+    },
     {
       version: 'v1.0.86',
       date: '2025-06-20',
@@ -156,19 +159,15 @@ window.LiteEditorVersion = {
       version: 'v1.1',
       plannedDate: '2025-07-15',
       features: [
-        '링크 삽입 단축키 (⌘+K)',
-        '미디어 삽입 단축키 (⌘+M)',
-        '코드 블록 단축키 (⌘+Shift+K)',
-        '플러그인 성능 최적화'
+        '플러그인 성능 최적화',
+        '이미지 드래그 앤 드롭 개선'
       ]
     },
     {
       version: 'v1.2',
       plannedDate: '2025-08-30',
       features: [
-        '이미지 삽입 단축키 (⌘+Shift+I)',
-        '테이블 삽입 단축키 (⌘+Shift+T)',
-        '드래그 앤 드롭 개선',
+        '줄 복제 (⌘+D)',
         '모바일 지원 강화'
       ]
     },
@@ -176,8 +175,7 @@ window.LiteEditorVersion = {
       version: 'v1.3',
       plannedDate: '2025-10-15',
       features: [
-        '찾기/바꾸기 기능 (⌘+F)',
-        '줄 복제 (⌘+D)',
+        
         '다중 커서 지원',
         '협업 기능 베타'
       ]
