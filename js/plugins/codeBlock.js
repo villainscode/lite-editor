@@ -581,6 +581,127 @@
     return !!codeBlock;
   }
   
+  /**
+   * 선택된 텍스트에 코드 블록을 바로 적용
+   * @param {HTMLElement} contentArea - 에디터 영역
+   * @param {string} selectedText - 선택된 텍스트
+   */
+  async function applyCodeBlockToSelection(contentArea, selectedText) {
+    try {
+      // SpeedHighlight 로드 확인
+      let SpeedHighlight = window.SpeedHighlight;
+      if (!SpeedHighlight) {
+        SpeedHighlight = await loadScripts();
+      }
+      
+      if (!SpeedHighlight) {
+        console.error('[CODEBLOCK] SpeedHighlight 로드 실패');
+        return;
+      }
+      
+      // 언어 자동 감지
+      const detectedLanguage = SpeedHighlight.detectLanguage(selectedText) || 'plain';
+      console.log('[CODEBLOCK] 감지된 언어:', detectedLanguage);
+      
+      // 선택된 텍스트를 코드 블록으로 교체
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      
+      const range = selection.getRangeAt(0);
+      
+      // HTML 특수 문자 이스케이프 처리
+      const escapedCode = LiteEditorSecurity.escapeHtml(selectedText);
+      
+      // 코드 블록 생성
+      const codeBlockHTML = `
+        <div class="lite-editor-code-block">
+          <div class="shj-lang-${detectedLanguage}">${escapedCode}</div>
+        </div>
+      `;
+      
+      // 선택된 텍스트를 코드 블록으로 교체
+      range.deleteContents();
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = codeBlockHTML;
+      const codeBlockElement = tempDiv.firstElementChild;
+      
+      range.insertNode(codeBlockElement);
+      
+      // 커서를 코드 블록 이후로 이동
+      range.setStartAfter(codeBlockElement);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      // 하이라이팅 적용
+      setTimeout(() => {
+        const newCodeElement = codeBlockElement.querySelector('.shj-lang-' + detectedLanguage);
+        if (newCodeElement && SpeedHighlight) {
+          SpeedHighlight.highlightElement(newCodeElement, detectedLanguage);
+        }
+      }, 50);
+      
+      // 에디터 변경 이벤트 발생
+      if (util.editor && util.editor.dispatchEditorEvent) {
+        util.editor.dispatchEditorEvent(contentArea);
+      } else {
+        contentArea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      
+      console.log('[CODEBLOCK] 선택된 텍스트를 코드 블록으로 변환 완료');
+      
+    } catch (error) {
+      console.error('[CODEBLOCK] 코드 블록 적용 중 오류:', error);
+      errorHandler.logError('CodeBlockPlugin', errorHandler.codes.PLUGINS.CODE.INSERT, error);
+    }
+  }
+  
+  /**
+   * 키보드 단축키 처리 - cmd+shift+c로 선택된 텍스트를 코드 블록으로 변환
+   */
+  document.addEventListener('keydown', async function(e) {
+    // cmd+shift+c (Mac) 또는 ctrl+shift+c (Windows) 조합 확인
+    const isShortcut = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'c';
+    if (!isShortcut) return;
+    
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    // 선택된 텍스트가 있는지 확인
+    if (range.collapsed) return;
+    
+    // 선택된 텍스트 가져오기
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+    
+    // 에디터 영역 내부인지 확인
+    let element = range.startContainer;
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement;
+    }
+    
+    // contentArea 찾기 (에디터 영역)
+    const contentArea = element.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    // 이미 코드 블록 내부에 있는지 확인
+    if (isInsideCodeBlock(contentArea)) {
+      console.log('[CODEBLOCK] 이미 코드 블록 내부에 있음 - 처리하지 않음');
+      return;
+    }
+    
+    // 기본 동작 차단
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[CODEBLOCK] 단축키로 코드 블록 적용:', selectedText);
+    
+    // 선택된 텍스트에 코드 블록 적용
+    await applyCodeBlockToSelection(contentArea, selectedText);
+  }, true); // capture 단계에서 처리
+  
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
     title: 'Code Block',

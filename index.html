@@ -71,7 +71,35 @@
       margin-bottom: 2rem;
     }
 
+    /* 툴바 테두리 스타일 */
+    #lite-editor-toolbar {
+        border: 1px solid #d0d7de;
+        border-radius: 6px 6px 0 0;
+        background-color: #f6f8fa;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
 
+    /* 탭 영역 스타일 - 테두리 없음 */
+    .editor-tab-space {
+        display: flex !important;
+        align-items: center !important;
+        border: none !important; /* 테두리 제거 */
+    }
+
+    /* 콘텐츠 영역 테두리 스타일 - 상단 테두리 추가 */
+    #lite-editor-content {
+        border: 1px solid #d0d7de !important;
+        border-radius: 0 0 6px 6px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        min-height: 400px !important;
+        padding: 15px !important;
+    }
+
+    /* 전체 에디터 컨테이너 정리 */
+    .lite-editor {
+        overflow: hidden;
+    }
 
     /* ✅ 에디터 콘텐츠 내 헤딩 스타일 */
     #lite-editor-content h1 {
@@ -336,6 +364,45 @@
             justify-content: center;
         }
     }
+
+    /* 탭 버튼 컨테이너 */
+    .editor-tabs {
+        display: flex;
+        gap: 2px;
+    }
+
+    /* 탭 버튼 스타일 */
+    .tab-button {
+        width: 100px;
+        height: 32px;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        background-color: #f6f8fa;
+        color: #656d76;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .tab-button:hover {
+        background-color: #f3f4f6;
+        border-color: #8c959f;
+    }
+
+    .tab-button.active {
+        background-color: #f6f8fa; /* 배경색 동일하게 */
+        font-weight: 600;
+    }
+
+    .tab-button .material-icons {
+        font-size: 14px;
+    }
     </style>
 
 </head>
@@ -348,10 +415,14 @@
         <div class="demo-section">
             <div class="editor-container">
                 <div class="lite-editor" id="main-editor">
-                    <!-- 툴바 영역 -->
+                    <!-- 툴바 영역 (상단 둥근 테두리) -->
                     <div id="lite-editor-toolbar"></div>
                     
-                    <!-- 에디터 콘텐츠 영역 -->
+                    <!-- 탭 영역 -->
+                    <div class="editor-tab-space" style="height: 5px;">
+                    </div>
+                    
+                    <!-- 콘텐츠 영역 (하단 둥근 테두리) -->
                     <div id="lite-editor-content" contenteditable="true">
                         <p>첫 번째 항목<br>두 번째 항목<br>세 번째 항목<br>네 번째 항목</p>
                         <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
@@ -403,8 +474,9 @@
   - alignJustify: { key: 'j', ctrl: true, shift: true },  // ⌘+Shift+J / Ctrl+Shift+J
 
   
-  // 🚫 레이어 기능 (단축키 지원 안함)
-  - 링크, 이미지, 테이블, 미디어는 클릭으로만 사용 가능
+  // ✅ 레이어 기능 (단축키 지원)
+  - 링크: ⌘+Shift+K, 이미지: ⌘+Shift+I, 미디어: ⌘+Shift+M, 코드블록: ⌘+Shift+C
+  - 테이블은 클릭으로만 사용 가능
   
 </pre>
                         <br>
@@ -767,7 +839,7 @@
                         <span class="material-symbols-outlined">photo_camera</span>
                         이미지 업로드 (link & file)
                     </h3>
-                    <p>이미지를 업로드하거나 URL로 삽입할 수 있습니다. <br>- 이미지 리사이즈<br>- Copy & Paste<br>- Drag & Drop</p>
+                    <p>이미지를 업로드하거나 URL로 삽입할 수 있습니다.<br>단축키: Ctrl+Shift+I / ⌘+Shift+I<br>- 이미지 리사이즈<br>- Copy & Paste<br>- Drag & Drop</p>
                     <div class="example">
                         <div style="border: 2px dashed #ccc; padding: 20px; text-align: center;">
                             📷 이미지 업로드 영역
@@ -802,7 +874,7 @@
                         <span class="material-symbols-outlined">link</span>
                         링크 (Link)
                     </h3>
-                    <p>외부 사이트나 내부 페이지로 연결되는 링크를 생성합니다.</p>
+                    <p>외부 사이트나 내부 페이지로 연결되는 링크를 생성합니다.<br>단축키: Ctrl+Shift+K / ⌘+Shift+K</p>
                     <div class="example">
                         <a href="#" style="color: #1a73e8; text-decoration: underline;">이것은 링크입니다</a>
                     </div>
@@ -814,7 +886,7 @@
                         <span class="material-symbols-outlined">video_library</span>
                         미디어 (Media)
                     </h3>
-                    <p>유튜브등 동영상 미디어 링크를 삽입할 수 있습니다.</p>
+                    <p>유튜브등 동영상 미디어 링크를 삽입할 수 있습니다.<br>단축키: Ctrl+Shift+M / ⌘+Shift+M</p>
                     <div class="example">
                         <div style="border: 2px solid #ddd; padding: 20px; text-align: center;">
                             🎬 동영상 플레이어 영역
@@ -840,7 +912,7 @@
                         <span class="material-symbols-outlined">code_blocks</span>
                         코드 블록 (Code Block)
                     </h3>
-                    <p>여러 줄의 코드를 구문 강조와 함께 표시할 수 있습니다.</p>
+                    <p>여러 줄의 코드를 구문 강조와 함께 표시할 수 있습니다.<br>단축키: Ctrl+Shift+C / ⌘+Shift+C</p>
                     
                         <pre class="example lite-editor-content">function hello() {
   console.log("Hello, World!");
@@ -881,7 +953,7 @@
                 <div class="feature-item">
                     <h3>
                         <span class="material-symbols-outlined">format_clear</span>
-                        서식 지우기 (Clear Format)
+                        서식제거
                     </h3>
                     <p>선택된 텍스트의 모든 서식을 제거하고 기본 텍스트로 되돌립니다.<br>단축키: Ctrl+Shift+\ / ⌘+Shift+\</p>
                     <div class="example">
@@ -1053,6 +1125,7 @@
                     'orderedList', 'unorderedList', 'checkList',              // 목록 
                     'align', 'formatIndent',                                  // 정렬과 인덴트
                     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+                    'source',                                                 // HTML 소스 보기/편집 플러그인
                 ],
                 dividers: [4, 8, 12, 16, 19, 22],
                 dimensions: {
@@ -1301,16 +1374,6 @@
                         ⌥⇧H
                     </span>
                 </div>
-                <div class="shortcut-item" style="opacity: 0.5;">
-                    <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">link</span>
-                        <span class="shortcut-desc">링크 삽입 <small>(구현 예정)</small></span>
-                    </div>
-                    <span class="shortcut-key">
-                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        ⌥⇧L
-                    </span>
-                </div>
             </div>
         </div>
 
@@ -1326,7 +1389,7 @@
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+Z
+                        ⌘+Z
                     </span>
                 </div>
                 <div class="shortcut-item">
@@ -1336,7 +1399,7 @@
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+Shift+Z
+                        ⌘⇧+Z
                     </span>
                 </div>
                 <div class="shortcut-item">
@@ -1346,7 +1409,7 @@
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+Shift+\
+                        ⌘⇧+\
                     </span>
                 </div>
                 <div class="shortcut-item">
@@ -1363,58 +1426,47 @@
         </div>
 
         <!-- 미구현 기능 (개발 예정) -->
-        <div class="shortcuts-category" style="opacity: 0.6;">
-            <h3><span class="material-icons">schedule</span>개발 예정 기능</h3>
+        <div class="shortcuts-category">
+            <h3><span class="material-icons">layers</span>레이어</h3>
             <div class="shortcuts-grid">
-                <div class="shortcut-item" style="opacity: 0.7;">
+                <div class="shortcut-item">
                     <div class="shortcut-item-top">
                         <span class="material-symbols-outlined">link</span>
-                        <span class="shortcut-desc">링크 삽입 <small>(v1.1 예정)</small></span>
+                        <span class="shortcut-desc">링크 삽입</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+K
+                        ⌘⇧+K
                     </span>
                 </div>
-                <div class="shortcut-item" style="opacity: 0.7;">
+                <div class="shortcut-item">
                     <div class="shortcut-item-top">
                         <span class="material-symbols-outlined">videocam</span>
-                        <span class="shortcut-desc">미디어 삽입 <small>(v1.1 예정)</small></span>
+                        <span class="shortcut-desc">미디어 삽입</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+M
+                        ⌘⇧+M
                     </span>
                 </div>
-                <div class="shortcut-item" style="opacity: 0.7;">
+                <div class="shortcut-item">
                     <div class="shortcut-item-top">
                         <span class="material-symbols-outlined">code_blocks</span>
-                        <span class="shortcut-desc">코드 블록 <small>(v1.1 예정)</small></span>
+                        <span class="shortcut-desc">코드 블록</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+Shift+K
+                        ⌘⇧+C
                     </span>
                 </div>
-                <div class="shortcut-item" style="opacity: 0.7;">
+                <div class="shortcut-item">
                     <div class="shortcut-item-top">
                         <span class="material-symbols-outlined">image</span>
-                        <span class="shortcut-desc">이미지 삽입 <small>(v1.2 예정)</small></span>
+                        <span class="shortcut-desc">이미지 삽입</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+Shift+I
-                    </span>
-                </div>
-
-                <div class="shortcut-item" style="opacity: 0.7;">
-                    <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">find_replace</span>
-                        <span class="shortcut-desc">찾기/바꾸기 <small>(v1.3 예정)</small></span>
-                    </div>
-                    <span class="shortcut-key">
-                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
-                        Ctrl+F
+                        ⌘⇧+I
                     </span>
                 </div>
             </div>

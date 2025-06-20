@@ -4,12 +4,9 @@
 .lite-editor {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #ddd;
-  border-radius: 4px;
   background-color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Ensure nothing spills outside the editor */

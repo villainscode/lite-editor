@@ -8,7 +8,7 @@
     versionScript.src = `js/data/version.js?t=${Date.now()}`; // ✅ 타임스탬프 추가
     
     versionScript.onload = function() {
-        const VERSION = window.LiteEditorVersion?.version || 'v1.0.05';
+        const VERSION = window.LiteEditorVersion?.version || 'v1.0.96';
         
         // CSS 파일들 로드
         loadCSS(VERSION);
@@ -84,7 +84,7 @@
             'js/plugins/table.js',
             'js/plugins/media.js',
             'js/plugins/line.js',
-            
+            'js/plugins/source.js',
             // 체크리스트 플러그인
             'js/plugins/checkList.js',
             'js/plugins/bulletList.js',

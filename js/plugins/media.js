@@ -825,6 +825,43 @@ function cleanup() {
   isDropdownOpen = false;
 }
 
+// 키보드 단축키 처리 추가 - cmd+shift+m으로 미디어 드롭다운 열기
+document.addEventListener('keydown', function(e) {
+    // cmd+shift+m 조합 확인
+    const isShortcut = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'm';
+    if (!isShortcut) return;
+    
+    // 에디터 영역에 포커스가 있는지 확인
+    const activeElement = document.activeElement;
+    const contentArea = activeElement?.closest('[contenteditable="true"]') || 
+                       document.querySelector('.lite-editor-content');
+    
+    if (!contentArea) return;
+    
+    // 미디어 버튼 찾기
+    const editorContainer = contentArea.closest('.lite-editor');
+    const mediaButton = editorContainer?.querySelector('.lite-editor-button[title="Insert Media"]');
+    if (!mediaButton) return;
+    
+    // 기본 동작 차단
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[MEDIA] 단축키로 미디어 드롭다운 열기');
+    
+    // 미디어 버튼 클릭
+    mediaButton.click();
+    
+    // URL 입력 필드 포커스 보장
+    setTimeout(() => {
+        const urlInput = document.querySelector('.lite-editor-media-input');
+        if (urlInput) {
+            urlInput.focus();
+            urlInput.select(); // 기존 텍스트가 있다면 선택
+        }
+    }, 50); // 드롭다운이 완전히 열린 후 포커스
+}, true);
+
 // 페이지 언로드 시 정리
 window.addEventListener('beforeunload', cleanup);
 })();
