@@ -66,16 +66,62 @@
                 range.deleteContents();
             }
             
-            range.insertNode(hr);
+            // ✅ 현재 위치한 블록 요소 찾기
+            let currentBlock = range.startContainer;
+            if (currentBlock.nodeType === Node.TEXT_NODE) {
+                currentBlock = currentBlock.parentElement;
+            }
             
-            const newRange = document.createRange();
-            newRange.setStartAfter(hr);
-            newRange.collapse(true);
+            // P 태그 등 블록 요소 찾기
+            while (currentBlock && currentBlock !== contentArea) {
+                if (currentBlock.tagName && 
+                    ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(currentBlock.tagName)) {
+                    break;
+                }
+                currentBlock = currentBlock.parentElement;
+            }
             
-            selection.removeAllRanges();
-            selection.addRange(newRange);
+            // ✅ 블록 요소 다음에 HR 삽입 (같은 레벨)
+            if (currentBlock && currentBlock !== contentArea) {
+                if (currentBlock.nextSibling) {
+                    contentArea.insertBefore(hr, currentBlock.nextSibling);
+                } else {
+                    contentArea.appendChild(hr);
+                }
+            } else {
+                // 일반적인 경우
+                range.insertNode(hr);
+            }
+            
+            // ✅ HR 다음에 새로운 P 태그 생성
+            const newParagraph = document.createElement('p');
+            newParagraph.innerHTML = '<br>';
+            
+            // HR 바로 다음에 P 태그 삽입
+            if (hr.nextSibling) {
+                contentArea.insertBefore(newParagraph, hr.nextSibling);
+            } else {
+                contentArea.appendChild(newParagraph);
+            }
+            
+            // ✅ 새로운 P 태그 안에 커서 위치
+            setTimeout(() => {
+                const newRange = document.createRange();
+                newRange.setStart(newParagraph, 0);
+                newRange.collapse(true);
+                
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+                
+                // 포커스 확실히 설정
+                contentArea.focus();
+                
+                console.log('✅ [HR DEBUG] 커서를 새 P 태그에 위치 (지연 처리)');
+            }, 50); // 선택 영역 복원보다 늦게 실행
             
         } catch (error) {
+            console.log('⚠️ [HR DEBUG] 오류 발생 → insertHrFallback');
             insertHrFallback(range, hr, contentArea);
         }
     }

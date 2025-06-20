@@ -405,4 +405,5 @@
       applyHeadingByShortcut(tag, contentArea);
     }
   }, true);
+
 })();

@@ -188,11 +188,8 @@
     range.insertNode(ol);
     applyBasicStyle(ol);
     
-    // ✅ 간소화된 선택 영역 복원
-    setTimeout(() => {
-      restoreSelection(ol, contentArea, savedOffsets);
-      contentArea.focus();
-    }, 50);
+    // ✅ 단순화된 선택 영역 복원 (bulletList.js 방식)
+    restoreSelection(ol);
     
     errorHandler.logDebug('NumberedList', '리스트 생성 완료');
     return ol;
@@ -219,18 +216,8 @@
           
           ol.parentNode.replaceChild(p, ol);
           
-          // ✅ 간소화된 선택 영역 복원
-          setTimeout(() => {
-            if (originalStructure.savedOffsets) {
-              const restored = PluginUtil.selection.restoreFromOffsets(contentArea, originalStructure.savedOffsets);
-              if (!restored) {
-                restoreSelection(p, contentArea);
-              }
-            } else {
-              restoreSelection(p, contentArea);
-            }
-            contentArea.focus();
-          }, 50);
+          // ✅ 단순화된 선택 영역 복원
+          restoreSelection(p);
           
           errorHandler.logDebug('NumberedList', '원본 구조 복원 완료');
           return;
@@ -417,18 +404,8 @@
     ol.style.display = '';
   }
   
-  // ✅ 선택 영역 복원 (bulletList.js 방식 + 오프셋 지원)
-  function restoreSelection(element, contentArea, savedOffsets) {
-    // 오프셋 복원 시도
-    if (savedOffsets && contentArea) {
-      const restored = PluginUtil.selection.restoreFromOffsets(contentArea, savedOffsets);
-      if (restored) {
-        errorHandler.logDebug('NumberedList', '오프셋 기반 선택 복원 성공');
-        return;
-      }
-    }
-    
-    // 폴백: 요소 내용 선택 (bulletList.js 방식)
+  // ✅ 선택 영역 복원 함수 단순화 (bulletList.js 방식)
+  function restoreSelection(element) {
     const timerId = setTimeout(() => {
       try {
         const range = document.createRange();
@@ -436,7 +413,7 @@
         const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
-        errorHandler.logDebug('NumberedList', '요소 내용 선택 완료');
+        errorHandler.logDebug('NumberedList', '선택 영역 복원 완료');
       } catch (e) {
         errorHandler.logWarning('NumberedList', '선택 영역 복원 실패', e);
       }

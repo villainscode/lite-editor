@@ -424,7 +424,7 @@
       }
     });
     
-    // 에디터 내부 클릭 처리
+    // ✅ 에디터 내부 클릭 처리만 (외부 클릭은 처리하지 않음)
     if (isClickInsideEditor && activeEditorContainer) {
       if (sel.rangeCount > 0 && !sel.isCollapsed) {
         const range = sel.getRangeAt(0);
@@ -442,11 +442,7 @@
           }
         }
       }
-    } else {
-      // 에디터 영역 외부 클릭시 예외 지정 (드롭다운 메뉴 등)
-      if (!e.target.closest('.lite-editor-dropdown-menu') && !e.target.closest('.lite-editor-button')) {
-        sel.removeAllRanges();
-      }
     }
+    // ✅ else 블록 완전 제거 - 에디터 외부 클릭은 브라우저 기본 동작 허용
   });
 })();

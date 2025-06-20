@@ -72,66 +72,66 @@
   }
 
   function showModal(type, options = {}) {
-      loadStyles();
-    
-      const existing = document.querySelector('.lite-editor-modal-overlay');
-      if (existing) existing.remove();
-    
-      const modal = createModalTemplate(type, options);
-      document.body.appendChild(modal);
-      document.body.style.overflow = 'hidden';
-    
-      // 모달 내부 클릭 이벤트 처리 (확인, 취소, 바깥 클릭 시)
-      modal.addEventListener('click', (e) => {
-        const action = e.target.getAttribute('data-action');
-        if (action === 'confirm') {
-          closeModal(options.onConfirm);
-        } else if (action === 'cancel') {
-          closeModal(options.onCancel);
-        } else if (e.target === modal && options.closeOnClickOutside !== false) {
+    loadStyles();
+
+    const existing = document.querySelector('.lite-editor-modal-overlay');
+    if (existing) existing.remove();
+
+    const modal = createModalTemplate(type, options);
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // 모달 내부 클릭 이벤트 처리 (확인, 취소, 바깥 클릭 시)
+    modal.addEventListener('click', (e) => {
+      const action = e.target.getAttribute('data-action');
+      if (action === 'confirm') {
+        closeModal(options.onConfirm);
+      } else if (action === 'cancel') {
+        closeModal(options.onCancel);
+      } else if (e.target === modal && options.closeOnClickOutside !== false) {
+        const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
+        closeModal(cb);
+      }
+    });
+
+    // Escape 키 처리
+    function handleKey(e) {
+      try {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          document.removeEventListener('keydown', handleKey);
           const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
           closeModal(cb);
         }
-      });
-    
-      // Escape 키 처리
-      function handleKey(e) {
-        try {
-          // ESC 키만 처리하고 나머지는 무시
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            document.removeEventListener('keydown', handleKey);
-            const cb = type === MODAL_TYPES.CONFIRM ? options.onCancel : options.onConfirm;
-            closeModal(cb);
+        // ✅ Enter 키 처리 추가
+        else if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          document.removeEventListener('keydown', handleKey);
+          
+          // ✅ 항상 확인 버튼 클릭
+          const confirmBtn = modal.querySelector('[data-action="confirm"]');
+          if (confirmBtn) {
+            confirmBtn.click();
           }
-          // 다른 키는 처리하지 않음
-        } catch (error) {
+        }
+      } catch (error) {
+        if (window.errorHandler) {
           errorHandler.logError('Modal', errorHandler.codes.MODAL.KEY_HANDLER, error);
         }
       }
-      document.addEventListener('keydown', handleKey);
-    
-      // 엔터 키 처리: 포커스된 버튼의 클릭 이벤트를 시뮬레이션
-      modal.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          // 모달 내부에서 현재 포커스된 요소가 버튼(data-action 속성을 가진 경우)이면 클릭 이벤트를 발생시킴
-          const activeElement = document.activeElement;
-          if (activeElement && modal.contains(activeElement) && activeElement.getAttribute('data-action')) {
-            activeElement.click();
-          }
-        }
-      });
-    
-      // 포커스 처리: 기본적으로 확인 버튼에 포커스를 줌
-      const confirmBtn = modal.querySelector('[data-action="confirm"]');
-      setTimeout(() => {
-        modal.classList.add('show');
-        if (confirmBtn) confirmBtn.focus();
-      }, 10);
-    
-      return modal;
     }
+    document.addEventListener('keydown', handleKey);
+
+    // 포커스 처리: 기본적으로 확인 버튼에 포커스를 줌
+    const confirmBtn = modal.querySelector('[data-action="confirm"]');
+    setTimeout(() => {
+      modal.classList.add('show');
+      if (confirmBtn) confirmBtn.focus();
+    }, 10);
+
+    return modal;
+  }
 
   // 공통 헬퍼 함수: 아이콘이 있는 타이틀 생성
   function createIconTitle(icon, titleText, options = {}) {

@@ -112,57 +112,82 @@ const PluginUtil = (function() {
                 }
             });
             
+            // ✅ 수정: codeBlock 레이어가 열릴 예정이면 선택 영역 복원 생략
+            const isCodeBlockOpening = exceptLayer && exceptLayer.classList.contains('lite-editor-code-block-layer');
+            
             // 저장된 선택 영역 복원 + 콜백 실행
-            if (savedSelection && activeContentArea) {
-                setTimeout(() => {
-                    try {
-                        activeContentArea.focus({ preventScroll: true });
-                        
-                        // 선택 영역 복원 시도
-                        const restored = selection.restoreSelection(savedSelection);
-                        
-                        if (!restored) {
-                            // 복원 실패 시 커서를 적절한 위치에
-                            const range = document.createRange();
-                            range.selectNodeContents(activeContentArea);
-                            range.collapse(false);
+            if (savedSelection && activeContentArea && !isCodeBlockOpening) {
+                // 에디터에 실제 포커스가 있을 때만 복원
+                const isEditorFocused = document.activeElement === activeContentArea ||
+                                       activeContentArea.contains(document.activeElement);
+                
+                if (isEditorFocused) {
+                    setTimeout(() => {
+                        try {
+                            activeContentArea.focus({ preventScroll: true });
                             
-                            const sel = window.getSelection();
-                            sel.removeAllRanges();
-                            sel.addRange(range);
+                            // 선택 영역 복원 시도
+                            const restored = selection.restoreSelection(savedSelection);
+                            
+                            if (!restored) {
+                                // 복원 실패 시 커서를 적절한 위치에
+                                const range = document.createRange();
+                                range.selectNodeContents(activeContentArea);
+                                range.collapse(false);
+                                
+                                const sel = window.getSelection();
+                                sel.removeAllRanges();
+                                sel.addRange(range);
+                            }
+                            
+                            // 저장된 선택 영역 정리
+                            if (window.mediaPluginSavedRange) {
+                                window.mediaPluginSavedRange = null;
+                            }
+                            if (this.lastSavedSelection) {
+                                this.lastSavedSelection = null;
+                            }
+                            
+                            if (window.errorHandler) {
+                                errorHandler.colorLog('LAYER_MANAGER', '✅ 레이어 닫기 및 선택 영역 처리 완료', {
+                                    target: activeContentArea.className || activeContentArea.id || 'contentArea'
+                                }, '#4caf50');
+                            }
+                        } catch (e) {
+                            console.error('선택 영역 복원 실패:', e);
                         }
                         
-                        // 저장된 선택 영역 정리
-                        if (window.mediaPluginSavedRange) {
-                            window.mediaPluginSavedRange = null;
-                        }
-                        if (this.lastSavedSelection) {
-                            this.lastSavedSelection = null;
-                        }
-                        
-                        if (window.errorHandler) {
-                            errorHandler.colorLog('LAYER_MANAGER', '✅ 레이어 닫기 및 선택 영역 처리 완료', {
-                                target: activeContentArea.className || activeContentArea.id || 'contentArea'
-                            }, '#4caf50');
-                        }
-                        
-                    } catch (e) {
-                        console.warn('LayerManager: 선택 영역 복원 중 오류:', e);
-                        if (activeContentArea && activeContentArea.focus) {
-                            activeContentArea.focus();
-                        }
+                        if (onComplete) onComplete();
+                    }, 50);
+                } else {
+                    // 에디터에 포커스가 없으면 선택 영역 복원하지 않음
+                    console.log('[LAYER_MANAGER] 에디터 포커스 없음 - 선택 영역 복원 생략');
+                    
+                    // 저장된 선택 영역만 정리
+                    if (window.mediaPluginSavedRange) {
+                        window.mediaPluginSavedRange = null;
+                    }
+                    if (this.lastSavedSelection) {
+                        this.lastSavedSelection = null;
                     }
                     
-                    // 콜백 실행
-                    if (onComplete && typeof onComplete === 'function') {
-                        onComplete();
-                    }
-                }, 50);
-            } else {
-                // 저장된 선택 영역이 없어도 콜백 실행
-                if (onComplete && typeof onComplete === 'function') {
-                    setTimeout(onComplete, 10);
+                    if (onComplete) onComplete();
                 }
+            } else {
+                // ✅ codeBlock 레이어가 열릴 예정이거나 저장된 선택 영역이 없는 경우
+                if (isCodeBlockOpening) {
+                    console.log('[LAYER_MANAGER] CodeBlock 레이어 열림 - 선택 영역 복원 생략');
+                }
+                
+                // 저장된 선택 영역 정리
+                if (window.mediaPluginSavedRange) {
+                    window.mediaPluginSavedRange = null;
+                }
+                if (this.lastSavedSelection) {
+                    this.lastSavedSelection = null;
+                }
+                
+                if (onComplete) onComplete();
             }
             
             // 제외된 레이어 외에는 모두 제거

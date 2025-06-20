@@ -86,8 +86,16 @@
    * 저장된 선택 영역을 복원
    */
   function restoreSelection() {
-    if (!savedRange) return false;
-    return util.selection.restoreSelection(savedRange);
+    if (!savedRange) {
+      console.log('[CODEBLOCK] savedRange가 없음 - 복원 생략');
+      return false;
+    }
+    
+    console.log('[CODEBLOCK] 선택 영역 복원 시도:', savedRange);
+    const restored = util.selection.restoreSelection(savedRange);
+    console.log('[CODEBLOCK] 선택 영역 복원 결과:', restored);
+    
+    return restored;
   }
   
   /**
@@ -261,20 +269,13 @@
    * 코드 블록 레이어 표시
    */
   function showCodeBlockLayer(buttonElement, contentArea, SpeedHighlight) {
-    // ✅ closeAll 이후에 선택 영역 저장
+    // ✅ 수정: 선택 영역은 이미 버튼 클릭 시 저장되었으므로 여기서는 제거
+    console.log('[CODEBLOCK] 레이어 표시 - 기존 savedRange 사용:', savedRange);
+    
     // 다른 활성화된 모달 모두 닫기 (현재 레이어 제외)
     if (util.activeModalManager) {
       util.activeModalManager.closeAll(activeLayer);
     }
-    
-    // ✅ closeAll 완료 후 선택 영역 저장
-    setTimeout(() => {
-      if (document.activeElement === contentArea) {
-        savedRange = util.selection.saveSelection();
-      } else {
-        savedRange = null;
-      }
-    }, 60); // closeAll의 선택 영역 복원(50ms) 이후
     
     // 레이어 생성
     activeLayer = document.createElement('div');
@@ -384,13 +385,39 @@
     }
     
     try {
-      // 저장된 선택 영역 복원
-      restoreSelection();
+      // ✅ 수정: 포커스 먼저 설정
+      try {
+        contentArea.focus({ preventScroll: true });
+      } catch (e) {
+        contentArea.focus();
+      }
       
-      // 현재 선택 영역 확인
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        selection.getRangeAt(0);
+      // ✅ 수정: 포커스 후에 선택 영역 복원
+      if (savedRange) {
+        const restored = util.selection.restoreSelection(savedRange);
+        console.log('[CODEBLOCK] 선택 영역 복원 결과:', restored);
+        
+        if (!restored) {
+          console.log('[CODEBLOCK] 선택 영역 복원 실패 - 에디터 끝으로 이동');
+          // 복원 실패 시 에디터 끝으로 커서 이동
+          const range = document.createRange();
+          range.selectNodeContents(contentArea);
+          range.collapse(false); // 끝으로 이동
+          
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } else {
+        console.log('[CODEBLOCK] savedRange가 없음 - 에디터 끝으로 이동');
+        // savedRange가 없으면 에디터 끝으로 이동
+        const range = document.createRange();
+        range.selectNodeContents(contentArea);
+        range.collapse(false);
+        
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
       
       // 언어 결정
@@ -399,12 +426,6 @@
         finalLanguage = 'plain';
       } else if (language === 'auto') {
         finalLanguage = SpeedHighlight?.detectLanguage(code) || 'plain';
-      }
-      
-      try {
-        contentArea.focus({ preventScroll: true });
-      } catch (e) {
-        contentArea.focus();
       }
       
       // HTML 특수 문자 이스케이프 처리
@@ -452,7 +473,6 @@
         }
       }, 10);
       
-
       if (SpeedHighlight) {
         setTimeout(() => {
           const codeBlocks = contentArea.querySelectorAll('.lite-editor-code-block .shj-lang-' + finalLanguage);
@@ -536,6 +556,31 @@
     }
   }, true); // capture 단계에서 처리
   
+  /**
+   * 현재 커서나 선택 영역이 코드 블록 내부에 있는지 확인
+   * @param {HTMLElement} contentArea - 에디터 영역
+   * @returns {boolean} 코드 블록 내부 여부
+   */
+  function isInsideCodeBlock(contentArea) {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return false;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // 텍스트 노드인 경우 부모 요소로
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement;
+    }
+    
+    // 에디터 영역 내부에서만 검사
+    if (!contentArea.contains(element)) return false;
+    
+    // 코드 블록 내부인지 확인 (.lite-editor-code-block 클래스 사용)
+    const codeBlock = element.closest('.lite-editor-code-block');
+    return !!codeBlock;
+  }
+  
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
     title: 'Code Block',
@@ -584,6 +629,32 @@
       button.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // ✅ 코드 블록 내부에서 클릭했는지 먼저 확인
+        if (isInsideCodeBlock(contentArea)) {
+          LiteEditorModal.alert('코드하일라이트 된 영역에서 코드를 삽입할 수 없습니다.', {
+            titleText: '코드 블록 삽입 불가',
+            confirmText: '확인'
+          });
+          return; // 경고창만 표시하고 레이어 열지 않음
+        }
+        
+        // ✅ 수정: 버튼 클릭 직후 즉시 선택 영역 저장 (포커스가 바뀌기 전에)
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+          // 선택 영역이 있는 경우
+          savedRange = util.selection.saveSelection();
+          console.log('[CODEBLOCK] 버튼 클릭 시 선택 영역 저장:', savedRange);
+        } else {
+          // 커서만 있는 경우 - contentArea에 포커스가 있는지 확인
+          if (contentArea.contains(selection.anchorNode)) {
+            savedRange = util.selection.saveSelection();
+            console.log('[CODEBLOCK] 버튼 클릭 시 커서 위치 저장:', savedRange);
+          } else {
+            savedRange = null;
+            console.log('[CODEBLOCK] 에디터 외부에서 클릭 - savedRange를 null로 설정');
+          }
+        }
         
         // 스크롤 위치 저장
         util.scroll.savePosition();

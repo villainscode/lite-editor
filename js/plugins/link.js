@@ -30,16 +30,48 @@
 
 
     /**
-     * URL 유효성 검사
+     * URL 유효성 검사 (도메인만 엄격하게, 경로/파라미터는 한글 허용)
      */
     function isValidUrl(url) {
-        // security-manager.js로 이동한 로직 사용
-        if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.isValidUrl) {
-            return LiteEditorSecurity.isValidUrl(url);
-        }
+        if (!url) return false;
         
-        // 폴백: 기본 검사 (security-manager.js가 없는 경우)
-        return /^(https?:\/\/)?(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(:\d+)?(\/[^\s]*)?$/.test(url);
+        try {
+            // URL 정규화 (프로토콜 추가)
+            let normalizedUrl = url;
+            if (!/^https?:\/\//i.test(url)) {
+                normalizedUrl = 'https://' + url;
+            }
+            
+            // URL 객체로 파싱
+            const urlObj = new URL(normalizedUrl);
+            const hostname = urlObj.hostname;
+            
+            // 1. 도메인에 한글 자음/모음만 있는 경우 차단
+            const onlyKoreanConsonantVowel = /^[ㄱ-ㅎㅏ-ㅣ.]+$/;
+            if (onlyKoreanConsonantVowel.test(hostname)) {
+                return false;
+            }
+            
+            // 2. 도메인 기본 형식 검증 (영문/숫자 + 일부 특수문자만)
+            const validDomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$/;
+            if (!validDomainRegex.test(hostname)) {
+                return false;
+            }
+            
+            // 3. 최소 도메인 구조 확인 (점이 하나 이상 있어야 함)
+            if (!hostname.includes('.') || hostname.length < 3) {
+                return false;
+            }
+            
+            // 4. security-manager.js의 추가 보안 검사
+            if (typeof LiteEditorSecurity !== 'undefined' && LiteEditorSecurity.isValidUrl) {
+                return LiteEditorSecurity.isValidUrl(url);
+            }
+            
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     /**

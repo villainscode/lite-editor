@@ -723,7 +723,7 @@
    * Undo 플러그인
    */
   LiteEditor.registerPlugin('undo', {
-    title: 'Undo',
+    title: 'Undo (⌘⇧Z)',
     icon: 'undo',
     action: function(contentArea) {
       const historyManager = getHistoryManager(contentArea);
@@ -737,7 +737,7 @@
    * Redo 플러그인
    */
   LiteEditor.registerPlugin('redo', {
-    title: 'Redo',
+    title: 'Redo (⌘⇧Z)',
     icon: 'redo',
     action: function(contentArea) {
       const historyManager = getHistoryManager(contentArea);

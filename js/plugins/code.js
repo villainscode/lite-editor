@@ -323,9 +323,15 @@
     const newParagraph = util.dom.createElement('p');
     newParagraph.innerHTML = '<br>'; // 빈 문단 표시용
     
-    // ✅ 코드 블럭 다음에 P 태그 삽입
-    if (codeElement.nextSibling) {
-      contentArea.insertBefore(newParagraph, codeElement.nextSibling);
+    // ✅ 수정: codeElement의 최상위 부모 블록 요소 찾기
+    let parentBlock = codeElement;
+    while (parentBlock.parentNode && parentBlock.parentNode !== contentArea) {
+      parentBlock = parentBlock.parentNode;
+    }
+    
+    // ✅ 수정: 올바른 위치에 P 태그 삽입
+    if (parentBlock.nextSibling) {
+      contentArea.insertBefore(newParagraph, parentBlock.nextSibling);
     } else {
       contentArea.appendChild(newParagraph);
     }
@@ -345,7 +351,8 @@
       
       if (window.errorHandler) {
         errorHandler.colorLog('CODE', '✅ 새 문단 생성 및 포커스 완료', {
-          newParagraph: newParagraph.outerHTML
+          newParagraph: newParagraph.outerHTML,
+          parentBlock: parentBlock.outerHTML
         }, '#4caf50');
       }
     }, 10);

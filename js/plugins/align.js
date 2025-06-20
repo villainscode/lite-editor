@@ -309,6 +309,7 @@
         savedRange.deleteContents();
         savedRange.insertNode(spanElement);
         
+        // ✅ 수정: 정렬된 텍스트를 다시 선택하여 블록 유지
         const newRange = document.createRange();
         newRange.selectNodeContents(spanElement);
         selection.removeAllRanges();
@@ -384,158 +385,40 @@
     return lastNode;
   }
 
-  // ✅ 수정: 전역 클릭 이벤트 (layerManager 복원 차단 추가)
-  document.addEventListener('click', function(e) {
-    const contentArea = e.target.closest('[contenteditable="true"]');
-    const editorContainer = e.target.closest('.lite-editor, .lite-editor-content');
-    const alignButton = e.target.closest('.lite-editor-button');
-    
-    // ✅ content 영역 밖 클릭 시 완전한 초기화
-    if (!contentArea && !editorContainer && !alignButton) {
-      console.log('[ALIGN] content 영역 밖 클릭 - 완전한 초기화 시작');
-      
-      // ✅ 1. savedRange 초기화
-      savedRange = null;
-      
-      // ✅ 2. **layerManager 복원 기능 임시 차단**
-      const originalCloseAll = util.layerManager?.closeAll;
-      if (util.layerManager && originalCloseAll) {
-        console.log('[ALIGN] layerManager 복원 기능 임시 차단');
-        util.layerManager.closeAll = function() {
-          console.log('[ALIGN] layerManager.closeAll 호출 차단됨');
-          // 기본 레이어 닫기만 수행, 선택 영역 복원은 건너뜀
-          this.activeLayersList.forEach(item => {
-            if (item.element && document.body.contains(item.element)) {
-              if (item.type === 'dropdown') {
-                item.element.classList.remove('show');
-                if (item.button) item.button.classList.remove('active');
-              } else {
-                if (item.element.closeCallback) {
-                  item.element.closeCallback();
-                }
-              }
-            }
-          });
-          this.activeLayersList = [];
-        };
-      }
-      
-      // ✅ 3. 브라우저 selection **무조건** 완전 제거
-      try {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          selection.removeAllRanges();
-          console.log('[ALIGN] 브라우저 selection 강제 제거 완료');
-        }
-      } catch (e) {
-        console.warn('[ALIGN] selection 초기화 중 오류:', e);
-      }
-      
-      // ✅ 4. content 영역 포커스 제거 강제
-      const activeContentAreas = document.querySelectorAll('[contenteditable="true"]');
-      activeContentAreas.forEach(area => {
-        if (document.activeElement === area) {
-          area.blur();
-          console.log('[ALIGN] content 영역 포커스 제거 완료');
-        }
-      });
-      
-      // ✅ 5. 전역 선택 영역 저장소들 **무조건** 완전 초기화
-      try {
-        if (window.mediaPluginSavedRange) {
-          window.mediaPluginSavedRange = null;
-        }
-        if (window.liteEditorSelection && typeof window.liteEditorSelection.clear === 'function') {
-          window.liteEditorSelection.clear();
-        }
-        if (util.layerManager && util.layerManager.lastSavedSelection) {
-          util.layerManager.lastSavedSelection = null;
-        }
-        console.log('[ALIGN] 전역 선택 영역 저장소 초기화 완료');
-      } catch (e) {
-        console.warn('[ALIGN] 전역 저장소 초기화 중 오류:', e);
-      }
-      
-      // ✅ 6. layerManager 복원 기능 다시 활성화 (지연 실행)
-      setTimeout(() => {
-        if (util.layerManager && originalCloseAll) {
-          util.layerManager.closeAll = originalCloseAll;
-          console.log('[ALIGN] layerManager 복원 기능 재활성화');
-        }
-      }, 100);
-    }
-  }, true);
-
-  // ✅ 수정: content 영역 내 클릭 시에도 layerManager 차단
-  document.addEventListener('click', function(e) {
-    const contentArea = e.target.closest('[contenteditable="true"]');
-    
-    // ✅ content 영역 내 클릭 시 align 관련 상태만 정리
-    if (contentArea && savedRange) {
-      console.log('[ALIGN] content 영역 내 클릭 - align 상태 초기화');
-      
-      // ✅ layerManager 복원 차단 (임시)
-      const originalCloseAll = util.layerManager?.closeAll;
-      if (util.layerManager && originalCloseAll) {
-        util.layerManager.closeAll = function() { 
-          console.log('[ALIGN] content 내 클릭 - layerManager 복원 차단');
-          // 레이어만 닫고 선택 영역 복원은 건너뜀
-          this.activeLayersList = [];
-        };
-      }
-      
-      savedRange = null;
-      
-      // 전역 저장소 정리
-      try {
-        if (window.mediaPluginSavedRange) {
-          window.mediaPluginSavedRange = null;
-        }
-        if (window.liteEditorSelection && typeof window.liteEditorSelection.clear === 'function') {
-          window.liteEditorSelection.clear();
-        }
-        if (util.layerManager && util.layerManager.lastSavedSelection) {
-          util.layerManager.lastSavedSelection = null;
-        }
-        console.log('[ALIGN] content 영역 내 - 전역 저장소 정리 완료');
-      } catch (e) {
-        console.warn('[ALIGN] content 영역 내 저장소 정리 중 오류:', e);
-      }
-      
-      // ✅ layerManager 복원 기능 재활성화
-      setTimeout(() => {
-        if (util.layerManager && originalCloseAll) {
-          util.layerManager.closeAll = originalCloseAll;
-          console.log('[ALIGN] content 내 - layerManager 복원 기능 재활성화');
-        }
-      }, 50);
-    }
-  }, true);
-
   // ✅ 수정: 단축키 등록 (포커스 기반 체크)
   document.addEventListener('keydown', function(e) {
-    // ✅ 1. 실제 포커스된 요소 체크 (e.target 대신 document.activeElement 사용)
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+    
+    // ✅ 1. 먼저 Cmd+Shift+R 조합인지 확인
+    const isCmdShiftR = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'r';
+    const isCmdShiftL = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'l';
+    const isCmdShiftE = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'e';
+    const isCmdShiftJ = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'j';
+    
+    // ✅ 2. 정렬 단축키가 아니면 무시 (브라우저 기본 동작 허용)
+    if (!isCmdShiftR && !isCmdShiftL && !isCmdShiftE && !isCmdShiftJ) {
+      return;
+    }
+    
+    // ✅ 3. 정렬 단축키인 경우에만 content 영역 체크
     const activeElement = document.activeElement;
     const contentArea = activeElement?.closest('[contenteditable="true"]');
     
     if (!contentArea) {
-      // ✅ 실제 포커스가 content 영역이 아니면 아무것도 하지 않음
-      console.log('[ALIGN] 키 이벤트 무시 - 포커스가 content 영역 밖');
-      return;
+      // ✅ content 영역에 포커스가 없으면 브라우저 기본 동작 허용
+      console.log('[ALIGN] 키 이벤트 무시 - 포커스가 content 영역 밖, 브라우저 기본 동작 허용');
+      return; // preventDefault 호출하지 않음!
     }
     
     const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
     if (!editorContainer) {
-      console.log('[ALIGN] 키 이벤트 무시 - 에디터 컨테이너 밖');
-      return;
+      console.log('[ALIGN] 키 이벤트 무시 - 에디터 컨테이너 밖, 브라우저 기본 동작 허용');
+      return; // preventDefault 호출하지 않음!
     }
 
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-    // ✅ 2. content 영역에 실제 포커스가 있을 때만 단축키 처리
+    // ✅ 4. content 영역에 실제 포커스가 있을 때만 단축키 처리 및 preventDefault
     
-    // Cmd+Shift+L - 왼쪽 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'l') {
+    if (isCmdShiftL) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+L - 왼쪽 정렬 (포커스 확인됨)');
@@ -543,8 +426,7 @@
       return;
     }
     
-    // Cmd+Shift+E - 중앙 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'e') {
+    if (isCmdShiftE) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+E - 중앙 정렬 (포커스 확인됨)');
@@ -552,8 +434,7 @@
       return;
     }
     
-    // Cmd+Shift+R - 오른쪽 정렬 (✅ 실제 포커스 확인 후에만)
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'r') {
+    if (isCmdShiftR) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+R - 오른쪽 정렬 (포커스 확인됨)');
@@ -561,8 +442,7 @@
       return;
     }
     
-    // Cmd+Shift+J - 양쪽 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'j') {
+    if (isCmdShiftJ) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+J - 양쪽 정렬 (포커스 확인됨)');

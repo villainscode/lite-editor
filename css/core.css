@@ -119,7 +119,7 @@
 /* 기본 타이포그래피 - 인용구 */
 .lite-editor-content blockquote {
   /* p-3: padding 0.75rem (12px) */
-  padding: 0.75rem;
+  padding: 8px;
   
   /* bg-blue-50: 연한 파란색 배경 */
   background-color: #eff6ff;
