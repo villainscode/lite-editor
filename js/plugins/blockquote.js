@@ -112,27 +112,47 @@
     }
   });
 
-  // ✅ 단축키 등록 (Alt+Shift+B)
-  document.addEventListener('keydown', function(e) {
-    const contentArea = e.target.closest('[contenteditable="true"]');
-    if (!contentArea) return;
+  // ✅ 더 강력한 차단 시도
+  window.addEventListener('keydown', function(e) {
+    const contentArea = document.querySelector('[contenteditable="true"]:focus') || 
+                        document.activeElement?.closest('[contenteditable="true"]');
     
-    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
-    if (!editorContainer) return;
+    if (!contentArea) return;
 
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-    // ✅ Alt+Shift+B (Mac/Windows 공통)
+    // Alt+Shift+B 감지
     if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'b') {
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-        executeBlockquoteAction(contentArea, 'Alt+Shift+B');
-      } catch (error) {
-        if (window.errorHandler) {
-          errorHandler.logWarning('BlockquotePlugin', 'Alt+Shift+B 처리 중 확장 프로그램 충돌', error);
+      console.log('🔍 Blockquote 단축키 감지됨!');
+      
+      // ✅ 모든 차단 방법 동원
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      // ✅ 입력 이벤트도 차단
+      const inputHandler = (inputEvent) => {
+        if (inputEvent.data === 'ı') {
+          inputEvent.preventDefault();
+          inputEvent.stopPropagation();
+          // 잘못 입력된 문자 제거
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (range.startContainer.textContent?.includes('ı')) {
+              range.startContainer.textContent = range.startContainer.textContent.replace('ı', '');
+            }
+          }
         }
-      }
+      };
+      
+      contentArea.addEventListener('input', inputHandler, { once: true });
+      
+      // 비동기로 blockquote 실행
+      setTimeout(() => {
+        executeBlockquoteAction(contentArea, 'Alt+Shift+B');
+        contentArea.removeEventListener('input', inputHandler);
+      }, 0);
+      
+      return false;
     }
   }, true);
 })();
