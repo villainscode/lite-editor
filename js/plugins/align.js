@@ -309,6 +309,7 @@
         savedRange.deleteContents();
         savedRange.insertNode(spanElement);
         
+        // ✅ 수정: 정렬된 텍스트를 다시 선택하여 블록 유지
         const newRange = document.createRange();
         newRange.selectNodeContents(spanElement);
         selection.removeAllRanges();
@@ -386,28 +387,38 @@
 
   // ✅ 수정: 단축키 등록 (포커스 기반 체크)
   document.addEventListener('keydown', function(e) {
-    // ✅ 1. 실제 포커스된 요소 체크 (e.target 대신 document.activeElement 사용)
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+    
+    // ✅ 1. 먼저 Cmd+Shift+R 조합인지 확인
+    const isCmdShiftR = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'r';
+    const isCmdShiftL = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'l';
+    const isCmdShiftE = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'e';
+    const isCmdShiftJ = e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'j';
+    
+    // ✅ 2. 정렬 단축키가 아니면 무시 (브라우저 기본 동작 허용)
+    if (!isCmdShiftR && !isCmdShiftL && !isCmdShiftE && !isCmdShiftJ) {
+      return;
+    }
+    
+    // ✅ 3. 정렬 단축키인 경우에만 content 영역 체크
     const activeElement = document.activeElement;
     const contentArea = activeElement?.closest('[contenteditable="true"]');
     
     if (!contentArea) {
-      // ✅ 실제 포커스가 content 영역이 아니면 아무것도 하지 않음
-      console.log('[ALIGN] 키 이벤트 무시 - 포커스가 content 영역 밖');
-      return;
+      // ✅ content 영역에 포커스가 없으면 브라우저 기본 동작 허용
+      console.log('[ALIGN] 키 이벤트 무시 - 포커스가 content 영역 밖, 브라우저 기본 동작 허용');
+      return; // preventDefault 호출하지 않음!
     }
     
     const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
     if (!editorContainer) {
-      console.log('[ALIGN] 키 이벤트 무시 - 에디터 컨테이너 밖');
-      return;
+      console.log('[ALIGN] 키 이벤트 무시 - 에디터 컨테이너 밖, 브라우저 기본 동작 허용');
+      return; // preventDefault 호출하지 않음!
     }
 
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-    // ✅ 2. content 영역에 실제 포커스가 있을 때만 단축키 처리
+    // ✅ 4. content 영역에 실제 포커스가 있을 때만 단축키 처리 및 preventDefault
     
-    // Cmd+Shift+L - 왼쪽 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'l') {
+    if (isCmdShiftL) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+L - 왼쪽 정렬 (포커스 확인됨)');
@@ -415,8 +426,7 @@
       return;
     }
     
-    // Cmd+Shift+E - 중앙 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'e') {
+    if (isCmdShiftE) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+E - 중앙 정렬 (포커스 확인됨)');
@@ -424,8 +434,7 @@
       return;
     }
     
-    // Cmd+Shift+R - 오른쪽 정렬 (✅ 실제 포커스 확인 후에만)
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'r') {
+    if (isCmdShiftR) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+R - 오른쪽 정렬 (포커스 확인됨)');
@@ -433,8 +442,7 @@
       return;
     }
     
-    // Cmd+Shift+J - 양쪽 정렬
-    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key.toLowerCase() === 'j') {
+    if (isCmdShiftJ) {
       e.preventDefault();
       e.stopPropagation();
       console.log('[ALIGN] Cmd+Shift+J - 양쪽 정렬 (포커스 확인됨)');
