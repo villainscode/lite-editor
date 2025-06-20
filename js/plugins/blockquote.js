@@ -77,14 +77,22 @@
     
     document.execCommand('formatBlock', false, 'blockquote');
     
-    // ✅ 커서를 텍스트 마지막으로 이동
+    // ✅ 커서를 blockquote 내부로 강제 이동
     setTimeout(() => {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        range.collapse(false); // false = 끝으로 이동
+      // 방금 생성된 blockquote 찾기
+      const blockquotes = contentArea.querySelectorAll('blockquote');
+      const lastBlockquote = blockquotes[blockquotes.length - 1];
+      
+      if (lastBlockquote) {
+        const range = document.createRange();
+        range.selectNodeContents(lastBlockquote);
+        range.collapse(true); // 시작 부분으로
+        
+        const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
+        
+        contentArea.focus();
       }
       
       // 히스토리 완료 기록
