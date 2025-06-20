@@ -556,6 +556,31 @@
     }
   }, true); // capture 단계에서 처리
   
+  /**
+   * 현재 커서나 선택 영역이 코드 블록 내부에 있는지 확인
+   * @param {HTMLElement} contentArea - 에디터 영역
+   * @returns {boolean} 코드 블록 내부 여부
+   */
+  function isInsideCodeBlock(contentArea) {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return false;
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // 텍스트 노드인 경우 부모 요소로
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement;
+    }
+    
+    // 에디터 영역 내부에서만 검사
+    if (!contentArea.contains(element)) return false;
+    
+    // 코드 블록 내부인지 확인 (.lite-editor-code-block 클래스 사용)
+    const codeBlock = element.closest('.lite-editor-code-block');
+    return !!codeBlock;
+  }
+  
   // 플러그인 등록
   LiteEditor.registerPlugin(PLUGIN_ID, {
     title: 'Code Block',
@@ -604,6 +629,15 @@
       button.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        // ✅ 코드 블록 내부에서 클릭했는지 먼저 확인
+        if (isInsideCodeBlock(contentArea)) {
+          LiteEditorModal.alert('코드하일라이트 된 영역에서 코드를 삽입할 수 없습니다.', {
+            titleText: '코드 블록 삽입 불가',
+            confirmText: '확인'
+          });
+          return; // 경고창만 표시하고 레이어 열지 않음
+        }
         
         // ✅ 수정: 버튼 클릭 직후 즉시 선택 영역 저장 (포커스가 바뀌기 전에)
         const selection = window.getSelection();
