@@ -474,7 +474,21 @@
     urlInput.addEventListener('paste', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // 텍스트만 처리하는 로직
+      
+      // ✅ 클립보드에서 텍스트 가져오기
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      if (text) {
+        // ✅ input에 텍스트 삽입
+        const start = urlInput.selectionStart;
+        const end = urlInput.selectionEnd;
+        const value = urlInput.value;
+        
+        urlInput.value = value.substring(0, start) + text + value.substring(end);
+        urlInput.selectionStart = urlInput.selectionEnd = start + text.length;
+        
+        // ✅ input 이벤트 발생 (필요시)
+        urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
 
     return cachedDropdownElements;
