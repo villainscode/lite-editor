@@ -384,14 +384,32 @@
     return lastNode;
   }
 
+<<<<<<< HEAD
   // ✅ 수정: 전역 클릭 이벤트 (layerManager 복원 차단 추가)
+=======
+  // ✅ 수정: 전역 클릭 이벤트 (플러그인 요소 제외 추가)
+>>>>>>> feature/2025-06-08
   document.addEventListener('click', function(e) {
     const contentArea = e.target.closest('[contenteditable="true"]');
     const editorContainer = e.target.closest('.lite-editor, .lite-editor-content');
     const alignButton = e.target.closest('.lite-editor-button');
     
+<<<<<<< HEAD
     // ✅ content 영역 밖 클릭 시 완전한 초기화
     if (!contentArea && !editorContainer && !alignButton) {
+=======
+    // ✅ 플러그인 내부 요소들 제외 추가
+    const isPluginElement = e.target.closest('.lite-editor-dropdown-menu') ||
+                           e.target.closest('.modal-overlay') ||
+                           e.target.closest('.lite-editor-code-block-layer') ||
+                           e.target.closest('.media-dropdown') ||
+                           e.target.closest('.link-dropdown') ||
+                           e.target.matches('input, textarea, select, button') ||
+                           e.target.closest('input, textarea, select, button');
+    
+    // ✅ content 영역 밖 클릭 시 완전한 초기화 (단, 플러그인 요소는 제외)
+    if (!contentArea && !editorContainer && !alignButton && !isPluginElement) {
+>>>>>>> feature/2025-06-08
       console.log('[ALIGN] content 영역 밖 클릭 - 완전한 초기화 시작');
       
       // ✅ 1. savedRange 초기화
@@ -466,12 +484,27 @@
     }
   }, true);
 
+<<<<<<< HEAD
   // ✅ 수정: content 영역 내 클릭 시에도 layerManager 차단
   document.addEventListener('click', function(e) {
     const contentArea = e.target.closest('[contenteditable="true"]');
     
     // ✅ content 영역 내 클릭 시 align 관련 상태만 정리
     if (contentArea && savedRange) {
+=======
+  // ✅ 수정: content 영역 내 클릭 시에도 플러그인 요소 제외
+  document.addEventListener('click', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    
+    // ✅ 플러그인 내부 요소 제외
+    const isPluginElement = e.target.closest('.lite-editor-dropdown-menu') ||
+                           e.target.closest('.modal-overlay') ||
+                           e.target.closest('.lite-editor-code-block-layer') ||
+                           e.target.matches('input, textarea, select, button');
+    
+    // ✅ content 영역 내 클릭 시 align 관련 상태만 정리 (단, 플러그인 요소는 제외)
+    if (contentArea && savedRange && !isPluginElement) {
+>>>>>>> feature/2025-06-08
       console.log('[ALIGN] content 영역 내 클릭 - align 상태 초기화');
       
       // ✅ layerManager 복원 차단 (임시)

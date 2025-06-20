@@ -186,25 +186,28 @@
         display: flex;
         flex-wrap: wrap;
         gap: 20px;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: flex-start;
     }
 
     /* ✅ 단축키 아이템 - 한줄 구조 */
     .shortcut-item {
-        width: 240px; /* 너비 고정 */
-        height: 60px; /* 높이 조정 */
+        width: 240px !important;
+        min-width: 240px;
+        max-width: 240px;
+        height: 60px;
         padding: 15px;
         background: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 8px;
         display: flex;
-        flex-direction: row; /* 가로 배치 */
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
         transition: all 0.2s ease;
         box-sizing: border-box;
+        flex-shrink: 0;
     }
 
     .shortcut-item:hover {
@@ -219,7 +222,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        flex: 1; /* 남은 공간 차지 */
+        flex: 1;
     }
 
     .shortcut-item .material-icons {
@@ -236,18 +239,19 @@
 
     /* ✅ 단축키 부분 */
     .shortcut-key {
-        background: #495057;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-family: 'Courier New', monospace;
-        font-size: 11px;
-        font-weight: bold;
-        white-space: nowrap;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: 4px;
+        background: #495057 !important;
+        color: white !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 11px !important;
+        font-weight: bold !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        min-width: 80px !important; /* 최소 너비 보장 */
     }
 
     .shortcut-key .material-icons {
@@ -274,7 +278,64 @@
 
     .example .lite-editor-content li + li {
         margin-top: 0.25em !important;
-    } 
+    }
+
+    /* ✅ Pro Tips 스타일 추가 */
+    .pro-tips {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .tip-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .tip-item .material-icons {
+        color: #007bff;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .tip-item span:last-child {
+        color: #333;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    /* ✅ 그리드 레이아웃 개선 */
+    .shortcuts-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+
+    /* ✅ 반응형 개선 */
+    @media (max-width: 1200px) {
+        .shortcuts-grid {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .shortcut-item {
+            width: 100% !important;
+            max-width: 300px;
+        }
+        
+        .shortcuts-grid {
+            justify-content: center;
+        }
+    }
     </style>
 
 </head>
@@ -298,14 +359,19 @@
                         <p></p>
                        
                         <pre>
+<<<<<<< HEAD
 📋 LiteEditor 단축키 가이드 (v1.0.22 기준)
+=======
+📋 LiteEditor 단축키 가이드 (v1.0.85 기준)
+>>>>>>> feature/2025-06-08
 
   // ✅ 텍스트 서식 (정상 동작)
-  - bold: { key: 'b', cmd: true },               // ⌘+B / Ctrl+B
-  - italic: { key: 'i', cmd: true },             // ⌘+I / Ctrl+I  
-  - underline: { key: 'u', cmd: true },          // ⌘+U / Ctrl+U
-  - strike: { key: 's', cmd: true, shift: true }, // ⌘+Shift+S / Ctrl+Shift+S
+  - bold: { key: 'b', ctrl: true, meta: true },        // ⌘+B / Ctrl+B
+  - italic: { key: 'i', ctrl: true, meta: true },      // ⌘+I / Ctrl+I  
+  - underline: { key: 'u', ctrl: true, meta: true },   // ⌘+U / Ctrl+U
+  - strike: { key: 's', meta: true, shift: true },     // ⌘+Shift+S / Ctrl+Shift+S
   
+<<<<<<< HEAD
   // ✅ 헤딩 (업데이트됨)
   - heading1: { key: '1', alt: true, cmd: true },  // ⌥⌘+1 / Alt+Ctrl+1
   - heading2: { key: '2', alt: true, cmd: true },  // ⌥⌘+2 / Alt+Ctrl+2
@@ -316,18 +382,31 @@
   - bulletList: { key: '8', cmd: true, shift: true },   // ⌘+Shift+8 / Ctrl+Shift+8
   - numberedList: { key: '7', cmd: true, shift: true }, // ⌘+Shift+7 / Ctrl+Shift+7
   - checkList: { key: '9', cmd: true, shift: true },    // ⌘+Shift+9 / Ctrl+Shift+9
+=======
+  // ✅ 헤딩 (정상 동작)
+  - heading1: { key: '1', ctrl: true, alt: true },     // ⌘+⌥+1 / Ctrl+Alt+1
+  - heading2: { key: '2', ctrl: true, alt: true },     // ⌘+⌥+2 / Ctrl+Alt+2
+  - heading3: { key: '3', ctrl: true, alt: true },     // ⌘+⌥+3 / Ctrl+Alt+3
+  - paragraph: { key: '4', ctrl: true, alt: true },    // ⌘+⌥+4 / Ctrl+Alt+4 (본문)
+  
+  // ✅ 리스트 (정상)
+  - bulletList: { key: '8', ctrl: true, shift: true }, // ⌘+Shift+8 / Ctrl+Shift+8
+  - numberedList: { key: '7', ctrl: true, shift: true }, // ⌘+Shift+7 / Ctrl+Shift+7
+  - checkList: { key: '9', ctrl: true, shift: true },  // ⌘+Shift+9 / Ctrl+Shift+9
+>>>>>>> feature/2025-06-08
   
   // ✅ 편집 (정상 동작)
-  - undo: { key: 'z', cmd: true },                // ⌘+Z / Ctrl+Z
-  - redo: { key: 'z', cmd: true, shift: true },   // ⌘+Shift+Z / Ctrl+Shift+Z
+  - undo: { key: 'z', ctrl: true },                    // ⌘+Z / Ctrl+Z
+  - redo: { key: 'z', ctrl: true, shift: true },       // ⌘+Shift+Z / Ctrl+Shift+Z
     
   // ✅ 들여쓰기 (정상 동작)
-  - indent: { key: 'Tab' },                       // Tab
-  - outdent: { key: 'Tab', shift: true },         // Shift+Tab
+  - indent: { key: 'Tab' },                            // Tab
+  - outdent: { key: 'Tab', shift: true },              // Shift+Tab
   
   // ✅ 서식 제거 (정상 동작)
-  - reset: { key: '\\', cmd: true, shift: true }, // ⌘+Shift+\ / Ctrl+Shift+\
+  - reset: { key: '\\', ctrl: true, shift: true },     // ⌘+Shift+\ / Ctrl+Shift+\
   
+<<<<<<< HEAD
   // ✅ 삽입 (업데이트됨)
   - code: { key: 'c', alt: true, shift: true },       // ⌥+Shift+C / Alt+Shift+C
   - blockquote: { key: 'b', alt: true, shift: true }, // ⌥+Shift+B / Alt+Shift+B
@@ -338,6 +417,17 @@
   - alignCenter: { key: 'e', cmd: true, shift: true },  // ⌘+Shift+E / Ctrl+Shift+E
   - alignRight: { key: 'r', cmd: true, shift: true },   // ⌘+Shift+R / Ctrl+Shift+R
   - alignJustify: { key: 'j', cmd: true, shift: true }, // ⌘+Shift+J / Ctrl+Shift+J
+=======
+  // ✅ 삽입 (정상 동작)
+  - code: { key: 'c', alt: true, shift: true },        // Alt+Shift+C
+  - blockquote: { key: 'q', alt: true },               // Alt+Q (구현 확인 필요)
+  
+  // ✅ 정렬 (정상 동작)
+  - alignLeft: { key: 'l', ctrl: true, shift: true },     // ⌘+Shift+L / Ctrl+Shift+L
+  - alignCenter: { key: 'e', ctrl: true, shift: true },   // ⌘+Shift+E / Ctrl+Shift+E
+  - alignRight: { key: 'r', ctrl: true, shift: true },    // ⌘+Shift+R / Ctrl+Shift+R
+  - alignJustify: { key: 'j', ctrl: true, shift: true },  // ⌘+Shift+J / Ctrl+Shift+J
+>>>>>>> feature/2025-06-08
   
   // 🚫 레이어 기능 (단축키 지원 안함)
   - 링크, 이미지, 테이블, 미디어는 클릭으로만 사용 가능
@@ -1020,7 +1110,7 @@
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_bold</span>
+                        <span class="material-icons">format_bold</span>
                         <span class="shortcut-desc">굵게</span>
                     </div>
                     <span class="shortcut-key">
@@ -1030,7 +1120,7 @@
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_italic</span>
+                        <span class="material-icons">format_italic</span>
                         <span class="shortcut-desc">기울임</span>
                     </div>
                     <span class="shortcut-key">
@@ -1040,7 +1130,7 @@
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_underlined</span>
+                        <span class="material-icons">format_underlined</span>
                         <span class="shortcut-desc">밑줄</span>
                     </div>
                     <span class="shortcut-key">
@@ -1050,7 +1140,7 @@
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_strikethrough</span>
+                        <span class="material-icons">format_strikethrough</span>
                         <span class="shortcut-desc">취소선</span>
                     </div>
                     <span class="shortcut-key">
@@ -1067,42 +1157,59 @@
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_h1</span>
-                        <span class="shortcut-desc">제목 1 (H1)</span>
+                        <span class="material-icons">title</span>
+                        <span class="shortcut-desc">제목 1 (h1)</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⌘+1
+=======
+                        Ctrl+Alt+1
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_h2</span>
-                        <span class="shortcut-desc">제목 2 (H2)</span>
+                        <span class="material-icons">title</span>
+                        <span class="shortcut-desc">제목 2 (h2)</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⌘+2
+=======
+                        Ctrl+Alt+2
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_h3</span>
-                        <span class="shortcut-desc">제목 3 (H3)</span>
+                        <span class="material-icons">title</span>
+                        <span class="shortcut-desc">제목 3 (h3)</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⌘+3
+=======
+                        Ctrl+Alt+3
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
+                
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">title</span>
+                        <span class="material-icons">title</span>
                         <span class="shortcut-desc">본문 (P)</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⌘+4
+=======
+                        Ctrl+Alt+4
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
             </div>
@@ -1114,42 +1221,58 @@
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_align_left</span>
+                        <span class="material-icons">format_align_left</span>
                         <span class="shortcut-desc">왼쪽 정렬</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧L
+=======
+                        Ctrl+Shift+L
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_align_center</span>
+                        <span class="material-icons">format_align_center</span>
                         <span class="shortcut-desc">중앙 정렬</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧C
+=======
+                        Ctrl+Shift+E
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_align_right</span>
+                        <span class="material-icons">format_align_right</span>
                         <span class="shortcut-desc">오른쪽 정렬</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧R
+=======
+                        Ctrl+Shift+R
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_align_justify</span>
+                        <span class="material-icons">format_align_justify</span>
                         <span class="shortcut-desc">양쪽 정렬</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧J
+=======
+                        Ctrl+Shift+J
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
             </div>
@@ -1161,37 +1284,49 @@
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_list_bulleted</span>
+                        <span class="material-icons">format_list_bulleted</span>
                         <span class="shortcut-desc">불릿 목록</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌘⇧8
+=======
+                        Ctrl+Shift+8
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_list_numbered</span>
+                        <span class="material-icons">format_list_numbered</span>
                         <span class="shortcut-desc">번호 목록</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌘⇧7
+=======
+                        Ctrl+Shift+7
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">checklist</span>
-                        <span class="shortcut-desc">체크리스트</span>
+                        <span class="material-icons">checklist</span>
+                        <span class="shortcut-desc">체크 목록</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌘⇧9
+=======
+                        Ctrl+Shift+9
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_indent_increase</span>
+                        <span class="material-icons">format_indent_increase</span>
                         <span class="shortcut-desc">들여쓰기</span>
                     </div>
                     <span class="shortcut-key">
@@ -1208,31 +1343,40 @@
             <div class="shortcuts-grid">
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">format_quote</span>
+                        <span class="material-icons">format_quote</span>
                         <span class="shortcut-desc">인용구</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧B
+=======
+                        Alt+Shift+B
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">code</span>
+                        <span class="material-icons">code</span>
                         <span class="shortcut-desc">인라인 코드</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧C
+=======
+                        Alt+Shift+C
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
                 <div class="shortcut-item">
                     <div class="shortcut-item-top">
-                        <span class="material-symbols-outlined">horizontal_rule</span>
+                        <span class="material-icons">horizontal_rule</span>
                         <span class="shortcut-desc">수평선</span>
                     </div>
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+<<<<<<< HEAD
                         ⌥⇧H
                     </span>
                 </div>
@@ -1244,22 +1388,142 @@
                     <span class="shortcut-key">
                         <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
                         ⌥⇧L
+=======
+                        Alt+Shift+H
+>>>>>>> feature/2025-06-08
                     </span>
                 </div>
             </div>
         </div>
 
+<<<<<<< HEAD
+=======
+        <!-- 편집 도구 단축키 -->
+        <div class="shortcuts-category">
+            <h3><span class="material-icons">edit</span>편집 도구</h3>
+            <div class="shortcuts-grid">
+                <div class="shortcut-item">
+                    <div class="shortcut-item-top">
+                        <span class="material-icons">undo</span>
+                        <span class="shortcut-desc">실행 취소</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Z
+                    </span>
+                </div>
+                <div class="shortcut-item">
+                    <div class="shortcut-item-top">
+                        <span class="material-icons">redo</span>
+                        <span class="shortcut-desc">재실행</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Shift+Z
+                    </span>
+                </div>
+                <div class="shortcut-item">
+                    <div class="shortcut-item-top">
+                        <span class="material-icons">format_clear</span>
+                        <span class="shortcut-desc">서식제거</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Shift+\
+                    </span>
+                </div>
+                <div class="shortcut-item">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">format_indent_decrease</span>
+                        <span class="shortcut-desc">내어쓰기</span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Shift+Tab
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 미구현 기능 (개발 예정) -->
+        <div class="shortcuts-category" style="opacity: 0.6;">
+            <h3><span class="material-icons">schedule</span>개발 예정 기능</h3>
+            <div class="shortcuts-grid">
+                <div class="shortcut-item" style="opacity: 0.7;">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">link</span>
+                        <span class="shortcut-desc">링크 삽입 <small>(v1.1 예정)</small></span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+K
+                    </span>
+                </div>
+                <div class="shortcut-item" style="opacity: 0.7;">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">videocam</span>
+                        <span class="shortcut-desc">미디어 삽입 <small>(v1.1 예정)</small></span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+M
+                    </span>
+                </div>
+                <div class="shortcut-item" style="opacity: 0.7;">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">code_blocks</span>
+                        <span class="shortcut-desc">코드 블록 <small>(v1.1 예정)</small></span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Shift+K
+                    </span>
+                </div>
+                <div class="shortcut-item" style="opacity: 0.7;">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">image</span>
+                        <span class="shortcut-desc">이미지 삽입 <small>(v1.2 예정)</small></span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+Shift+I
+                    </span>
+                </div>
+
+                <div class="shortcut-item" style="opacity: 0.7;">
+                    <div class="shortcut-item-top">
+                        <span class="material-symbols-outlined">find_replace</span>
+                        <span class="shortcut-desc">찾기/바꾸기 <small>(v1.3 예정)</small></span>
+                    </div>
+                    <span class="shortcut-key">
+                        <span class="material-icons" style="font-size: 14px; margin-right: 4px;">keyboard</span>
+                        Ctrl+F
+                    </span>
+                </div>
+            </div>
+        </div>
+
+>>>>>>> feature/2025-06-08
         <!-- Pro Tips -->
         <div class="shortcuts-category">
             <h3><span class="material-icons">lightbulb</span>Pro Tips</h3>
-            <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #1a73e8;">
-                <ul style="margin: 0; padding-left: 20px; color: #333;">
-                    <li><strong>Mac 사용자:</strong> Ctrl 대신 Cmd(⌘) 키를 사용하세요</li>
-                    <li><strong>연속 작업:</strong> 텍스트를 선택한 후 여러 서식을 연속으로 적용 가능</li>
-                    <li><strong>빠른 선택:</strong> 단어는 더블클릭, 문단은 트리플클릭으로 선택</li>
-                    <li><strong>실행 취소:</strong> 최대 50단계까지 되돌리기 가능</li>
-                    <li><strong>모바일:</strong> 터치 디바이스에서는 툴바 버튼을 이용하세요</li>
-                </ul>
+            <div class="pro-tips">
+                <div class="tip-item">
+                    <span class="material-icons">info</span>
+                    <span>Mac에서는 ⌘(Command) 키를, Windows/Linux에서는 Ctrl 키를 사용하세요.</span>
+                </div>
+                <div class="tip-item">
+                    <span class="material-icons">keyboard</span>
+                    <span>단축키는 선택된 텍스트나 현재 커서 위치에 적용됩니다.</span>
+                </div>
+                <div class="tip-item">
+                    <span class="material-icons">speed</span>
+                    <span>연속으로 단축키를 사용하여 빠른 편집이 가능합니다.</span>
+                </div>
+                <div class="tip-item">
+                    <span class="material-icons">preview</span>
+                    <span>Shift+Enter를 사용하여 같은 서식 내에서 줄바꿈할 수 있습니다.</span>
+                </div>
             </div>
         </div>
     </div>

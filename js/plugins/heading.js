@@ -405,4 +405,8 @@
       applyHeadingByShortcut(tag, contentArea);
     }
   }, true);
+<<<<<<< HEAD
 })();
+=======
+})();
+>>>>>>> feature/2025-06-08
