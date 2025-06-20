@@ -71,7 +71,35 @@
       margin-bottom: 2rem;
     }
 
+    /* 툴바 테두리 스타일 */
+    #lite-editor-toolbar {
+        border: 1px solid #d0d7de;
+        border-radius: 6px 6px 0 0;
+        background-color: #f6f8fa;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
 
+    /* 탭 영역 스타일 - 테두리 없음 */
+    .editor-tab-space {
+        display: flex !important;
+        align-items: center !important;
+        border: none !important; /* 테두리 제거 */
+    }
+
+    /* 콘텐츠 영역 테두리 스타일 - 상단 테두리 추가 */
+    #lite-editor-content {
+        border: 1px solid #d0d7de !important;
+        border-radius: 0 0 6px 6px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        min-height: 400px !important;
+        padding: 15px !important;
+    }
+
+    /* 전체 에디터 컨테이너 정리 */
+    .lite-editor {
+        overflow: hidden;
+    }
 
     /* ✅ 에디터 콘텐츠 내 헤딩 스타일 */
     #lite-editor-content h1 {
@@ -336,6 +364,45 @@
             justify-content: center;
         }
     }
+
+    /* 탭 버튼 컨테이너 */
+    .editor-tabs {
+        display: flex;
+        gap: 2px;
+    }
+
+    /* 탭 버튼 스타일 */
+    .tab-button {
+        width: 100px;
+        height: 32px;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        background-color: #f6f8fa;
+        color: #656d76;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .tab-button:hover {
+        background-color: #f3f4f6;
+        border-color: #8c959f;
+    }
+
+    .tab-button.active {
+        background-color: #f6f8fa; /* 배경색 동일하게 */
+        font-weight: 600;
+    }
+
+    .tab-button .material-icons {
+        font-size: 14px;
+    }
     </style>
 
 </head>
@@ -348,10 +415,14 @@
         <div class="demo-section">
             <div class="editor-container">
                 <div class="lite-editor" id="main-editor">
-                    <!-- 툴바 영역 -->
+                    <!-- 툴바 영역 (상단 둥근 테두리) -->
                     <div id="lite-editor-toolbar"></div>
                     
-                    <!-- 에디터 콘텐츠 영역 -->
+                    <!-- 탭 영역 -->
+                    <div class="editor-tab-space" style="height: 5px;">
+                    </div>
+                    
+                    <!-- 콘텐츠 영역 (하단 둥근 테두리) -->
                     <div id="lite-editor-content" contenteditable="true">
                         <p>첫 번째 항목<br>두 번째 항목<br>세 번째 항목<br>네 번째 항목</p>
                         <p>LiteEditor 소개, 이 크기는 h1 태그입니다.</p>
@@ -882,7 +953,7 @@
                 <div class="feature-item">
                     <h3>
                         <span class="material-symbols-outlined">format_clear</span>
-                        서식 지우기 (Clear Format)
+                        서식제거
                     </h3>
                     <p>선택된 텍스트의 모든 서식을 제거하고 기본 텍스트로 되돌립니다.<br>단축키: Ctrl+Shift+\ / ⌘+Shift+\</p>
                     <div class="example">
@@ -1054,6 +1125,7 @@
                     'orderedList', 'unorderedList', 'checkList',              // 목록 
                     'align', 'formatIndent',                                  // 정렬과 인덴트
                     'historyInit', 'undo', 'redo', 'reset',                   // 실행 취소/되돌리기  
+                    'source',                                                 // HTML 소스 보기/편집 플러그인
                 ],
                 dividers: [4, 8, 12, 16, 19, 22],
                 dimensions: {
