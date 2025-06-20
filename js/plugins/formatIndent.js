@@ -100,7 +100,7 @@
   }
   
   /**
-   * BR 컨텍스트 분석 (D5, D6 요구사항)
+   * BR 컨텍스트 분석 
    */
   function isBRContext(selection) {
     if (!selection || selection.rangeCount === 0) return false;
@@ -146,7 +146,7 @@
         }, '#ff5722');
       }
       
-      // D5, D6: BR 컨텍스트에서 특별 처리
+      // BR 컨텍스트에서 특별 처리
       const inBRContext = isBRContext(selection);
       
       // 🔧 디버깅: BR 컨텍스트 분석 결과
@@ -193,7 +193,7 @@
   }
   
   /**
-   * 들여쓰기 실행 (A1, B1, C1) - 디버깅 추가
+   * 들여쓰기 실행  - 디버깅 추가
    */
   function executeIndent(selection, inBRContext, contentArea) {
     // 🔧 디버깅: 들여쓰기 시작 상태

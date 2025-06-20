@@ -126,14 +126,30 @@
 
         // ✅ URL 입력 키 이벤트
         urlInput.addEventListener('keydown', (e) => {
-            e.stopPropagation(); // 키 이벤트 보호
+            e.stopPropagation();
             
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const url = urlInput.value.trim();
-                if (url) processImageInsertion(url, null, modal);
+                
+                if (url) {
+                    processImageInsertion(url, null, modal);
+                } else {
+                    // ✅ Enter로 빈 URL 시: Alert만 표시, 콜백에서 모달 닫기
+                    errorHandler.showUserAlert('P803');
+                    
+                    // Alert 후 모달 닫기 (link.js와 동일한 방식)
+                    setTimeout(() => {
+                        modal.style.transition = 'opacity 0.5s ease-out';
+                        modal.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            closeModal(modal);
+                        }, 500);
+                    }, 100); // Alert가 완전히 표시된 후 실행
+                }
             }
-            // ESC는 모달 닫기를 위해 전파 허용
+            
             if (e.key === 'Escape') {
                 closeModal(modal);
             }
@@ -175,16 +191,64 @@
             const file = fileInput.files[0];
             
             if (file) {
-                // ✅ 파일 업로드 시 준비중 알림
-                closeModal(modal);
-                LiteEditorModal.alert('업로드 기능 준비중입니다.\n\nURL 링크를 통한 이미지 삽입을 이용해 주세요.');
+                // ✅ 파일 선택 시: Alert + fade out 콜백
+                LiteEditorModal.alert('업로드 기능 준비중입니다.\n\nURL 링크를 통한 이미지 삽입을 이용해 주세요.', {
+                    onConfirm: () => {
+                        // Alert 확인 후 fade out 처리
+                        setTimeout(() => {
+                            modal.style.transition = 'opacity 0.5s ease-out';
+                            modal.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                closeModal(modal);
+                                
+                                // 에디터 포커스 복원
+                                const contentArea = document.querySelector('.lite-editor-content');
+                                if (contentArea) {
+                                    try {
+                                        contentArea.focus({ preventScroll: true });
+                                        if (savedRange && util.selection) {
+                                            util.selection.restoreSelection(savedRange);
+                                        }
+                                    } catch (e) {
+                                        contentArea.focus();
+                                    }
+                                }
+                            }, 500);
+                        }, 10);
+                    }
+                });
                 return;
             }
             
             if (url) {
                 await processImageInsertion(url, null, modal);
             } else {
-                alert('URL 또는 파일을 선택해주세요.');
+                // ✅ 빈 URL 시: Alert + fade out 콜백
+                LiteEditorModal.alert('유효한 이미지 URL을 입력해주세요', {
+                    onConfirm: () => {
+                        setTimeout(() => {
+                            modal.style.transition = 'opacity 0.5s ease-out';
+                            modal.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                closeModal(modal);
+                                
+                                const contentArea = document.querySelector('.lite-editor-content');
+                                if (contentArea) {
+                                    try {
+                                        contentArea.focus({ preventScroll: true });
+                                        if (savedRange && util.selection) {
+                                            util.selection.restoreSelection(savedRange);
+                                        }
+                                    } catch (e) {
+                                        contentArea.focus();
+                                    }
+                                }
+                            }, 500);
+                        }, 10);
+                    }
+                });
             }
         });
 
@@ -291,30 +355,26 @@
 
     // 이미지 삽입 프로세스
     async function processImageInsertion(url, file, modal) {
+        // ✅ 먼저 모달 닫기 (성공/실패 관계없이)
+        closeModal(modal);
+        
         try {
             let finalUrl = url;
 
             if (file) {
                 if (!window.ImageUploadModule) {
-                    closeModal(modal);
                     throw new Error('ImageUploadModule이 로드되지 않았습니다');
                 }
 
                 const uploadResult = await window.ImageUploadModule.uploadFile(file);
                 if (!uploadResult) {
-                    closeModal(modal);
                     return;
                 }
 
                 finalUrl = uploadResult.path;
-                closeModal(modal);
                 
-                // 🔧 간단한 JSON alert으로 변경
                 const jsonString = JSON.stringify(uploadResult, null, 2);
                 LiteEditorModal.alert(`업로드 완료!\n\n서버 응답 JSON:\n${jsonString}`);
-                
-            } else if (url) {
-                closeModal(modal);
             }
 
             if (finalUrl) {
@@ -322,7 +382,6 @@
             }
 
         } catch (error) {
-            closeModal(modal);
             errorHandler.logError?.(MODULE_NAME, 'P801', error);
             errorHandler.showUserAlert?.('P801', `업로드 실패: ${error.message}`);
         }
