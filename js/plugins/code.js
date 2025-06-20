@@ -7,43 +7,35 @@
 (function() {
   const util = window.PluginUtil;
   
-  LiteEditor.registerPlugin('code', {
-    title: 'Code',
-    icon: 'code',
-    customRender: function(toolbar, contentArea) {
-      const button = util.dom.createElement('button', {
-        className: 'lite-editor-button',
-        title: 'Code'
-      });
-
-      const icon = util.dom.createElement('i', {
-        className: 'material-icons',
-        textContent: 'code'
-      });
-      button.appendChild(icon);
-
-      button.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (!util.utils.canExecutePlugin(contentArea)) {
-          return;
-        }
-        
-        contentArea.focus();
-        applyCodeFormat(contentArea);
-      });
-
-      return button;
+  // ✅ 공통 로직을 별도 함수로 추출
+  function executeCodeAction(contentArea, triggerSource = 'unknown') {
+    if (!contentArea) return;
+    if (!util.utils.canExecutePlugin(contentArea)) return;
+    
+    contentArea.focus();
+    
+    // 히스토리 기록
+    if (window.LiteEditorHistory) {
+      window.LiteEditorHistory.forceRecord(contentArea, `Before Code (${triggerSource})`);
     }
-  });
+    
+    applyCodeFormat(contentArea);
+    
+    // 히스토리 완료 기록
+    setTimeout(() => {
+      if (window.LiteEditorHistory) {
+        window.LiteEditorHistory.recordState(contentArea, `After Code (${triggerSource})`);
+      }
+    }, 100);
+  }
 
-  // Code 단축키 (Alt+C)
-  LiteEditor.registerShortcut('code', {
-    key: 'c',
-    alt: true,
-    action: function(contentArea) {
-      applyCodeFormat(contentArea);
+  // ✅ 플러그인 등록 (간소화)
+  PluginUtil.registerPlugin('code', {
+    title: 'Code (⌥⇧C)',
+    icon: 'code',
+    action: function(contentArea, buttonElement, event) {
+      if (event) event.preventDefault();
+      executeCodeAction(contentArea, 'Button Click');
     }
   });
 
@@ -358,4 +350,28 @@
       }
     }, 10);
   }
+
+  // ✅ 단축키 등록 (Alt+Shift+C)
+  document.addEventListener('keydown', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+    if (!editorContainer) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // ✅ Alt+Shift+C (Mac/Windows 공통)
+    if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'c') {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        executeCodeAction(contentArea, 'Alt+Shift+C');
+      } catch (error) {
+        if (window.errorHandler) {
+          errorHandler.logWarning('CodePlugin', 'Alt+Shift+C 처리 중 확장 프로그램 충돌', error);
+        }
+      }
+    }
+  }, true);
 })();

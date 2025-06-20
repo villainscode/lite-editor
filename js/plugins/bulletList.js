@@ -36,76 +36,76 @@
     return null;
   }
   
-  // ✅ 플러그인 등록 (히스토리 통합)
+  // ✅ 공통 로직을 별도 함수로 추출
+  function executeBulletListAction(contentArea, triggerSource = 'unknown') {
+    if (!contentArea) return;
+    
+    // 선택 영역 저장
+    const savedSelection = PluginUtil.selection.saveSelection();
+    
+    // 다른 리스트 타입 체크
+    const otherListType = detectOtherListTypes();
+    if (otherListType) {
+      LiteEditorModal.alert(
+        '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 불릿리스트를 적용해주세요.',
+        {
+          titleText: '리스트 중복 적용 불가',
+          confirmText: '확인',
+          onConfirm: function() {
+            setTimeout(() => {
+              try {
+                contentArea.focus();
+                if (savedSelection) {
+                  PluginUtil.selection.restoreSelection(savedSelection);
+                }
+              } catch (e) {
+                contentArea.focus();
+              }
+            }, 50);
+          }
+        }
+      );
+      return;
+    }
+    
+    // 히스토리 기록
+    if (window.LiteEditorHistory) {
+      window.LiteEditorHistory.forceRecord(contentArea, `Before Bullet List (${triggerSource})`);
+    }
+    
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection?.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    const existingList = findExistingList(range);
+    
+    try {
+      if (existingList) {
+        unwrapBulletList(existingList.ul, range);
+      } else {
+        createBulletList(contentArea, range);
+      }
+      
+      // 완료 후 상태 기록
+      setTimeout(() => {
+        if (window.LiteEditorHistory) {
+          window.LiteEditorHistory.recordState(contentArea, `After Bullet List (${triggerSource})`);
+        }
+      }, 100);
+      
+    } catch (error) {
+      errorHandler.logError('PLUGINS', 'P601', error);
+    }
+  }
+  
+  // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('unorderedList', {
-    title: 'Bullet List',
+    title: 'Bullet List (⌘⇧8)',
     icon: 'format_list_bulleted',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();
       contentArea.focus();
-      
-      // ✅ 선택 영역 저장 (모달 표시 전에)
-      const savedSelection = PluginUtil.selection.saveSelection();
-      
-      // ✅ 다른 리스트 타입 체크 (수정된 버전)
-      const otherListType = detectOtherListTypes();
-      if (otherListType) {
-        LiteEditorModal.alert(
-          '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 불릿리스트를 적용해주세요.',
-          {
-            titleText: '리스트 중복 적용 불가',
-            confirmText: '확인',
-            onConfirm: function() {
-              // ✅ 모달 닫힌 후 선택 영역 및 포커스 복원
-              setTimeout(() => {
-                try {
-                  contentArea.focus();
-                  if (savedSelection) {
-                    PluginUtil.selection.restoreSelection(savedSelection);
-                  }
-                  console.log('🔄 [BulletList] 선택 영역 복원 완료');
-                } catch (e) {
-                  console.warn('[BulletList] 선택 영역 복원 실패:', e);
-                  // 폴백: 에디터 끝에 커서 설정
-                  contentArea.focus();
-                }
-              }, 50);
-            }
-          }
-        );
-        return;
-      }
-      
-      // ✅ 히스토리에 적용 전 상태 기록
-      if (window.LiteEditorHistory) {
-        window.LiteEditorHistory.forceRecord(contentArea, 'Before Bullet List Action');
-      }
-      
-      const selection = PluginUtil.selection.getSafeSelection();
-      if (!selection?.rangeCount) {
-        return;
-      }
-      
-      const range = selection.getRangeAt(0);
-      const existingList = findExistingList(range);
-      
-      try {
-        if (existingList) {
-          unwrapBulletList(existingList.ul, range);
-        } else {
-          createBulletList(contentArea, range);
-        }
-        
-        // ✅ 작업 완료 후 상태 기록
-        setTimeout(() => {
-          if (window.LiteEditorHistory) {
-            window.LiteEditorHistory.recordState(contentArea, 'After Bullet List Action');
-          }
-        }, 100);
-        
-      } catch (error) {
-        errorHandler.logError('PLUGINS', 'P601', error);
-      }
+      executeBulletListAction(contentArea, 'Button Click');
     }
   });
   
@@ -366,6 +366,30 @@
   initStyles();
   document.addEventListener('keydown', handleTabKey, true);
   tabKeyCleanup = () => document.removeEventListener('keydown', handleTabKey, true);
+
+  // ✅ 단축키 등록 (Cmd+Shift+8로 변경)
+  document.addEventListener('keydown', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+    if (!editorContainer) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // ✅ 변경: Cmd+Shift+8 (Mac) / Ctrl+Shift+8 (Windows/Linux)
+    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key === '8') {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        executeBulletListAction(contentArea, 'Cmd+Shift+8');
+      } catch (error) {
+        if (window.errorHandler) {
+          errorHandler.logWarning('BulletListPlugin', 'Cmd+Shift+8 처리 중 확장 프로그램 충돌', error);
+        }
+      }
+    }
+  }, true);
 
   // 정리 함수
   if (PluginUtil.registerCleanup) {

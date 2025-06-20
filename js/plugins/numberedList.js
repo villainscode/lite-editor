@@ -38,77 +38,76 @@
     return null;
   }
   
-  // ✅ 플러그인 등록 (히스토리 통합)
+  // ✅ 공통 로직을 별도 함수로 추출
+  function executeNumberedListAction(contentArea, triggerSource = 'unknown') {
+    if (!contentArea) return;
+    
+    // 선택 영역 저장
+    const savedSelection = PluginUtil.selection.saveSelection();
+    
+    // 다른 리스트 타입 체크
+    const otherListType = detectOtherListTypes();
+    if (otherListType) {
+      LiteEditorModal.alert(
+        '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 넘버리스트를 적용해주세요.',
+        {
+          titleText: '리스트 중복 적용 불가',
+          confirmText: '확인',
+          onConfirm: function() {
+            setTimeout(() => {
+              try {
+                contentArea.focus();
+                if (savedSelection) {
+                  PluginUtil.selection.restoreSelection(savedSelection);
+                }
+              } catch (e) {
+                contentArea.focus();
+              }
+            }, 50);
+          }
+        }
+      );
+      return;
+    }
+    
+    // 히스토리 기록
+    if (window.LiteEditorHistory) {
+      window.LiteEditorHistory.forceRecord(contentArea, `Before Numbered List (${triggerSource})`);
+    }
+    
+    const selection = PluginUtil.selection.getSafeSelection();
+    if (!selection?.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    const existingList = findExistingList(range);
+    
+    try {
+      if (existingList) {
+        unwrapNumberedList(existingList.ol, range, contentArea);
+      } else {
+        createNumberedList(contentArea, range);
+      }
+      
+      // 완료 후 상태 기록
+      setTimeout(() => {
+        if (window.LiteEditorHistory) {
+          window.LiteEditorHistory.recordState(contentArea, `After Numbered List (${triggerSource})`);
+        }
+      }, 100);
+      
+    } catch (error) {
+      errorHandler.logError('PLUGINS', 'P601', error);
+    }
+  }
+  
+  // ✅ 플러그인 등록 (간소화)
   PluginUtil.registerPlugin('orderedList', {
-    title: 'Numbered List',
+    title: 'Numbered List (⌘⇧7)',
     icon: 'format_list_numbered',
     action: function(contentArea, buttonElement, event) {
       if (event) event.preventDefault();
       contentArea.focus();
-      
-      // ✅ 선택 영역 저장 (모달 표시 전에)
-      const savedSelection = PluginUtil.selection.saveSelection();
-      
-      // ✅ 다른 리스트 타입 체크 (수정된 버전)
-      const otherListType = detectOtherListTypes();
-      if (otherListType) {
-        LiteEditorModal.alert(
-          '이미 ' + otherListType.type + '가 적용되었습니다.\n리스트 적용을 해제한 뒤 넘버리스트를 적용해주세요.',
-          {
-            titleText: '리스트 중복 적용 불가',
-            confirmText: '확인',
-            onConfirm: function() {
-              // ✅ 모달 닫힌 후 선택 영역 및 포커스 복원
-              setTimeout(() => {
-                try {
-                  contentArea.focus();
-                  if (savedSelection) {
-                    PluginUtil.selection.restoreSelection(savedSelection);
-                  }
-                  console.log('🔄 [NumberedList] 선택 영역 복원 완료');
-                } catch (e) {
-                  console.warn('[NumberedList] 선택 영역 복원 실패:', e);
-                  // 폴백: 에디터 끝에 커서 설정
-                  contentArea.focus();
-                }
-              }, 50);
-            }
-          }
-        );
-        return;
-      }
-      
-      // 히스토리 기록
-      if (window.LiteEditorHistory) {
-        window.LiteEditorHistory.forceRecord(contentArea, 'Before Numbered List Action');
-      }
-      
-      const selection = PluginUtil.selection.getSafeSelection();
-      if (!selection?.rangeCount) {
-        errorHandler.logWarning('NumberedList', '선택 영역이 없습니다.');
-        return;
-      }
-      
-      const range = selection.getRangeAt(0);
-      const existingList = findExistingList(range);
-      
-      try {
-        if (existingList) {
-          unwrapNumberedList(existingList.ol, range, contentArea);
-        } else {
-          createNumberedList(contentArea, range);
-        }
-        
-        // 작업 완료 후 히스토리 기록
-        setTimeout(() => {
-          if (window.LiteEditorHistory) {
-            window.LiteEditorHistory.recordState(contentArea, 'After Numbered List Action');
-          }
-        }, 100);
-        
-      } catch (error) {
-        errorHandler.logError('PLUGINS', 'P601', error);
-      }
+      executeNumberedListAction(contentArea, 'Button Click');
     }
   });
   
@@ -577,39 +576,29 @@
     document.removeEventListener('keydown', handleEnterKey, true);
   };
   
-  // ✅ Alt+O 단축키 등록
-  LiteEditor.registerShortcut('orderedList', {
-    key: 'o',
-    alt: true,
-    action: function(contentArea) {
-      if (window.LiteEditorHistory) {
-        window.LiteEditorHistory.forceRecord(contentArea, 'Before Numbered List (Shortcut)');
-      }
-      
-      const selection = PluginUtil.selection.getSafeSelection();
-      if (!selection?.rangeCount) return;
-      
-      const range = selection.getRangeAt(0);
-      const existingList = findExistingList(range);
-      
+  // ✅ 단축키 등록 (Cmd+Shift+7로 변경)
+  document.addEventListener('keydown', function(e) {
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+    
+    const editorContainer = contentArea.closest('.lite-editor, .lite-editor-content');
+    if (!editorContainer) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+    // ✅ 변경: Cmd+Shift+7 (Mac) / Ctrl+Shift+7 (Windows/Linux)
+    if (e.shiftKey && ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && !e.altKey && e.key === '7') {
       try {
-        if (existingList) {
-          unwrapNumberedList(existingList.ol, range, contentArea);
-        } else {
-          createNumberedList(contentArea, range);
-        }
-        
-        setTimeout(() => {
-          if (window.LiteEditorHistory) {
-            window.LiteEditorHistory.recordState(contentArea, 'After Numbered List (Shortcut)');
-          }
-        }, 100);
-        
+        e.preventDefault();
+        e.stopPropagation();
+        executeNumberedListAction(contentArea, 'Cmd+Shift+7');
       } catch (error) {
-        errorHandler.logError('PLUGINS', 'P601', error);
+        if (window.errorHandler) {
+          errorHandler.logWarning('NumberedListPlugin', 'Cmd+Shift+7 처리 중 확장 프로그램 충돌', error);
+        }
       }
     }
-  });
+  }, true);
   
   // ✅ 정리 함수 (bulletList.js 방식)
   if (PluginUtil.registerCleanup) {

@@ -104,17 +104,18 @@
       
       // 제목 레벨 옵션
       const headingLevels = [
-        { text: 'Heading 1', tag: 'h1' },
-        { text: 'Heading 2', tag: 'h2' },
-        { text: 'Heading 3', tag: 'h3' },
-        { text: 'Paragraph', tag: 'p' }
+        { text: 'Heading 1', tag: 'h1', shortcut: '⌥⌘1' },
+        { text: 'Heading 2', tag: 'h2', shortcut: '⌥⌘2' },
+        { text: 'Heading 3', tag: 'h3', shortcut: '⌥⌘3' },
+        { text: 'Paragraph', tag: 'p', shortcut: '⌥⌘4' }
       ];
       
       // 각 제목 레벨에 대한 옵션 추가
       headingLevels.forEach(level => {
         const option = util.dom.createElement('div', {
           className: 'lite-editor-heading-option lite-editor-heading-' + level.tag,
-          textContent: level.text
+          textContent: level.text,
+          title: `${level.text} (${level.shortcut})`
         });
         
         // 해당 태그에 맞는 스타일 적용
@@ -380,36 +381,28 @@
     util.editor.dispatchEditorEvent(contentArea);
   }
   
-  // 단축키 등록
-  LiteEditor.registerShortcut('heading', {
-    key: '1',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h1', contentArea);
+  // ✅ 수정: strike.js처럼 직접 document 레벨에서 capture: true로 처리
+  document.addEventListener('keydown', function(e) {
+    // 에디터 영역 찾기
+    const contentArea = e.target.closest('[contenteditable="true"]');
+    if (!contentArea) return;
+
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+    
+    // 단축키 조합 체크
+    const isHeadingShortcut = 
+      ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) && 
+      e.altKey && 
+      !e.shiftKey && 
+      ['1', '2', '3', '4'].includes(e.key);
+
+    if (isHeadingShortcut) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      const tag = e.key === '4' ? 'p' : `h${e.key}`;
+      applyHeadingByShortcut(tag, contentArea);
     }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '2',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h2', contentArea);
-    }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '3',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('h3', contentArea);
-    }
-  });
-  
-  LiteEditor.registerShortcut('heading', {
-    key: '4',
-    alt: true,
-    action: function(contentArea) {
-      applyHeadingByShortcut('p', contentArea);
-    }
-  });
+  }, true);
 })();
