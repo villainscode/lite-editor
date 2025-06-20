@@ -948,4 +948,41 @@
             });
         });
     }
+
+    // 키보드 단축키 처리 추가 - cmd+shift+i로 이미지 업로드 모달 열기
+    document.addEventListener('keydown', function(e) {
+        // cmd+shift+i 조합 확인
+        const isShortcut = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'i';
+        if (!isShortcut) return;
+        
+        // 에디터 영역에 포커스가 있는지 확인
+        const activeElement = document.activeElement;
+        const contentArea = activeElement?.closest('[contenteditable="true"]') || 
+                           document.querySelector('.lite-editor-content');
+        
+        if (!contentArea) return;
+        
+        // 이미지 업로드 버튼 찾기
+        const editorContainer = contentArea.closest('.lite-editor');
+        const imageButton = editorContainer?.querySelector('.lite-editor-image-upload-button');
+        if (!imageButton) return;
+        
+        // 기본 동작 차단
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('[IMAGE] 단축키로 이미지 업로드 모달 열기');
+        
+        // 이미지 업로드 버튼 클릭
+        imageButton.click();
+        
+        // URL 입력 필드 포커스 보장
+        setTimeout(() => {
+            const urlInput = document.querySelector('#image-url-input');
+            if (urlInput) {
+                urlInput.focus();
+                urlInput.select(); // 기존 텍스트가 있다면 선택
+            }
+        }, 100); // 모달이 완전히 열린 후 포커스
+    }, true);
 })();

@@ -314,4 +314,43 @@
             return linkButton;
         }
     });
+    
+    // 키보드 단축키 처리 추가
+    document.addEventListener('keydown', function(e) {
+        // cmd+shift+k 조합 확인
+        const isShortcut = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'k';
+        if (!isShortcut) return;
+        
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount || selection.getRangeAt(0).collapsed) return;
+        
+        // 에디터 영역 찾기
+        let element = selection.getRangeAt(0).startContainer;
+        if (element.nodeType === Node.TEXT_NODE) {
+            element = element.parentElement;
+        }
+        
+        const contentArea = element.closest('[contenteditable="true"]');
+        if (!contentArea) return;
+        
+        const editorContainer = contentArea.closest('.lite-editor');
+        const linkButton = editorContainer?.querySelector('.lite-editor-button[title="Insert Link"]');
+        if (!linkButton) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 링크 버튼 클릭
+        linkButton.click();
+        
+        // 포커스 보장을 위한 추가 처리
+        setTimeout(() => {
+            const linkInput = document.querySelector('.lite-editor-link-input');
+            if (linkInput) {
+                linkInput.focus();
+                linkInput.select(); // 기존 텍스트가 있다면 선택
+            }
+        }, 50); // 드롭다운이 완전히 열린 후 포커스
+    }, true);
+    
 })();
